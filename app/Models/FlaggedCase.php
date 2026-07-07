@@ -16,6 +16,16 @@ class FlaggedCase extends Model
 
     public const STATUS_RESOLVED = 'Resolved';
 
+    public const FLAG_TYPE_COUNSELING_ENDORSEMENT = 'counseling_endorsement';
+
+    public const FLAG_TYPE_AWARENESS_NOTIFICATION = 'awareness_notification';
+
+    public const SUBSCALE_DEPRESSION = 'depression';
+
+    public const SUBSCALE_ANXIETY = 'anxiety';
+
+    public const SUBSCALE_STRESS = 'stress';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -24,7 +34,8 @@ class FlaggedCase extends Model
     protected $fillable = [
         'assessment_id',
         'assigned_to_user_id',
-        'highest_severity',
+        'flag_type',
+        'triggering_subscale',
         'status',
         'flagged_at',
     ];

@@ -13,8 +13,10 @@ use Illuminate\Database\DatabaseManager;
 
 class StudentService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
+    public function __construct(
+        private readonly DatabaseManager $database,
+        private readonly StudentNumberGeneratorService $studentNumberGenerator,
+    ) {
     }
 
     public function paginate(int $perPage = 10): LengthAwarePaginator
@@ -42,7 +44,10 @@ class StudentService
      */
     public function create(array $data): Student
     {
-        return $this->database->transaction(fn (): Student => Student::query()->create($data));
+        return $this->database->transaction(fn (): Student => Student::query()->create([
+            ...$data,
+            'student_number' => $this->studentNumberGenerator->generate(),
+        ]));
     }
 
     /**

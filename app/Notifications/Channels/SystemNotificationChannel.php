@@ -12,9 +12,9 @@ use Illuminate\Notifications\Notification;
  * system_notifications table (our canonical schema) instead of the
  * framework's default polymorphic `notifications` table.
  *
- * Uses updateOrCreate keyed by (user_id, assessment_id), matching the
- * unique constraint on system_notifications and satisfying "duplicate
- * notifications shall not be generated for the same assessment."
+ * Uses updateOrCreate keyed by (user_id, flagged_case_id), matching the
+ * unique constraint on system_notifications and satisfying "a unique
+ * notification shall exist for each (user, flagged_case) pair."
  */
 class SystemNotificationChannel
 {
@@ -29,9 +29,11 @@ class SystemNotificationChannel
         SystemNotification::query()->updateOrCreate(
             [
                 'user_id' => $notifiable->id,
-                'assessment_id' => $data['assessment_id'],
+                'flagged_case_id' => $data['flagged_case_id'],
             ],
             [
+                'assessment_id' => $data['assessment_id'],
+                'notification_type' => $data['notification_type'],
                 'title' => $data['title'],
                 'message' => $data['message'],
             ]

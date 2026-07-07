@@ -185,12 +185,14 @@ class ReportService
 
         $total = $assessmentIds->count();
 
+        // "Overall severity" is no longer a stored column (differentiated
+        // flagging classifies each subscale independently — see
+        // flagged_cases) — computed here as the highest of the three
+        // subscale levels per assessment, tallied in PHP.
         $bySeverity = DassResult::query()
             ->whereIn('assessment_id', $assessmentIds)
-            ->selectRaw('overall_status, count(*) as total')
-            ->groupBy('overall_status')
-            ->pluck('total', 'overall_status')
-            ->all();
+            ->get(['depression_level', 'anxiety_level', 'stress_level'])
+            ->countBy(fn (DassResult $result): string => $result->highestSeverityLevel());
 
         $orderedSeverities = [
             ClassificationThreshold::SEVERITY_NORMAL,

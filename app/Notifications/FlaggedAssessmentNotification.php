@@ -4,17 +4,19 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
-use App\Models\Assessment;
+use App\Models\FlaggedCase;
+use App\Models\SystemNotification;
 use App\Notifications\Channels\SystemNotificationChannel;
 use Illuminate\Notifications\Notification;
 
 /**
- * Notifies a Guidance Counselor that a newly-submitted assessment met or
- * exceeded the Notification Severity Threshold.
+ * Notifies a Guidance Counselor of a newly-created Flagged Case: either a
+ * Counseling Endorsement (severe stress) or an Awareness Notification
+ * (severe depression and/or anxiety).
  */
 class FlaggedAssessmentNotification extends Notification
 {
-    public function __construct(private readonly Assessment $assessment)
+    public function __construct(private readonly FlaggedCase $flaggedCase)
     {
     }
 
@@ -29,22 +31,36 @@ class FlaggedAssessmentNotification extends Notification
     /**
      * Build the data persisted by SystemNotificationChannel.
      *
-     * @return array{assessment_id: int, title: string, message: string}
+     * @return array{assessment_id: int, flagged_case_id: int, notification_type: string, title: string, message: string}
      */
     public function toSystemNotification(mixed $notifiable): array
     {
-        $student = $this->assessment->student;
-        $result = $this->assessment->result;
+        $assessment = $this->flaggedCase->assessment;
+        $student = $assessment->student;
+        $result = $assessment->result;
+
+        $isEndorsement = $this->flaggedCase->flag_type === FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT;
+
+        $severityBySubscale = [
+            FlaggedCase::SUBSCALE_DEPRESSION => $result->depression_level,
+            FlaggedCase::SUBSCALE_ANXIETY => $result->anxiety_level,
+            FlaggedCase::SUBSCALE_STRESS => $result->stress_level,
+        ];
 
         return [
-            'assessment_id' => $this->assessment->id,
-            'title' => 'New Flagged Assessment',
+            'assessment_id' => $assessment->id,
+            'flagged_case_id' => $this->flaggedCase->id,
+            'notification_type' => $isEndorsement
+                ? SystemNotification::TYPE_COUNSELING_ENDORSEMENT
+                : SystemNotification::TYPE_AWARENESS_NOTIFICATION,
+            'title' => $isEndorsement ? 'Counseling Endorsement' : 'Awareness Notification',
             'message' => sprintf(
-                '%s (%s) was assessed with a highest severity of %s on %s.',
+                '%s (%s) was assessed with %s %s on %s.',
                 $student->full_name,
                 $student->student_number,
-                $result->overall_status,
-                $this->assessment->submitted_at->format('M d, Y')
+                $severityBySubscale[$this->flaggedCase->triggering_subscale],
+                ucfirst($this->flaggedCase->triggering_subscale),
+                $assessment->submitted_at->format('M d, Y')
             ),
         ];
     }

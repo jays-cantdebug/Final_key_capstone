@@ -12,10 +12,6 @@ class Student extends Model
 {
     use HasFactory, SoftDeletes;
 
-    public const STATUS_ACTIVE = 'Active';
-
-    public const STATUS_INACTIVE = 'Inactive';
-
     /**
      * The attributes that are mass assignable.
      *
@@ -26,12 +22,10 @@ class Student extends Model
         'first_name',
         'middle_name',
         'last_name',
-        'sex',
         'gender',
         'course_id',
         'year_level_id',
         'section_id',
-        'status',
         'privacy_consent_at',
     ];
 
@@ -59,26 +53,31 @@ class Student extends Model
 
     /**
      * Get the student's course.
+     *
+     * Includes soft-deleted (archived) courses — deactivating/archiving a
+     * course must not break historical student/assessment views.
      */
     public function course(): BelongsTo
     {
-        return $this->belongsTo(Course::class);
+        return $this->belongsTo(Course::class)->withTrashed();
     }
 
     /**
-     * Get the student's year level.
+     * Get the student's year level. Includes archived year levels — see
+     * course() above for why.
      */
     public function yearLevel(): BelongsTo
     {
-        return $this->belongsTo(YearLevel::class);
+        return $this->belongsTo(YearLevel::class)->withTrashed();
     }
 
     /**
-     * Get the student's section.
+     * Get the student's section. Includes archived sections — see
+     * course() above for why.
      */
     public function section(): BelongsTo
     {
-        return $this->belongsTo(Section::class);
+        return $this->belongsTo(Section::class)->withTrashed();
     }
 
     /**

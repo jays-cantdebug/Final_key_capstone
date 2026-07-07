@@ -45,7 +45,7 @@
             <tr>
                 <td><strong>Overall</strong></td>
                 <td></td>
-                <td><strong>{{ $assessment->result->overall_status }}</strong></td>
+                <td><strong>{{ $assessment->result->highestSeverityLevel() }}</strong></td>
             </tr>
         </tbody>
     </table>

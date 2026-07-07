@@ -21,7 +21,7 @@ class SystemNotificationService
     {
         return SystemNotification::query()
             ->where('user_id', $user->id)
-            ->with(['assessment.student', 'assessment.result'])
+            ->with(['assessment.student', 'assessment.result', 'flaggedCase'])
             ->orderByDesc('created_at')
             ->paginate($perPage);
     }

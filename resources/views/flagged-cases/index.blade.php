@@ -7,9 +7,21 @@
         'Extremely Severe' => 'bg-[#FCEBEB] text-[#791F1F]',
     ];
 
-    $statusBadgeClasses = [
-        'Open' => 'bg-rose-100 text-rose-700',
-        'Resolved' => 'bg-emerald-100 text-emerald-700',
+    $flagTypeBadgeClasses = [
+        'counseling_endorsement' => 'bg-[#E3F4F1] text-[#0F5C50]',
+        'awareness_notification' => 'bg-[#F1E9FB] text-[#4A1E82]',
+    ];
+
+    $flagTypeLabels = [
+        'counseling_endorsement' => 'Endorsement',
+        'awareness_notification' => 'Notification',
+    ];
+
+    $tabs = [
+        'all' => 'All',
+        'endorsement' => 'Endorsement',
+        'notification' => 'Notification',
+        'normal' => 'Normal',
     ];
 @endphp
 
@@ -18,7 +30,7 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Flagged Students</p>
-                <h2 class="text-2xl font-semibold text-slate-900">Flagged Cases</h2>
+                <h2 class="text-2xl font-semibold text-slate-900">Student Flagged</h2>
             </div>
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('reports.flagged-students.print', $filters) }}" target="_blank" class="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
@@ -31,8 +43,21 @@
         </div>
     </x-slot>
 
+    <div class="mb-6 flex gap-2 border-b border-slate-200">
+        @foreach ($tabs as $key => $label)
+            <a
+                href="{{ route('flagged-cases.index', array_merge(array_diff_key($filters, ['tab' => null]), ['tab' => $key])) }}"
+                class="border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === $key ? 'border-[#1F6B3A] text-[#1F6B3A]' : 'border-transparent text-slate-500 hover:text-slate-700' }}"
+            >
+                {{ $label }}
+            </a>
+        @endforeach
+    </div>
+
     <div class="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <form method="GET" action="{{ route('flagged-cases.index') }}" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <input type="hidden" name="tab" value="{{ $activeTab }}" />
+
             <div>
                 <x-input-label for="student_number" :value="__('Student Number')" />
                 <x-text-input id="student_number" name="student_number" type="text" class="mt-1 block w-full" value="{{ $filters['student_number'] ?? '' }}" placeholder="Search by student number" />
@@ -80,7 +105,7 @@
 
             <div class="flex items-end gap-3 lg:col-span-3">
                 <x-secondary-button type="submit">{{ __('Filter') }}</x-secondary-button>
-                <a href="{{ route('flagged-cases.index') }}" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50">
+                <a href="{{ route('flagged-cases.index', ['tab' => $activeTab]) }}" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50">
                     {{ __('Clear') }}
                 </a>
             </div>
@@ -93,43 +118,60 @@
                 <thead class="bg-slate-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Student</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Student #</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Course / Year / Section</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Assessment Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Highest Severity</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Course</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Stress</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Anxiety</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Depression</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Flag</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Date</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200 bg-white">
-                    @forelse ($flaggedCases as $flaggedCase)
+                    @forelse ($assessments as $assessment)
+                        @php
+                            $priorityFlag = $assessment->priorityFlag();
+                            $secondaryCount = $assessment->secondaryFlagCount();
+                        @endphp
                         <tr>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">{{ $flaggedCase->assessment->student->full_name }}</td>
-                            <td class="px-6 py-4 text-sm text-slate-700">{{ $flaggedCase->assessment->student->student_number }}</td>
-                            <td class="px-6 py-4 text-sm text-slate-700">
-                                {{ $flaggedCase->assessment->student->course?->course_code }} &mdash;
-                                {{ $flaggedCase->assessment->student->yearLevel?->label }} &mdash;
-                                {{ $flaggedCase->assessment->student->section?->section_name }}
+                            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">
+                                {{ $assessment->student->full_name }}
+                                <div class="text-xs font-normal text-slate-500">{{ $assessment->student->student_number }} &mdash; {{ $assessment->student->yearLevel?->label }} / {{ $assessment->student->section?->section_name }}</div>
                             </td>
-                            <td class="px-6 py-4 text-sm text-slate-700">{{ $flaggedCase->assessment->submitted_at->format('M d, Y') }}</td>
+                            <td class="px-6 py-4 text-sm text-slate-700">{{ $assessment->student->course?->course_code }}</td>
                             <td class="px-6 py-4 text-sm">
-                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $severityBadgeClasses[$flaggedCase->highest_severity] ?? 'bg-slate-200 text-slate-600' }}">
-                                    {{ $flaggedCase->highest_severity }}
-                                </span>
+                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $severityBadgeClasses[$assessment->result?->stress_level] ?? 'bg-slate-200 text-slate-600' }}">{{ $assessment->result?->stress_level ?? 'N/A' }}</span>
                             </td>
                             <td class="px-6 py-4 text-sm">
-                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $statusBadgeClasses[$flaggedCase->status] ?? 'bg-slate-200 text-slate-600' }}">
-                                    {{ $flaggedCase->status }}
-                                </span>
+                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $severityBadgeClasses[$assessment->result?->anxiety_level] ?? 'bg-slate-200 text-slate-600' }}">{{ $assessment->result?->anxiety_level ?? 'N/A' }}</span>
                             </td>
+                            <td class="px-6 py-4 text-sm">
+                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $severityBadgeClasses[$assessment->result?->depression_level] ?? 'bg-slate-200 text-slate-600' }}">{{ $assessment->result?->depression_level ?? 'N/A' }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-sm">
+                                @if ($priorityFlag)
+                                    <span
+                                        class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold {{ $flagTypeBadgeClasses[$priorityFlag->flag_type] }}"
+                                        @if ($secondaryCount > 0) title="Also has {{ $secondaryCount }} additional flag(s)" @endif
+                                    >
+                                        {{ $flagTypeLabels[$priorityFlag->flag_type] }}
+                                        @if ($secondaryCount > 0)
+                                            <span class="opacity-75">+{{ $secondaryCount }} Notification</span>
+                                        @endif
+                                    </span>
+                                @else
+                                    <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">Normal</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-700">{{ $assessment->submitted_at->format('M d, Y') }}</td>
                             <td class="px-6 py-4 text-right text-sm">
-                                <a href="{{ route('assessments.show', $flaggedCase->assessment_id) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View Assessment</a>
+                                <a href="{{ route('assessments.show', $assessment) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-12 text-center text-sm text-slate-500">
-                                No flagged cases found.
+                            <td colspan="8" class="px-6 py-12 text-center text-sm text-slate-500">
+                                No flagged students match these filters.
                             </td>
                         </tr>
                     @endforelse
@@ -138,7 +180,7 @@
         </div>
 
         <div class="border-t border-slate-200 px-6 py-4">
-            {{ $flaggedCases->links() }}
+            {{ $assessments->links() }}
         </div>
     </div>
 </x-app-layout>

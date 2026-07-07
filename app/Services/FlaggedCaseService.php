@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Assessment;
+use App\Models\ClassificationThreshold;
 use App\Models\Course;
+use App\Models\DassResult;
 use App\Models\FlaggedCase;
 use App\Models\Section;
 use App\Models\User;
@@ -17,77 +19,138 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Notification;
 
 /**
- * Creates Flagged Cases for assessments that meet or exceed the
- * Notification Severity Threshold, notifies all Guidance Counselor
- * accounts, and supports the Flagged Students listing/search/filter
- * feature.
+ * Evaluates a completed assessment's DASS-21 result against the
+ * differentiated flagging rules and creates the appropriate Flagged Case
+ * row(s), notifying Guidance Counselors accordingly. Also supports the
+ * Flagged Students listing/search/filter feature.
  */
 class FlaggedCaseService
 {
+    private const SEVERE_LEVELS = [
+        ClassificationThreshold::SEVERITY_SEVERE,
+        ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE,
+    ];
+
     public function __construct(private readonly DatabaseManager $database)
     {
     }
 
     /**
-     * Create a Flagged Case for a newly-submitted, flagged assessment and
-     * notify every active Guidance Counselor. Idempotent: does nothing if
-     * a Flagged Case already exists for this assessment.
+     * Evaluate each subscale independently and create a Flagged Case for
+     * every one that meets or exceeds Severe:
+     *   - Stress Severe/Extremely Severe -> Counseling Endorsement.
+     *   - Depression and/or Anxiety Severe/Extremely Severe -> Awareness
+     *     Notification (evaluated independently of Stress and of each
+     *     other, so a single assessment may produce up to three rows).
+     * Idempotent per (assessment, flag_type, triggering_subscale); only
+     * newly-created rows trigger a notification.
      *
-     * @param array{overall_status: string} $scores
+     * @return Collection<int, FlaggedCase>
      */
-    public function createForFlaggedAssessment(Assessment $assessment, array $scores): FlaggedCase
+    public function evaluateAndFlag(Assessment $assessment, DassResult $result): Collection
     {
-        return $this->database->transaction(function () use ($assessment, $scores): FlaggedCase {
-            $flaggedCase = FlaggedCase::query()->firstOrCreate(
-                ['assessment_id' => $assessment->id],
+        return $this->database->transaction(function () use ($assessment, $result): Collection {
+            $candidates = [
                 [
-                    'highest_severity' => $scores['overall_status'],
-                    'status' => FlaggedCase::STATUS_OPEN,
-                    'flagged_at' => now(),
-                ]
-            );
+                    'level' => $result->stress_level,
+                    'flag_type' => FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT,
+                    'triggering_subscale' => FlaggedCase::SUBSCALE_STRESS,
+                ],
+                [
+                    'level' => $result->depression_level,
+                    'flag_type' => FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION,
+                    'triggering_subscale' => FlaggedCase::SUBSCALE_DEPRESSION,
+                ],
+                [
+                    'level' => $result->anxiety_level,
+                    'flag_type' => FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION,
+                    'triggering_subscale' => FlaggedCase::SUBSCALE_ANXIETY,
+                ],
+            ];
 
-            $guidanceCounselors = User::query()
-                ->where('is_active', true)
-                ->whereHas('role', fn ($query) => $query->where('name', 'guidance_counselor'))
-                ->get();
+            $flaggedCases = Collection::make();
 
-            Notification::send($guidanceCounselors, new FlaggedAssessmentNotification($assessment));
+            foreach ($candidates as $candidate) {
+                if (! in_array($candidate['level'], self::SEVERE_LEVELS, true)) {
+                    continue;
+                }
 
-            return $flaggedCase;
+                $flaggedCase = FlaggedCase::query()->firstOrCreate(
+                    [
+                        'assessment_id' => $assessment->id,
+                        'flag_type' => $candidate['flag_type'],
+                        'triggering_subscale' => $candidate['triggering_subscale'],
+                    ],
+                    [
+                        'status' => FlaggedCase::STATUS_OPEN,
+                        'flagged_at' => now(),
+                    ]
+                );
+
+                $flaggedCases->push($flaggedCase);
+
+                if ($flaggedCase->wasRecentlyCreated) {
+                    $this->notifyGuidanceCounselors($flaggedCase);
+                }
+            }
+
+            return $flaggedCases;
         });
     }
 
+    private function notifyGuidanceCounselors(FlaggedCase $flaggedCase): void
+    {
+        $guidanceCounselors = User::query()
+            ->where('is_active', true)
+            ->whereHas('role', fn ($query) => $query->where('name', 'guidance_counselor'))
+            ->get();
+
+        Notification::send($guidanceCounselors, new FlaggedAssessmentNotification($flaggedCase));
+    }
+
     /**
-     * Paginate flagged cases, most recently flagged first, with optional
-     * search/filter by student number, course, year level, section, and
-     * assessment date range.
+     * Paginate assessments for the Flagged Students listing — one row per
+     * assessment (not per flagged_cases row), most recent first, with
+     * optional search/filter by student number, course, year level,
+     * section, and assessment date range, plus the All/Endorsement/
+     * Notification/Normal tab filter.
+     *
+     * `flaggedCases` is eager-loaded so `Assessment::priorityFlag()`/
+     * `secondaryFlagCount()` never issue an extra query per row.
      *
      * @param array<string, mixed> $filters
      */
     public function paginate(array $filters, int $perPage = 10): LengthAwarePaginator
     {
-        return FlaggedCase::query()
-            ->with(['assessment.student.course', 'assessment.student.yearLevel', 'assessment.student.section'])
+        $tab = $filters['tab'] ?? 'all';
+
+        return Assessment::query()
+            ->with(['student.course', 'student.yearLevel', 'student.section', 'result', 'flaggedCases'])
+            ->when($tab === 'endorsement', function ($query) {
+                $query->whereHas('flaggedCases', fn ($q) => $q->where('flag_type', FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT));
+            })
+            ->when($tab === 'notification', function ($query) {
+                $query->whereHas('flaggedCases', fn ($q) => $q->where('flag_type', FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION))
+                    ->whereDoesntHave('flaggedCases', fn ($q) => $q->where('flag_type', FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT));
+            })
+            ->when($tab === 'normal', function ($query) {
+                $query->whereDoesntHave('flaggedCases');
+            })
             ->when($filters['student_number'] ?? null, function ($query, string $value) {
-                $query->whereHas('assessment.student', fn ($q) => $q->where('student_number', 'like', "%{$value}%"));
+                $query->whereHas('student', fn ($q) => $q->where('student_number', 'like', "%{$value}%"));
             })
             ->when($filters['course_id'] ?? null, function ($query, $value) {
-                $query->whereHas('assessment.student', fn ($q) => $q->where('course_id', $value));
+                $query->whereHas('student', fn ($q) => $q->where('course_id', $value));
             })
             ->when($filters['year_level_id'] ?? null, function ($query, $value) {
-                $query->whereHas('assessment.student', fn ($q) => $q->where('year_level_id', $value));
+                $query->whereHas('student', fn ($q) => $q->where('year_level_id', $value));
             })
             ->when($filters['section_id'] ?? null, function ($query, $value) {
-                $query->whereHas('assessment.student', fn ($q) => $q->where('section_id', $value));
+                $query->whereHas('student', fn ($q) => $q->where('section_id', $value));
             })
-            ->when($filters['date_from'] ?? null, function ($query, $value) {
-                $query->whereHas('assessment', fn ($q) => $q->whereDate('submitted_at', '>=', $value));
-            })
-            ->when($filters['date_to'] ?? null, function ($query, $value) {
-                $query->whereHas('assessment', fn ($q) => $q->whereDate('submitted_at', '<=', $value));
-            })
-            ->orderByDesc('flagged_at')
+            ->when($filters['date_from'] ?? null, fn ($query, $value) => $query->whereDate('submitted_at', '>=', $value))
+            ->when($filters['date_to'] ?? null, fn ($query, $value) => $query->whereDate('submitted_at', '<=', $value))
+            ->orderByDesc('submitted_at')
             ->paginate($perPage)
             ->withQueryString();
     }

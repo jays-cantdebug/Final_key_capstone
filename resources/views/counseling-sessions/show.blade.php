@@ -64,7 +64,7 @@
                         <dd class="mt-2 text-sm font-medium text-slate-900">
                             @if ($session->assessment)
                                 <a href="{{ route('assessments.show', $session->assessment) }}" class="text-[#1F6B3A] underline">
-                                    {{ $session->assessment->submitted_at->format('M d, Y') }} &mdash; {{ $session->assessment->result?->overall_status ?? 'N/A' }}
+                                    {{ $session->assessment->submitted_at->format('M d, Y') }} &mdash; {{ $session->assessment->result?->highestSeverityLevel() ?? 'N/A' }}
                                 </a>
                             @else
                                 None

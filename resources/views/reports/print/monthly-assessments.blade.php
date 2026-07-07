@@ -14,7 +14,7 @@
                     <td>{{ $assessment->submitted_at->format('M d, Y g:i A') }}</td>
                     <td>{{ $assessment->student->full_name }}</td>
                     <td>{{ $assessment->psychometrician->name }}</td>
-                    <td>{{ $assessment->result?->overall_status ?? 'N/A' }}</td>
+                    <td>{{ $assessment->result?->highestSeverityLevel() ?? 'N/A' }}</td>
                 </tr>
             @empty
                 <tr>

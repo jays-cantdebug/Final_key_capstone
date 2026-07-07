@@ -45,9 +45,13 @@ class DassResponse extends Model
 
     /**
      * Get the question this response answers.
+     *
+     * Includes soft-deleted (archived) questions — a submitted response
+     * must remain fully readable (Assessment Result, Reports) even if the
+     * question is later removed from the live questionnaire.
      */
     public function question(): BelongsTo
     {
-        return $this->belongsTo(DassQuestion::class, 'dass_question_id');
+        return $this->belongsTo(DassQuestion::class, 'dass_question_id')->withTrashed();
     }
 }

@@ -59,10 +59,14 @@ class CounselingSession extends Model
 
     /**
      * Get the student this session was conducted with.
+     *
+     * Includes archived (soft-deleted) students — a student being
+     * archived after a counseling session was logged must not break that
+     * session's historical record.
      */
     public function student(): BelongsTo
     {
-        return $this->belongsTo(Student::class);
+        return $this->belongsTo(Student::class)->withTrashed();
     }
 
     /**

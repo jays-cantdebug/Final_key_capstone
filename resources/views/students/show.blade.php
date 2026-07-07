@@ -27,15 +27,12 @@
                     <h3 class="mt-2 text-3xl font-semibold text-slate-900">{{ $student->full_name }}</h3>
                     <p class="mt-2 text-sm text-slate-500">{{ $student->course?->course_name }}</p>
                 </div>
-                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $student->status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600' }}">
-                    {{ $student->status }}
-                </span>
             </div>
 
             <dl class="mt-6 grid gap-4 sm:grid-cols-2">
                 <div class="rounded-2xl bg-slate-50 p-4">
-                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Sex</dt>
-                    <dd class="mt-2 text-sm font-medium text-slate-900">{{ $student->sex }}</dd>
+                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Gender</dt>
+                    <dd class="mt-2 text-sm font-medium text-slate-900">{{ $student->gender }}</dd>
                 </div>
                 <div class="rounded-2xl bg-slate-50 p-4">
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Year Level</dt>

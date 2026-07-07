@@ -1,3 +1,8 @@
+## NORMI Deployment Notes
+
+- Before running `php artisan migrate:fresh --seed` (or `db:seed`), set `ADMIN_DEFAULT_PASSWORD` in `.env` — `UserSeeder` requires it and throws if it's unset; there is no hardcoded fallback password.
+- **Change the default Psychometrician password immediately after first login.**
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">

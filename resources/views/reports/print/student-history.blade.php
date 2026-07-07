@@ -29,7 +29,7 @@
                         <td>{{ $assessment->result?->depression_level ?? 'N/A' }}</td>
                         <td>{{ $assessment->result?->anxiety_level ?? 'N/A' }}</td>
                         <td>{{ $assessment->result?->stress_level ?? 'N/A' }}</td>
-                        <td>{{ $assessment->result?->overall_status ?? 'N/A' }}</td>
+                        <td>{{ $assessment->result?->highestSeverityLevel() ?? 'N/A' }}</td>
                     </tr>
                 @empty
                     <tr>

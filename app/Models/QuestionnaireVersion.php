@@ -48,10 +48,14 @@ class QuestionnaireVersion extends Model
 
     /**
      * Get the questionnaire this version belongs to.
+     *
+     * Includes soft-deleted (archived) questionnaires — "Archived
+     * questionnaires must remain available for historical assessments,"
+     * so this must never silently return null.
      */
     public function questionnaire(): BelongsTo
     {
-        return $this->belongsTo(Questionnaire::class);
+        return $this->belongsTo(Questionnaire::class)->withTrashed();
     }
 
     /**

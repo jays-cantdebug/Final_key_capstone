@@ -12,7 +12,7 @@ use Illuminate\Support\ServiceProvider;
 /**
  * Binds the AI Prediction Module's interface, factory, and service into
  * the container. AIProviderInterface always resolves to whichever
- * provider AIProviderFactory selects via config('ai.default'), so
+ * provider AIProviderFactory selects via config('ai.provider'), so
  * switching providers never requires changing consuming code.
  */
 class AIServiceProvider extends ServiceProvider

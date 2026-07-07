@@ -9,6 +9,7 @@ use App\Models\CounselingSession;
 use App\Models\Course;
 use App\Models\DassQuestion;
 use App\Models\FlaggedCase;
+use App\Models\PredictionFeedback;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireVersion;
 use App\Models\Section;
@@ -46,6 +47,18 @@ class AuditableObserver
             return;
         }
 
+        if ($model instanceof PredictionFeedback) {
+            $this->auditLogService->record(
+                'Feedback Loop',
+                'Feedback Loop Submission',
+                $model->getKey(),
+                null,
+                $this->sanitize($model->getAttributes())
+            );
+
+            return;
+        }
+
         $this->auditLogService->record(
             $this->moduleNameFor($model),
             'Create',
@@ -65,6 +78,18 @@ class AuditableObserver
             $this->auditLogService->record(
                 'Questionnaire Management',
                 'Questionnaire Activation',
+                $model->getKey(),
+                $this->sanitize($model->getOriginal()),
+                $this->sanitize($model->getChanges())
+            );
+
+            return;
+        }
+
+        if ($model instanceof PredictionFeedback) {
+            $this->auditLogService->record(
+                'Feedback Loop',
+                'Feedback Loop Submission',
                 $model->getKey(),
                 $this->sanitize($model->getOriginal()),
                 $this->sanitize($model->getChanges())

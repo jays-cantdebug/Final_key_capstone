@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\DashboardFilterRequest;
+use App\Models\Course;
+use App\Models\YearLevel;
 use App\Services\Auth\DashboardRouteService;
 use App\Services\DashboardService;
 use Illuminate\Contracts\View\View;
@@ -23,9 +26,16 @@ class DashboardController extends Controller
         return redirect()->route($this->dashboardRouteService->resolve($request->user()));
     }
 
-    public function psychometrician(): View
+    public function psychometrician(DashboardFilterRequest $request): View
     {
-        return view('psychometrician.dashboard');
+        $filters = $request->validated();
+
+        return view('psychometrician.dashboard', [
+            ...$this->dashboardService->psychometricianStats($filters),
+            'filters' => $filters,
+            'courses' => Course::query()->where('status', Course::STATUS_ACTIVE)->orderBy('course_code')->get(),
+            'yearLevels' => YearLevel::query()->where('status', YearLevel::STATUS_ACTIVE)->orderBy('display_order')->get(),
+        ]);
     }
 
     public function guidanceCounselor(): View

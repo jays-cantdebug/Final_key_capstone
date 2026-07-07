@@ -7,11 +7,23 @@
         'Extremely Severe' => 'bg-[#FCEBEB] text-[#791F1F]',
     ];
 
+    $flagTypeBadgeClasses = [
+        'counseling_endorsement' => 'bg-[#E3F4F1] text-[#0F5C50]',
+        'awareness_notification' => 'bg-[#F1E9FB] text-[#4A1E82]',
+    ];
+
+    $flagTypeLabels = [
+        'counseling_endorsement' => 'Counseling Endorsement Required',
+        'awareness_notification' => 'Awareness Notification',
+    ];
+
     $subscales = [
         ['label' => 'Depression', 'score' => $assessment->result->depression_final_score, 'level' => $assessment->result->depression_level],
         ['label' => 'Anxiety', 'score' => $assessment->result->anxiety_final_score, 'level' => $assessment->result->anxiety_level],
         ['label' => 'Stress', 'score' => $assessment->result->stress_final_score, 'level' => $assessment->result->stress_level],
     ];
+
+    $feedback = $assessment->predictionFeedback;
 @endphp
 
 <x-app-layout>
@@ -22,9 +34,6 @@
                 <h2 class="text-2xl font-semibold text-slate-900">{{ $assessment->student->full_name }}</h2>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $severityBadgeClasses[$assessment->result->overall_status] ?? 'bg-slate-200 text-slate-600' }}">
-                    Overall: {{ $assessment->result->overall_status }}
-                </span>
                 <a href="{{ route('reports.assessment.print', $assessment) }}" target="_blank" class="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                     Print Report
                 </a>
@@ -41,9 +50,14 @@
         </div>
     @endif
 
-    @if ($assessment->result->overall_flag)
-        <div class="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-            This assessment meets the notification severity threshold and has been flagged for Guidance Counselor follow-up.
+    @if ($assessment->flaggedCases->isNotEmpty())
+        <div class="mb-6 flex flex-wrap gap-2">
+            @foreach ($assessment->flaggedCases as $flaggedCase)
+                <span class="inline-flex rounded-full px-4 py-2 text-sm font-semibold {{ $flagTypeBadgeClasses[$flaggedCase->flag_type] ?? 'bg-slate-200 text-slate-600' }}">
+                    {{ $flagTypeLabels[$flaggedCase->flag_type] ?? $flaggedCase->flag_type }}
+                    <span class="ml-1 font-normal opacity-75">({{ ucfirst($flaggedCase->triggering_subscale) }})</span>
+                </span>
+            @endforeach
         </div>
     @endif
 
@@ -80,7 +94,10 @@
             </div>
 
             <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 class="text-lg font-semibold text-slate-900">DASS-21 Scores</h3>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-slate-900">DASS-21 Scores</h3>
+                    <p class="text-xs text-slate-500">Classified by: {{ $assessment->result->ai_provider }}</p>
+                </div>
                 <div class="mt-4 grid gap-4 sm:grid-cols-3">
                     @foreach ($subscales as $subscale)
                         <div class="rounded-2xl bg-slate-50 p-4">
@@ -92,6 +109,11 @@
                         </div>
                     @endforeach
                 </div>
+                @if ($assessment->result->used_non_official_thresholds)
+                    <span class="mt-4 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800" title="This assessment was classified while non-official (overridden) DASS-21 thresholds were in effect.">
+                        ⚠ Non-Official Thresholds
+                    </span>
+                @endif
             </div>
 
             <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -121,28 +143,94 @@
             </div>
         </div>
 
-        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 class="text-lg font-semibold text-slate-900">AI Prediction</h3>
-            <p class="mt-1 text-xs text-slate-500">Powered by the AI Prediction Module (not yet integrated)</p>
+        <div class="space-y-6">
+            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 class="text-lg font-semibold text-slate-900">Correct Prediction</h3>
+                <p class="mt-1 text-xs text-slate-500">Confirm the AI's classification as accurate, or correct it. This does not change the scores or flags already recorded above.</p>
 
-            <dl class="mt-4 space-y-4">
-                <div>
-                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Mental Health Status</dt>
-                    <dd class="mt-1 text-sm font-medium text-slate-900">{{ $aiPrediction['mentalHealthStatus'] }}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Risk Level</dt>
-                    <dd class="mt-1 text-sm font-medium text-slate-900">{{ $aiPrediction['riskLevel'] }}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Interpretation</dt>
-                    <dd class="mt-1 text-sm text-slate-700">{{ $aiPrediction['interpretation'] }}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Recommendation</dt>
-                    <dd class="mt-1 text-sm text-slate-700">{{ $aiPrediction['recommendation'] }}</dd>
-                </div>
-            </dl>
+                @if ($feedback)
+                    <div class="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                        <p class="font-semibold text-slate-900">
+                            {{ $feedback->is_confirmed ? 'Confirmed' : 'Corrected' }} by {{ $feedback->psychometrician->name }}
+                        </p>
+                        @if (! $feedback->is_confirmed)
+                            <ul class="mt-2 space-y-1 text-slate-600">
+                                @if ($feedback->corrected_depression_level)
+                                    <li>Depression &rarr; {{ $feedback->corrected_depression_level }}</li>
+                                @endif
+                                @if ($feedback->corrected_anxiety_level)
+                                    <li>Anxiety &rarr; {{ $feedback->corrected_anxiety_level }}</li>
+                                @endif
+                                @if ($feedback->corrected_stress_level)
+                                    <li>Stress &rarr; {{ $feedback->corrected_stress_level }}</li>
+                                @endif
+                            </ul>
+                        @endif
+                        @if ($feedback->notes)
+                            <p class="mt-2 italic text-slate-600">"{{ $feedback->notes }}"</p>
+                        @endif
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('assessments.feedback.store', $assessment) }}" class="mt-4 space-y-4">
+                    @csrf
+
+                    @php
+                        $severityOptions = ['Normal', 'Mild', 'Moderate', 'Severe', 'Extremely Severe'];
+                    @endphp
+
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <div>
+                            <x-input-label for="corrected_depression_level" :value="__('Depression')" />
+                            <select id="corrected_depression_level" name="corrected_depression_level" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-[#1F6B3A] focus:ring-[#1F6B3A]">
+                                <option value="">Unchanged</option>
+                                @foreach ($severityOptions as $level)
+                                    <option value="{{ $level }}" @selected(old('corrected_depression_level', $feedback?->corrected_depression_level) === $level)>{{ $level }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <x-input-label for="corrected_anxiety_level" :value="__('Anxiety')" />
+                            <select id="corrected_anxiety_level" name="corrected_anxiety_level" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-[#1F6B3A] focus:ring-[#1F6B3A]">
+                                <option value="">Unchanged</option>
+                                @foreach ($severityOptions as $level)
+                                    <option value="{{ $level }}" @selected(old('corrected_anxiety_level', $feedback?->corrected_anxiety_level) === $level)>{{ $level }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <x-input-label for="corrected_stress_level" :value="__('Stress')" />
+                            <select id="corrected_stress_level" name="corrected_stress_level" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-[#1F6B3A] focus:ring-[#1F6B3A]">
+                                <option value="">Unchanged</option>
+                                @foreach ($severityOptions as $level)
+                                    <option value="{{ $level }}" @selected(old('corrected_stress_level', $feedback?->corrected_stress_level) === $level)>{{ $level }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <x-input-label for="notes" :value="__('Notes (optional)')" />
+                        <textarea id="notes" name="notes" rows="3" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-[#1F6B3A] focus:ring-[#1F6B3A]">{{ old('notes', $feedback?->notes) }}</textarea>
+                    </div>
+
+                    <x-input-error :messages="$errors->get('corrected_depression_level')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('corrected_anxiety_level')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('corrected_stress_level')" class="mt-2" />
+
+                    <div class="flex flex-wrap gap-3">
+                        <button type="submit" name="is_confirmed" value="1" class="inline-flex items-center justify-center rounded-2xl bg-[#1F6B3A] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#185828]">
+                            Confirm
+                        </button>
+                        <button type="submit" name="is_confirmed" value="0" class="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                            Correct
+                        </button>
+                        <a href="{{ route('assessments.show', $assessment) }}" class="inline-flex items-center justify-center rounded-2xl px-4 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-50">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </x-app-layout>

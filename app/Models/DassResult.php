@@ -28,8 +28,8 @@ class DassResult extends Model
         'depression_level',
         'anxiety_level',
         'stress_level',
-        'overall_status',
-        'overall_flag',
+        'ai_provider',
+        'used_non_official_thresholds',
     ];
 
     /**
@@ -46,7 +46,7 @@ class DassResult extends Model
             'depression_final_score' => 'integer',
             'anxiety_final_score' => 'integer',
             'stress_final_score' => 'integer',
-            'overall_flag' => 'boolean',
+            'used_non_official_thresholds' => 'boolean',
         ];
     }
 
@@ -56,5 +56,26 @@ class DassResult extends Model
     public function assessment(): BelongsTo
     {
         return $this->belongsTo(Assessment::class);
+    }
+
+    /**
+     * The highest severity level across the three subscales, computed on
+     * the fly rather than stored — per the capstone's Assessment Result
+     * design, this is a display convenience only, never a separate AI
+     * output or database column.
+     */
+    public function highestSeverityLevel(): string
+    {
+        $rank = [
+            ClassificationThreshold::SEVERITY_NORMAL => 0,
+            ClassificationThreshold::SEVERITY_MILD => 1,
+            ClassificationThreshold::SEVERITY_MODERATE => 2,
+            ClassificationThreshold::SEVERITY_SEVERE => 3,
+            ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE => 4,
+        ];
+
+        return collect([$this->depression_level, $this->anxiety_level, $this->stress_level])
+            ->sortByDesc(fn (string $level): int => $rank[$level] ?? 0)
+            ->first();
     }
 }

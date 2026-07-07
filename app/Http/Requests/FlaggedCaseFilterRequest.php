@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class FlaggedCaseFilterRequest extends FormRequest
 {
@@ -24,6 +25,7 @@ class FlaggedCaseFilterRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'tab' => ['nullable', Rule::in(['all', 'endorsement', 'notification', 'normal'])],
             'student_number' => ['nullable', 'string', 'max:50'],
             'course_id' => ['nullable', 'integer', 'exists:courses,id'],
             'year_level_id' => ['nullable', 'integer', 'exists:year_levels,id'],

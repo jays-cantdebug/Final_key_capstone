@@ -36,11 +36,10 @@ class StudentSeeder extends Seeder
                 'first_name' => 'Maria',
                 'middle_name' => 'Santos',
                 'last_name' => 'Reyes',
-                'sex' => 'Female',
+                'gender' => 'Female',
                 'course_id' => $course->id,
                 'year_level_id' => $yearLevel->id,
                 'section_id' => $section->id,
-                'status' => Student::STATUS_ACTIVE,
             ]
         );
 
@@ -50,11 +49,10 @@ class StudentSeeder extends Seeder
                 'first_name' => 'John',
                 'middle_name' => null,
                 'last_name' => 'Cruz',
-                'sex' => 'Male',
+                'gender' => 'Male',
                 'course_id' => $course->id,
                 'year_level_id' => $yearLevel->id,
                 'section_id' => $section->id,
-                'status' => Student::STATUS_ACTIVE,
             ]
         );
     }

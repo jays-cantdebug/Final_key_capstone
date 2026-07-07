@@ -10,12 +10,13 @@ return [
     |--------------------------------------------------------------------------
     |
     | The AI provider currently resolved by AIProviderFactory. Supported:
-    | "placeholder" (default, no external calls) and "claude" (scaffold
+    | "rule_based" (default — classifies each DASS-21 subscale against the
+    | official classification_thresholds table) and "claude" (scaffold
     | only — throws AIProviderNotImplementedException until implemented).
     |
     */
 
-    'default' => env('AI_PROVIDER', 'placeholder'),
+    'provider' => env('AI_PROVIDER', 'rule_based'),
 
     /*
     |--------------------------------------------------------------------------
@@ -24,7 +25,7 @@ return [
     */
 
     'providers' => [
-        'placeholder' => [],
+        'rule_based' => [],
 
         'claude' => [
             'api_key' => env('CLAUDE_API_KEY'),

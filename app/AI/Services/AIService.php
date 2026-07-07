@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\AI\Services;
 
 use App\AI\Contracts\AIProviderInterface;
+use App\AI\DTOs\AIClassificationResult;
 use App\AI\DTOs\AssessmentPayload;
 
 /**
- * Entry point controllers use to obtain an AI prediction. Depends only on
- * AIProviderInterface via dependency injection; controllers must never
- * instantiate an AI provider directly.
+ * Entry point controllers/services use to obtain an AI classification.
+ * Depends only on AIProviderInterface via dependency injection; callers
+ * must never instantiate an AI provider directly.
  */
 class AIService
 {
@@ -18,11 +19,8 @@ class AIService
     {
     }
 
-    /**
-     * @return array{mentalHealthStatus: string, riskLevel: string, interpretation: string, recommendation: string}
-     */
-    public function predict(AssessmentPayload $payload): array
+    public function classify(AssessmentPayload $payload): AIClassificationResult
     {
-        return $this->provider->predict($payload);
+        return $this->provider->classify($payload);
     }
 }

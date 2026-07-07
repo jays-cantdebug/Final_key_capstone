@@ -23,8 +23,9 @@ class FlaggedCaseController extends Controller
         $filters = $request->validated();
 
         return view('flagged-cases.index', [
-            'flaggedCases' => $this->flaggedCaseService->paginate($filters),
+            'assessments' => $this->flaggedCaseService->paginate($filters),
             'filters' => $filters,
+            'activeTab' => $filters['tab'] ?? 'all',
             'courses' => $this->flaggedCaseService->allCourses(),
             'yearLevels' => $this->flaggedCaseService->allYearLevels(),
             'sections' => $this->flaggedCaseService->allSections(),

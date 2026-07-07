@@ -10,7 +10,7 @@
             <option value="">No related assessment</option>
             @foreach ($assessments as $assessment)
                 <option value="{{ $assessment->id }}" @selected((string) old('assessment_id', $session?->assessment_id) === (string) $assessment->id)>
-                    {{ $assessment->submitted_at->format('M d, Y g:i A') }} &mdash; {{ $assessment->result?->overall_status ?? 'N/A' }}
+                    {{ $assessment->submitted_at->format('M d, Y g:i A') }} &mdash; {{ $assessment->result?->highestSeverityLevel() ?? 'N/A' }}
                 </option>
             @endforeach
         </select>

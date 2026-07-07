@@ -63,8 +63,8 @@
                             <td class="px-6 py-4 text-sm font-medium text-slate-900">{{ $assessment->student->full_name }}</td>
                             <td class="px-6 py-4 text-sm text-slate-700">{{ $assessment->psychometrician->name }}</td>
                             <td class="px-6 py-4 text-sm">
-                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $severityBadgeClasses[$assessment->result?->overall_status] ?? 'bg-slate-200 text-slate-600' }}">
-                                    {{ $assessment->result?->overall_status ?? 'N/A' }}
+                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $severityBadgeClasses[$assessment->result?->highestSeverityLevel()] ?? 'bg-slate-200 text-slate-600' }}">
+                                    {{ $assessment->result?->highestSeverityLevel() ?? 'N/A' }}
                                 </span>
                             </td>
                         </tr>

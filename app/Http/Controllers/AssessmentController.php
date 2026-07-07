@@ -4,19 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\AI\Services\AIService;
 use App\Models\Assessment;
 use Illuminate\Contracts\View\View;
 
 /**
  * Displays the final, read-only result of a completed assessment.
+ *
+ * The AI classification was already computed and persisted at submission
+ * time (see AssessmentService::submit()) — an assessment is read-only
+ * after submission, so this never re-classifies on view.
  */
 class AssessmentController extends Controller
 {
-    public function __construct(private readonly AIService $aiService)
-    {
-    }
-
     public function show(Assessment $assessment): View
     {
         $assessment->load([
@@ -27,11 +26,12 @@ class AssessmentController extends Controller
             'result',
             'responses.question',
             'psychometrician',
+            'flaggedCases',
+            'predictionFeedback',
         ]);
 
         return view('assessments.show', [
             'assessment' => $assessment,
-            'aiPrediction' => $this->aiService->predict($assessment->toAssessmentPayload()),
         ]);
     }
 }

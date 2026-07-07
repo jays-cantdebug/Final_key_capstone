@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\AI\Services\AIService;
 use App\Http\Requests\AssessmentResponseFormRequest;
 use App\Http\Requests\AssessmentStudentRequest;
 use App\Services\AssessmentService;
@@ -25,27 +24,17 @@ class AssessmentWizardController extends Controller
 
     public function __construct(
         private readonly AssessmentService $assessmentService,
-        private readonly AIService $aiService,
     ) {
     }
 
     /**
-     * STEP 1 (GET): Search for or begin registering a student.
+     * STEP 1 (GET): Show the student intake form. Every New Assessment is
+     * treated as the student's first consultation encounter at intake —
+     * there is no search for or reuse of an existing student record here.
      */
-    public function showStudentStep(Request $request): View
+    public function showStudentStep(): View
     {
-        $searched = $request->filled('student_number');
-        $foundStudent = null;
-
-        if ($searched) {
-            $foundStudent = $this->assessmentService->findStudentByNumber(
-                $request->string('student_number')->toString()
-            );
-        }
-
         return view('assessments.create.student', [
-            'foundStudent' => $foundStudent,
-            'searched' => $searched,
             'courses' => $this->assessmentService->activeCourses(),
             'yearLevels' => $this->assessmentService->activeYearLevels(),
             'sections' => $this->assessmentService->activeSections(),
@@ -53,18 +42,14 @@ class AssessmentWizardController extends Controller
     }
 
     /**
-     * STEP 1 (POST): Confirm an existing student or register a new one,
-     * then advance to Step 2.
+     * STEP 1 (POST): Register a new student, then advance to Step 2. A
+     * fresh `students` row is created on every submission of this step.
      */
     public function confirmStudent(AssessmentStudentRequest $request): RedirectResponse
     {
-        if ($request->filled('student_id')) {
-            $student = $this->assessmentService->recordConsentIfMissing(
-                $this->assessmentService->findStudentOrFail($request->integer('student_id'))
-            );
-        } else {
-            $student = $this->assessmentService->registerStudent($request->safe()->except(['privacy_consent']));
-        }
+        $student = $this->assessmentService->registerStudent(
+            $request->safe()->except(['privacy_consent', 'full_name'])
+        );
 
         $request->session()->put(self::SESSION_KEY.'.student_id', $student->id);
         $request->session()->forget(self::SESSION_KEY.'.responses');
@@ -162,9 +147,6 @@ class AssessmentWizardController extends Controller
         $student = $this->assessmentService->findStudentOrFail($studentId);
 
         $assessment = $this->assessmentService->submit($student, $version, $request->user(), $responses);
-
-        $assessment->load(['student', 'result', 'responses.question']);
-        $this->aiService->predict($assessment->toAssessmentPayload());
 
         $request->session()->forget(self::SESSION_KEY);
 

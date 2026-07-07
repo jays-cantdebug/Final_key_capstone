@@ -47,7 +47,7 @@
                         <tr>
                             <td class="px-4 py-2 text-sm text-slate-700">{{ $assessment->student->full_name }}</td>
                             <td class="px-4 py-2 text-sm text-slate-700">{{ $assessment->submitted_at->format('M d, Y') }}</td>
-                            <td class="px-4 py-2 text-sm text-slate-700">{{ $assessment->result?->overall_status ?? 'N/A' }}</td>
+                            <td class="px-4 py-2 text-sm text-slate-700">{{ $assessment->result?->highestSeverityLevel() ?? 'N/A' }}</td>
                             <td class="px-4 py-2 text-right text-sm">
                                 <a href="{{ route('assessments.show', $assessment) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
                             </td>

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\AI\DTOs\AssessmentPayload;
+use App\AI\Services\AIService;
 use App\Models\Assessment;
 use App\Models\Course;
 use App\Models\DassResult;
@@ -18,21 +20,20 @@ use Illuminate\Database\Eloquent\Collection;
 /**
  * Orchestrates the New Assessment workflow: locating or registering the
  * student, loading the active questionnaire version, and persisting the
- * completed assessment (responses + computed DASS-21 results) inside a
- * single database transaction.
+ * completed assessment (responses + computed scores + AI classification +
+ * differentiated flags/notifications) inside a single database
+ * transaction.
  */
 class AssessmentService
 {
     public function __construct(
         private readonly DatabaseManager $database,
         private readonly DassScoringService $scoringService,
+        private readonly AIService $aiService,
         private readonly FlaggedCaseService $flaggedCaseService,
+        private readonly StudentNumberGeneratorService $studentNumberGenerator,
+        private readonly ClassificationThresholdService $thresholdService,
     ) {
-    }
-
-    public function findStudentByNumber(string $studentNumber): ?Student
-    {
-        return Student::query()->where('student_number', $studentNumber)->first();
     }
 
     public function findStudentOrFail(int $id): Student
@@ -66,9 +67,7 @@ class AssessmentService
 
     /**
      * Register a new student for this assessment, recording privacy
-     * consent immediately. The legacy `sex` column is auto-populated by
-     * mirroring `gender`, since it remains NOT NULL and is otherwise
-     * unused going forward.
+     * consent immediately.
      *
      * @param array<string, mixed> $data
      */
@@ -77,25 +76,10 @@ class AssessmentService
         return $this->database->transaction(function () use ($data): Student {
             return Student::query()->create([
                 ...$data,
-                'sex' => $data['gender'],
-                'status' => Student::STATUS_ACTIVE,
+                'student_number' => $this->studentNumberGenerator->generate(),
                 'privacy_consent_at' => now(),
             ]);
         });
-    }
-
-    /**
-     * Record consent for an existing student who has not yet consented.
-     */
-    public function recordConsentIfMissing(Student $student): Student
-    {
-        if ($student->privacy_consent_at === null) {
-            $this->database->transaction(function () use ($student): void {
-                $student->update(['privacy_consent_at' => now()]);
-            });
-        }
-
-        return $student->refresh();
     }
 
     public function activeQuestionnaireVersion(): ?QuestionnaireVersion
@@ -107,8 +91,10 @@ class AssessmentService
     }
 
     /**
-     * Submit a completed assessment: save the assessment, its responses,
-     * and the computed DASS-21 results inside a single transaction.
+     * Submit a completed assessment inside a single transaction: save the
+     * assessment and its responses, compute the DASS-21 scores, pass them
+     * to the AI Service for classification, save the results, then
+     * evaluate and create any differentiated flagged cases/notifications.
      *
      * @param array<int, int> $responses Question ID => answer value (0-3).
      */
@@ -136,14 +122,24 @@ class AssessmentService
 
             $scores = $this->scoringService->score($version, $responses);
 
-            DassResult::query()->create([
+            $classification = $this->aiService->classify(new AssessmentPayload(
+                assessmentId: $assessment->id,
+                depressionFinalScore: $scores['depression_final_score'],
+                anxietyFinalScore: $scores['anxiety_final_score'],
+                stressFinalScore: $scores['stress_final_score'],
+            ));
+
+            $result = DassResult::query()->create([
                 'assessment_id' => $assessment->id,
                 ...$scores,
+                'depression_level' => $classification->depressionLevel,
+                'anxiety_level' => $classification->anxietyLevel,
+                'stress_level' => $classification->stressLevel,
+                'ai_provider' => $classification->provider,
+                'used_non_official_thresholds' => $this->thresholdService->isOverridden(),
             ]);
 
-            if ($scores['overall_flag']) {
-                $this->flaggedCaseService->createForFlaggedAssessment($assessment, $scores);
-            }
+            $this->flaggedCaseService->evaluateAndFlag($assessment, $result);
 
             return $assessment->refresh();
         });

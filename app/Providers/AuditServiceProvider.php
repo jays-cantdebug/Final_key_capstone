@@ -12,6 +12,7 @@ use App\Models\CounselingSession;
 use App\Models\Course;
 use App\Models\DassQuestion;
 use App\Models\FlaggedCase;
+use App\Models\PredictionFeedback;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireVersion;
 use App\Models\Section;
@@ -54,6 +55,7 @@ class AuditServiceProvider extends ServiceProvider
         CounselingSession::observe(AuditableObserver::class);
         SystemSetting::observe(AuditableObserver::class);
         FlaggedCase::observe(AuditableObserver::class);
+        PredictionFeedback::observe(AuditableObserver::class);
 
         Event::listen(Login::class, LogSuccessfulLogin::class);
         Event::listen(Logout::class, LogSuccessfulLogout::class);

@@ -29,8 +29,7 @@
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Student #</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Program</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Sex</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Gender</th>
                         <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
                     </tr>
                 </thead>
@@ -46,12 +45,7 @@
                                 <div>{{ $student->course?->course_code ?? 'N/A' }}</div>
                                 <div class="text-xs text-slate-500">{{ $student->yearLevel?->label ?? 'N/A' }}</div>
                             </td>
-                            <td class="px-6 py-4 text-sm text-slate-700">{{ $student->sex }}</td>
-                            <td class="px-6 py-4 text-sm">
-                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $student->status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600' }}">
-                                    {{ $student->status }}
-                                </span>
-                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-700">{{ $student->gender }}</td>
                             <td class="px-6 py-4 text-right text-sm">
                                 <div class="inline-flex flex-wrap justify-end gap-2">
                                     <a href="{{ route('students.show', $student) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
@@ -66,7 +60,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-sm text-slate-500">
+                            <td colspan="5" class="px-6 py-12 text-center text-sm text-slate-500">
                                 No student records found.
                             </td>
                         </tr>

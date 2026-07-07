@@ -5,8 +5,13 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Assessment;
+use App\Models\ClassificationThreshold;
+use App\Models\DassResult;
 use App\Models\FlaggedCase;
 use App\Models\Student;
+use Carbon\Carbon;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -16,6 +21,11 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class DashboardService
 {
+    private const SEVERE_LEVELS = [
+        ClassificationThreshold::SEVERITY_SEVERE,
+        ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE,
+    ];
+
     /**
      * @return array{
      *     totalStudents: int, totalAssessments: int, todaysAssessments: int,
@@ -35,5 +45,213 @@ class DashboardService
                 ->limit(5)
                 ->get(),
         ];
+    }
+
+    /**
+     * Compute everything the Psychometrician Dashboard needs: the 4 stat
+     * cards (with trend vs. the immediately preceding period of the same
+     * length), the Assessment Volume and Severity Distribution charts,
+     * and the paginated "All Assessments" table.
+     *
+     * @param array<string, mixed> $filters period, course_id, year_level_id, severity_subscale
+     * @return array{
+     *     period: string,
+     *     cards: array<string, array{label: string, count: int, trend: ?float}>,
+     *     volumeChart: array<int, array{label: string, count: int}>,
+     *     severityChart: array<string, int>,
+     *     assessments: LengthAwarePaginator<int, Assessment>
+     * }
+     */
+    public function psychometricianStats(array $filters): array
+    {
+        $period = $filters['period'] ?? 'month';
+        [$start, $end] = $this->periodRange($period);
+
+        $baseQuery = fn (): Builder => Assessment::query()
+            ->when($start, fn (Builder $q) => $q->whereBetween('submitted_at', [$start, $end]));
+
+        $totalAssessments = (clone $baseQuery())->count();
+        $subscaleCounts = [
+            'stress' => $this->countBySubscale($baseQuery(), 'stress'),
+            'anxiety' => $this->countBySubscale($baseQuery(), 'anxiety'),
+            'depression' => $this->countBySubscale($baseQuery(), 'depression'),
+        ];
+
+        [$priorStart, $priorEnd] = $this->priorPeriodRange($period, $start, $end);
+        $priorQuery = fn (): Builder => Assessment::query()
+            ->when($priorStart, fn (Builder $q) => $q->whereBetween('submitted_at', [$priorStart, $priorEnd]));
+
+        $priorTotal = $priorStart ? (clone $priorQuery())->count() : null;
+        $priorSubscaleCounts = [
+            'stress' => $priorStart ? $this->countBySubscale($priorQuery(), 'stress') : null,
+            'anxiety' => $priorStart ? $this->countBySubscale($priorQuery(), 'anxiety') : null,
+            'depression' => $priorStart ? $this->countBySubscale($priorQuery(), 'depression') : null,
+        ];
+
+        $cards = [
+            'total' => [
+                'label' => 'Total Assessment',
+                'count' => $totalAssessments,
+                'trend' => $this->trend($totalAssessments, $priorTotal),
+            ],
+            'stress' => [
+                'label' => 'Total Stress',
+                'count' => $subscaleCounts['stress'],
+                'trend' => $this->trend($subscaleCounts['stress'], $priorSubscaleCounts['stress']),
+            ],
+            'anxiety' => [
+                'label' => 'Total Anxiety',
+                'count' => $subscaleCounts['anxiety'],
+                'trend' => $this->trend($subscaleCounts['anxiety'], $priorSubscaleCounts['anxiety']),
+            ],
+            'depression' => [
+                'label' => 'Total Depression',
+                'count' => $subscaleCounts['depression'],
+                'trend' => $this->trend($subscaleCounts['depression'], $priorSubscaleCounts['depression']),
+            ],
+        ];
+
+        $assessmentIds = (clone $baseQuery())->pluck('id');
+
+        return [
+            'period' => $period,
+            'cards' => $cards,
+            'volumeChart' => $this->assessmentVolumeSeries(),
+            'severityChart' => $this->severityDistribution($assessmentIds),
+            'assessments' => $this->allAssessmentsTable($baseQuery(), $filters),
+        ];
+    }
+
+    private function countBySubscale(Builder $query, string $subscale): int
+    {
+        return $query->whereHas('result', fn (Builder $q) => $q->whereIn("{$subscale}_level", self::SEVERE_LEVELS))->count();
+    }
+
+    /**
+     * @return array{0: ?Carbon, 1: ?Carbon}
+     */
+    private function periodRange(string $period): array
+    {
+        $now = now();
+
+        return match ($period) {
+            'today' => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+            'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()],
+            'month' => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
+            default => [null, null],
+        };
+    }
+
+    /**
+     * @return array{0: ?Carbon, 1: ?Carbon}
+     */
+    private function priorPeriodRange(string $period, ?Carbon $start, ?Carbon $end): array
+    {
+        if ($start === null || $end === null) {
+            return [null, null];
+        }
+
+        return match ($period) {
+            'today' => [$start->copy()->subDay(), $end->copy()->subDay()],
+            'week' => [$start->copy()->subWeek(), $end->copy()->subWeek()],
+            'month' => [$start->copy()->subMonthNoOverflow()->startOfMonth(), $start->copy()->subMonthNoOverflow()->endOfMonth()],
+            default => [null, null],
+        };
+    }
+
+    /**
+     * Percentage change vs. the prior period. Null when there is no prior
+     * period to compare against (period = "all") or the prior count was
+     * zero (a percentage change is meaningless from a zero baseline).
+     */
+    private function trend(int $current, ?int $prior): ?float
+    {
+        if ($prior === null || $prior === 0) {
+            return null;
+        }
+
+        return round((($current - $prior) / $prior) * 100, 1);
+    }
+
+    /**
+     * Assessment count per month for the last 6 months, zero-filled.
+     *
+     * @return array<int, array{label: string, count: int}>
+     */
+    private function assessmentVolumeSeries(): array
+    {
+        $sixMonthsAgo = now()->subMonths(5)->startOfMonth();
+
+        $counts = Assessment::query()
+            ->selectRaw("DATE_FORMAT(submitted_at, '%Y-%m') as ym, COUNT(*) as total")
+            ->where('submitted_at', '>=', $sixMonthsAgo)
+            ->groupBy('ym')
+            ->pluck('total', 'ym');
+
+        $series = [];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $key = $month->format('Y-m');
+
+            $series[] = [
+                'label' => $month->format('M'),
+                'count' => (int) ($counts[$key] ?? 0),
+            ];
+        }
+
+        return $series;
+    }
+
+    /**
+     * Breakdown of assessments (within the current filter) by their
+     * highest severity tier, ordered Normal -> Extremely Severe.
+     *
+     * @param \Illuminate\Support\Collection<int, int> $assessmentIds
+     * @return array<string, int>
+     */
+    private function severityDistribution(\Illuminate\Support\Collection $assessmentIds): array
+    {
+        $tallies = DassResult::query()
+            ->whereIn('assessment_id', $assessmentIds)
+            ->get(['depression_level', 'anxiety_level', 'stress_level'])
+            ->countBy(fn (DassResult $result): string => $result->highestSeverityLevel());
+
+        $orderedSeverities = [
+            ClassificationThreshold::SEVERITY_NORMAL,
+            ClassificationThreshold::SEVERITY_MILD,
+            ClassificationThreshold::SEVERITY_MODERATE,
+            ClassificationThreshold::SEVERITY_SEVERE,
+            ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE,
+        ];
+
+        $ordered = [];
+        foreach ($orderedSeverities as $severity) {
+            $ordered[$severity] = $tallies[$severity] ?? 0;
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     * @return LengthAwarePaginator<int, Assessment>
+     */
+    private function allAssessmentsTable(Builder $query, array $filters): LengthAwarePaginator
+    {
+        return $query
+            ->with(['student.course', 'student.yearLevel', 'result', 'flaggedCases'])
+            ->when($filters['course_id'] ?? null, function (Builder $q, $value) {
+                $q->whereHas('student', fn (Builder $qq) => $qq->where('course_id', $value));
+            })
+            ->when($filters['year_level_id'] ?? null, function (Builder $q, $value) {
+                $q->whereHas('student', fn (Builder $qq) => $qq->where('year_level_id', $value));
+            })
+            ->when($filters['severity_subscale'] ?? null, function (Builder $q, string $subscale) {
+                $q->whereHas('result', fn (Builder $qq) => $qq->whereIn("{$subscale}_level", self::SEVERE_LEVELS));
+            })
+            ->orderByDesc('submitted_at')
+            ->paginate(10)
+            ->withQueryString();
     }
 }

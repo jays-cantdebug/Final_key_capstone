@@ -12,6 +12,10 @@ class SystemNotification extends Model
 {
     use HasFactory;
 
+    public const TYPE_COUNSELING_ENDORSEMENT = 'counseling_endorsement';
+
+    public const TYPE_AWARENESS_NOTIFICATION = 'awareness_notification';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -20,6 +24,8 @@ class SystemNotification extends Model
     protected $fillable = [
         'user_id',
         'assessment_id',
+        'flagged_case_id',
+        'notification_type',
         'title',
         'message',
         'is_read',
@@ -53,5 +59,13 @@ class SystemNotification extends Model
     public function assessment(): BelongsTo
     {
         return $this->belongsTo(Assessment::class);
+    }
+
+    /**
+     * Get the flagged case this notification was generated for.
+     */
+    public function flaggedCase(): BelongsTo
+    {
+        return $this->belongsTo(FlaggedCase::class);
     }
 }

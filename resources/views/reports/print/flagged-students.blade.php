@@ -6,7 +6,8 @@
                 <th>Student #</th>
                 <th>Course / Year / Section</th>
                 <th>Assessment Date</th>
-                <th>Highest Severity</th>
+                <th>Flag</th>
+                <th>Triggering Subscale</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -21,12 +22,13 @@
                         {{ $flaggedCase->assessment->student->section?->section_name }}
                     </td>
                     <td>{{ $flaggedCase->assessment->submitted_at->format('M d, Y') }}</td>
-                    <td>{{ $flaggedCase->highest_severity }}</td>
+                    <td>{{ $flaggedCase->flag_type === 'counseling_endorsement' ? 'Counseling Endorsement' : 'Awareness Notification' }}</td>
+                    <td>{{ ucfirst($flaggedCase->triggering_subscale) }}</td>
                     <td>{{ $flaggedCase->status }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="empty">No flagged cases found for the current filters.</td>
+                    <td colspan="7" class="empty">No flagged cases found for the current filters.</td>
                 </tr>
             @endforelse
         </tbody>

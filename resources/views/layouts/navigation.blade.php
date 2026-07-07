@@ -32,12 +32,6 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('assessments.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
-                            <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4Zm0 5a1 1 0 0 1 1-1h6a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Zm0 5a1 1 0 0 1 1-1h10a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Z" clip-rule="evenodd" /></svg>
-                            Assessment History
-                        </a>
-                    </li>
-                    <li>
                         <a href="{{ route('students.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
                             <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a3 3 0 0 0-3 3v1H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2V5a3 3 0 0 0-3-3Zm1 4V5a1 1 0 1 0-2 0v1h2Z" /></svg>
                             Students
@@ -46,25 +40,25 @@
                     <li>
                         <a href="{{ route('questionnaires.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
                             <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 4a2 2 0 0 1 2-2h5.586A2 2 0 0 1 13 2.586L16.414 6A2 2 0 0 1 17 7.414V16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4Zm7 7a1 1 0 1 0-2 0v.01a1 1 0 0 0 2 0V11Zm-1-4a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Z" clip-rule="evenodd" /></svg>
-                            Questionnaire Management
+                            Questions
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('users.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
-                            <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm-3 5c-3 0-6 1.5-6 4v1h12v-1c0-2.5-3-4-6-4Zm7-8a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-1 5.05A5.97 5.97 0 0 1 18 12v1h-2v-1c0-1.06-.37-1.86-.94-2.53.32-.13.62-.28.94-.42Z" /></svg>
-                            User Management
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('settings.edit') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
-                            <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.078 2.25c-.917-.293-1.919.293-2.107 1.246l-.09.462a1.5 1.5 0 0 1-.9 1.107l-.45.184a1.5 1.5 0 0 1-1.408-.13l-.397-.264c-.816-.542-1.933-.334-2.454.478a7.51 7.51 0 0 0-.782 1.62c-.313.902.19 1.874 1.078 2.157l.445.142a1.5 1.5 0 0 1 1.02 1.4v.5a1.5 1.5 0 0 1-1.02 1.4l-.445.142c-.888.283-1.39 1.255-1.078 2.157.211.573.474 1.12.782 1.62.521.812 1.638 1.02 2.454.478l.397-.264a1.5 1.5 0 0 1 1.408-.13l.45.184a1.5 1.5 0 0 1 .9 1.107l.09.462c.188.953 1.19 1.539 2.107 1.246a7.55 7.55 0 0 0 1.844 0c.917.293 1.919-.293 2.107-1.246l.09-.462a1.5 1.5 0 0 1 .9-1.107l.45-.184a1.5 1.5 0 0 1 1.408.13l.397.264c.816.542 1.933.334 2.454-.478.308-.5.571-1.047.782-1.62.313-.902-.19-1.874-1.078-2.157l-.445-.142a1.5 1.5 0 0 1-1.02-1.4v-.5a1.5 1.5 0 0 1 1.02-1.4l.445-.142c.888-.283 1.39-1.255 1.078-2.157a7.508 7.508 0 0 0-.782-1.62c-.521-.812-1.638-1.02-2.454-.478l-.397.264a1.5 1.5 0 0 1-1.408.13l-.45-.184a1.5 1.5 0 0 1-.9-1.107l-.09-.462c-.188-.953-1.19-1.539-2.107-1.246a7.55 7.55 0 0 0-1.844 0ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
-                            Settings
+                        <a href="{{ route('reports.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
+                            <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7.414a1 1 0 0 0-.293-.707l-3.414-3.414A1 1 0 0 0 12.586 3H4Zm2 9a1 1 0 1 1 0-2h8a1 1 0 1 1 0 2H6Zm0-4a1 1 0 0 1 0-2h4a1 1 0 1 1 0 2H6Z" clip-rule="evenodd" /></svg>
+                            Reports
                         </a>
                     </li>
                     <li>
                         <a href="{{ route('audit-logs.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
                             <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 4a2 2 0 0 1 2-2h5.586A2 2 0 0 1 13 2.586L16.414 6A2 2 0 0 1 17 7.414V16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4Zm3 8a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H7Zm0-3a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H7Z" clip-rule="evenodd" /></svg>
                             Audit Logs
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('settings.edit') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
+                            <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.078 2.25c-.917-.293-1.919.293-2.107 1.246l-.09.462a1.5 1.5 0 0 1-.9 1.107l-.45.184a1.5 1.5 0 0 1-1.408-.13l-.397-.264c-.816-.542-1.933-.334-2.454.478a7.51 7.51 0 0 0-.782 1.62c-.313.902.19 1.874 1.078 2.157l.445.142a1.5 1.5 0 0 1 1.02 1.4v.5a1.5 1.5 0 0 1-1.02 1.4l-.445.142c-.888.283-1.39 1.255-1.078 2.157.211.573.474 1.12.782 1.62.521.812 1.638 1.02 2.454.478l.397-.264a1.5 1.5 0 0 1 1.408-.13l.45.184a1.5 1.5 0 0 1 .9 1.107l.09.462c.188.953 1.19 1.539 2.107 1.246a7.55 7.55 0 0 0 1.844 0c.917.293 1.919-.293 2.107-1.246l.09-.462a1.5 1.5 0 0 1 .9-1.107l.45-.184a1.5 1.5 0 0 1 1.408.13l.397.264c.816.542 1.933.334 2.454-.478.308-.5.571-1.047.782-1.62.313-.902-.19-1.874-1.078-2.157l-.445-.142a1.5 1.5 0 0 1-1.02-1.4v-.5a1.5 1.5 0 0 1 1.02-1.4l.445-.142c.888-.283 1.39-1.255 1.078-2.157a7.508 7.508 0 0 0-.782-1.62c-.521-.812-1.638-1.02-2.454-.478l-.397.264a1.5 1.5 0 0 1-1.408.13l-.45-.184a1.5 1.5 0 0 1-.9-1.107l-.09-.462c-.188-.953-1.19-1.539-2.107-1.246a7.55 7.55 0 0 0-1.844 0ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
+                            Settings
                         </a>
                     </li>
                 @endif
@@ -90,13 +84,13 @@
                             @endif
                         </a>
                     </li>
+                    <li>
+                        <a href="{{ route('reports.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
+                            <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7.414a1 1 0 0 0-.293-.707l-3.414-3.414A1 1 0 0 0 12.586 3H4Zm2 9a1 1 0 1 1 0-2h8a1 1 0 1 1 0 2H6Zm0-4a1 1 0 0 1 0-2h4a1 1 0 1 1 0 2H6Z" clip-rule="evenodd" /></svg>
+                            Reports
+                        </a>
+                    </li>
                 @endif
-                <li>
-                    <a href="{{ route('reports.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
-                        <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7.414a1 1 0 0 0-.293-.707l-3.414-3.414A1 1 0 0 0 12.586 3H4Zm2 9a1 1 0 1 1 0-2h8a1 1 0 1 1 0 2H6Zm0-4a1 1 0 0 1 0-2h4a1 1 0 1 1 0 2H6Z" clip-rule="evenodd" /></svg>
-                        Reports
-                    </a>
-                </li>
                 <li>
                     <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
                         <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 10a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm0 2c-4 0-7 2-7 4.5V18h14v-1.5C17 14 14 12 10 12Z" /></svg>
@@ -166,12 +160,6 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ route('assessments.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
-                                <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4Zm0 5a1 1 0 0 1 1-1h6a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Zm0 5a1 1 0 0 1 1-1h10a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Z" clip-rule="evenodd" /></svg>
-                                Assessment History
-                            </a>
-                        </li>
-                        <li>
                             <a href="{{ route('students.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
                                 <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a3 3 0 0 0-3 3v1H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2V5a3 3 0 0 0-3-3Zm1 4V5a1 1 0 1 0-2 0v1h2Z" /></svg>
                                 Students
@@ -180,25 +168,25 @@
                         <li>
                             <a href="{{ route('questionnaires.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
                                 <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 4a2 2 0 0 1 2-2h5.586A2 2 0 0 1 13 2.586L16.414 6A2 2 0 0 1 17 7.414V16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4Zm7 7a1 1 0 1 0-2 0v.01a1 1 0 0 0 2 0V11Zm-1-4a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Z" clip-rule="evenodd" /></svg>
-                                Questionnaire Management
+                                Questions
                             </a>
                         </li>
                         <li>
-                            <a href="{{ route('users.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
-                                <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm-3 5c-3 0-6 1.5-6 4v1h12v-1c0-2.5-3-4-6-4Zm7-8a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-1 5.05A5.97 5.97 0 0 1 18 12v1h-2v-1c0-1.06-.37-1.86-.94-2.53.32-.13.62-.28.94-.42Z" /></svg>
-                                User Management
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('settings.edit') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
-                                <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.078 2.25c-.917-.293-1.919.293-2.107 1.246l-.09.462a1.5 1.5 0 0 1-.9 1.107l-.45.184a1.5 1.5 0 0 1-1.408-.13l-.397-.264c-.816-.542-1.933-.334-2.454.478a7.51 7.51 0 0 0-.782 1.62c-.313.902.19 1.874 1.078 2.157l.445.142a1.5 1.5 0 0 1 1.02 1.4v.5a1.5 1.5 0 0 1-1.02 1.4l-.445.142c-.888.283-1.39 1.255-1.078 2.157.211.573.474 1.12.782 1.62.521.812 1.638 1.02 2.454.478l.397-.264a1.5 1.5 0 0 1 1.408-.13l.45.184a1.5 1.5 0 0 1 .9 1.107l.09.462c.188.953 1.19 1.539 2.107 1.246a7.55 7.55 0 0 0 1.844 0c.917.293 1.919-.293 2.107-1.246l.09-.462a1.5 1.5 0 0 1 .9-1.107l.45-.184a1.5 1.5 0 0 1 1.408.13l.397.264c.816.542 1.933.334 2.454-.478.308-.5.571-1.047.782-1.62.313-.902-.19-1.874-1.078-2.157l-.445-.142a1.5 1.5 0 0 1-1.02-1.4v-.5a1.5 1.5 0 0 1 1.02-1.4l.445-.142c.888-.283 1.39-1.255 1.078-2.157a7.508 7.508 0 0 0-.782-1.62c-.521-.812-1.638-1.02-2.454-.478l-.397.264a1.5 1.5 0 0 1-1.408.13l-.45-.184a1.5 1.5 0 0 1-.9-1.107l-.09-.462c-.188-.953-1.19-1.539-2.107-1.246a7.55 7.55 0 0 0-1.844 0ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
-                                Settings
+                            <a href="{{ route('reports.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
+                                <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7.414a1 1 0 0 0-.293-.707l-3.414-3.414A1 1 0 0 0 12.586 3H4Zm2 9a1 1 0 1 1 0-2h8a1 1 0 1 1 0 2H6Zm0-4a1 1 0 0 1 0-2h4a1 1 0 1 1 0 2H6Z" clip-rule="evenodd" /></svg>
+                                Reports
                             </a>
                         </li>
                         <li>
                             <a href="{{ route('audit-logs.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
                                 <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 4a2 2 0 0 1 2-2h5.586A2 2 0 0 1 13 2.586L16.414 6A2 2 0 0 1 17 7.414V16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4Zm3 8a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H7Zm0-3a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H7Z" clip-rule="evenodd" /></svg>
                                 Audit Logs
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('settings.edit') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
+                                <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.078 2.25c-.917-.293-1.919.293-2.107 1.246l-.09.462a1.5 1.5 0 0 1-.9 1.107l-.45.184a1.5 1.5 0 0 1-1.408-.13l-.397-.264c-.816-.542-1.933-.334-2.454.478a7.51 7.51 0 0 0-.782 1.62c-.313.902.19 1.874 1.078 2.157l.445.142a1.5 1.5 0 0 1 1.02 1.4v.5a1.5 1.5 0 0 1-1.02 1.4l-.445.142c-.888.283-1.39 1.255-1.078 2.157.211.573.474 1.12.782 1.62.521.812 1.638 1.02 2.454.478l.397-.264a1.5 1.5 0 0 1 1.408-.13l.45.184a1.5 1.5 0 0 1 .9 1.107l.09.462c.188.953 1.19 1.539 2.107 1.246a7.55 7.55 0 0 0 1.844 0c.917.293 1.919-.293 2.107-1.246l.09-.462a1.5 1.5 0 0 1 .9-1.107l.45-.184a1.5 1.5 0 0 1 1.408.13l.397.264c.816.542 1.933.334 2.454-.478.308-.5.571-1.047.782-1.62.313-.902-.19-1.874-1.078-2.157l-.445-.142a1.5 1.5 0 0 1-1.02-1.4v-.5a1.5 1.5 0 0 1 1.02-1.4l.445-.142c.888-.283 1.39-1.255 1.078-2.157a7.508 7.508 0 0 0-.782-1.62c-.521-.812-1.638-1.02-2.454-.478l-.397.264a1.5 1.5 0 0 1-1.408.13l-.45-.184a1.5 1.5 0 0 1-.9-1.107l-.09-.462c-.188-.953-1.19-1.539-2.107-1.246a7.55 7.55 0 0 0-1.844 0ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
+                                Settings
                             </a>
                         </li>
                     @endif
@@ -224,13 +212,13 @@
                                 @endif
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('reports.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
+                                <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7.414a1 1 0 0 0-.293-.707l-3.414-3.414A1 1 0 0 0 12.586 3H4Zm2 9a1 1 0 1 1 0-2h8a1 1 0 1 1 0 2H6Zm0-4a1 1 0 0 1 0-2h4a1 1 0 1 1 0 2H6Z" clip-rule="evenodd" /></svg>
+                                Reports
+                            </a>
+                        </li>
                     @endif
-                    <li>
-                        <a href="{{ route('reports.index') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
-                            <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7.414a1 1 0 0 0-.293-.707l-3.414-3.414A1 1 0 0 0 12.586 3H4Zm2 9a1 1 0 1 1 0-2h8a1 1 0 1 1 0 2H6Zm0-4a1 1 0 0 1 0-2h4a1 1 0 1 1 0 2H6Z" clip-rule="evenodd" /></svg>
-                            Reports
-                        </a>
-                    </li>
                     <li>
                         <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white">
                             <svg class="h-5 w-5 text-white/70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 10a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm0 2c-4 0-7 2-7 4.5V18h14v-1.5C17 14 14 12 10 12Z" /></svg>

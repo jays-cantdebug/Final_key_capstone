@@ -1,10 +1,12 @@
 @php
-    $severityBadgeClasses = [
-        'Normal' => 'bg-[#EAF3DE] text-[#27500A]',
-        'Mild' => 'bg-[#E6F1FB] text-[#0C447C]',
-        'Moderate' => 'bg-[#FAEEDA] text-[#633806]',
-        'Severe' => 'bg-[#FAECE7] text-[#712B13]',
-        'Extremely Severe' => 'bg-[#FCEBEB] text-[#791F1F]',
+    $notificationTypeBadgeClasses = [
+        'counseling_endorsement' => 'bg-[#E3F4F1] text-[#0F5C50]',
+        'awareness_notification' => 'bg-[#F1E9FB] text-[#4A1E82]',
+    ];
+
+    $notificationTypeLabels = [
+        'counseling_endorsement' => 'Counseling Endorsement',
+        'awareness_notification' => 'Awareness Notification',
     ];
 @endphp
 
@@ -26,7 +28,6 @@
         @forelse ($notifications as $notification)
             @php
                 $student = $notification->assessment->student;
-                $result = $notification->assessment->result;
             @endphp
             <div class="rounded-3xl border {{ $notification->is_read ? 'border-slate-200 bg-white' : 'border-[#1F6B3A]/30 bg-[#EAF3EC]' }} p-6 shadow-sm">
                 <div class="flex flex-wrap items-start justify-between gap-4">
@@ -40,8 +41,8 @@
                         <p class="mt-1 text-xs text-slate-500">Student #: {{ $student->student_number }}</p>
                         <p class="mt-1 text-xs text-slate-500">Assessment Date: {{ $notification->assessment->submitted_at->format('M d, Y g:i A') }}</p>
                     </div>
-                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $severityBadgeClasses[$result?->overall_status] ?? 'bg-slate-200 text-slate-600' }}">
-                        {{ $result?->overall_status ?? 'N/A' }}
+                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $notificationTypeBadgeClasses[$notification->notification_type] ?? 'bg-slate-200 text-slate-600' }}">
+                        {{ $notificationTypeLabels[$notification->notification_type] ?? $notification->notification_type }}
                     </span>
                 </div>
 

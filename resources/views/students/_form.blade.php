@@ -4,21 +4,13 @@
 @endphp
 
 <div class="grid gap-6 sm:grid-cols-2">
-    <div>
-        <x-input-label for="student_number" :value="__('Student Number')" />
-        <x-text-input id="student_number" name="student_number" type="text" class="mt-1 block w-full" :value="old('student_number', $student?->student_number)" required autofocus />
-        <x-input-error class="mt-2" :messages="$errors->get('student_number')" />
-    </div>
-
-    <div>
-        <x-input-label for="status" :value="__('Status')" />
-        <select id="status" name="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-            @foreach (['Active', 'Inactive'] as $status)
-                <option value="{{ $status }}" @selected(old('status', $student?->status ?? 'Active') === $status)>{{ $status }}</option>
-            @endforeach
-        </select>
-        <x-input-error class="mt-2" :messages="$errors->get('status')" />
-    </div>
+    @if ($student)
+        <div>
+            <x-input-label for="student_number" :value="__('Student Number')" />
+            <x-text-input id="student_number" type="text" class="mt-1 block w-full bg-slate-50" :value="$student->student_number" disabled />
+            <p class="mt-1 text-xs text-slate-500">System-generated — cannot be edited.</p>
+        </div>
+    @endif
 
     <div>
         <x-input-label for="first_name" :value="__('First Name')" />
@@ -39,13 +31,13 @@
     </div>
 
     <div>
-        <x-input-label for="sex" :value="__('Sex')" />
-        <select id="sex" name="sex" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-            @foreach (['Male', 'Female'] as $sex)
-                <option value="{{ $sex }}" @selected(old('sex', $student?->sex) === $sex)>{{ $sex }}</option>
+        <x-input-label for="gender" :value="__('Gender')" />
+        <select id="gender" name="gender" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            @foreach (['Male', 'Female', 'Prefer not to say'] as $genderOption)
+                <option value="{{ $genderOption }}" @selected(old('gender', $student?->gender) === $genderOption)>{{ $genderOption }}</option>
             @endforeach
         </select>
-        <x-input-error class="mt-2" :messages="$errors->get('sex')" />
+        <x-input-error class="mt-2" :messages="$errors->get('gender')" />
     </div>
 
     <div>

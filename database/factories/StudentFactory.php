@@ -32,11 +32,10 @@ class StudentFactory extends Factory
             'first_name' => fake()->firstName(),
             'middle_name' => fake()->optional()->firstName(),
             'last_name' => fake()->lastName(),
-            'sex' => fake()->randomElement(['Male', 'Female']),
+            'gender' => fake()->randomElement(['Male', 'Female', 'Prefer not to say']),
             'course_id' => $this->courseId(),
             'year_level_id' => $this->yearLevelId(),
             'section_id' => $this->sectionId(),
-            'status' => Student::STATUS_ACTIVE,
         ];
     }
 

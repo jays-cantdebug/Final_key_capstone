@@ -4,11 +4,14 @@ use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AssessmentHistoryController;
 use App\Http\Controllers\AssessmentWizardController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\ClassificationThresholdController;
 use App\Http\Controllers\CounselingSessionController;
+use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DassQuestionController;
 use App\Http\Controllers\FlaggedCaseController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PredictionFeedbackController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionnaireController;
 use App\Http\Controllers\QuestionnaireVersionController;
@@ -21,12 +24,19 @@ use App\Http\Controllers\Reports\FlaggedStudentsReportController;
 use App\Http\Controllers\Reports\MonthlyAssessmentReportController;
 use App\Http\Controllers\Reports\QuestionnaireUsageReportController;
 use App\Http\Controllers\Reports\StudentHistoryReportController;
+use App\Http\Controllers\SectionController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\YearLevelController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome');
+Route::get('/', function () {
+    return Auth::check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
+})->name('home');
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -74,6 +84,15 @@ Route::middleware('auth')->group(function (): void {
 
         Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+        Route::get('/settings/records', [SettingsController::class, 'records'])->name('settings.records');
+
+        Route::get('/settings/classification-thresholds', [ClassificationThresholdController::class, 'index'])->name('settings.classification-thresholds');
+        Route::put('/settings/classification-thresholds', [ClassificationThresholdController::class, 'update'])->name('settings.classification-thresholds.update');
+        Route::post('/settings/classification-thresholds/restore', [ClassificationThresholdController::class, 'restore'])->name('settings.classification-thresholds.restore');
+
+        Route::resource('courses', CourseController::class)->only(['create', 'store', 'edit', 'update', 'destroy']);
+        Route::resource('year-levels', YearLevelController::class)->parameters(['year-levels' => 'year_level'])->only(['create', 'store', 'edit', 'update', 'destroy']);
+        Route::resource('sections', SectionController::class)->only(['create', 'store', 'edit', 'update', 'destroy']);
 
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
         Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('audit-logs.show');
@@ -89,6 +108,8 @@ Route::middleware('auth')->group(function (): void {
                 Route::get('/result', [AssessmentWizardController::class, 'showResultStep'])->name('result');
                 Route::post('/submit', [AssessmentWizardController::class, 'submit'])->name('submit');
             });
+
+        Route::post('/assessments/{assessment}/feedback', [PredictionFeedbackController::class, 'store'])->name('assessments.feedback.store');
     });
 
     Route::get('/assessments', [AssessmentHistoryController::class, 'index'])

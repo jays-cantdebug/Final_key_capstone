@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\AI\Contracts;
 
+use App\AI\DTOs\AIClassificationResult;
 use App\AI\DTOs\AssessmentPayload;
 
 /**
@@ -11,15 +12,14 @@ use App\AI\DTOs\AssessmentPayload;
  *
  * All providers follow the Strategy Pattern: AIService depends only on
  * this interface, never on a concrete provider, so the active provider
- * can be swapped via config('ai.default') without touching controllers,
+ * can be swapped via config('ai.provider') without touching controllers,
  * services, or the database schema.
  */
 interface AIProviderInterface
 {
     /**
-     * Generate a mental health prediction for the given assessment payload.
-     *
-     * @return array{mentalHealthStatus: string, riskLevel: string, interpretation: string, recommendation: string}
+     * Classify each DASS-21 subscale in the given assessment payload into
+     * its official severity tier.
      */
-    public function predict(AssessmentPayload $payload): array;
+    public function classify(AssessmentPayload $payload): AIClassificationResult;
 }
