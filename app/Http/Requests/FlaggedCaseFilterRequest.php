@@ -26,7 +26,7 @@ class FlaggedCaseFilterRequest extends FormRequest
     {
         return [
             'tab' => ['nullable', Rule::in(['all', 'endorsement', 'notification', 'normal'])],
-            'student_number' => ['nullable', 'string', 'max:50'],
+            'search' => ['nullable', 'string', 'max:100'],
             'course_id' => ['nullable', 'integer', 'exists:courses,id'],
             'year_level_id' => ['nullable', 'integer', 'exists:year_levels,id'],
             'section_id' => ['nullable', 'integer', 'exists:sections,id'],

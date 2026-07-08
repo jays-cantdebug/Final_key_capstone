@@ -1,3 +1,12 @@
+@php
+    $statusBadgeStyles = [
+        'Scheduled' => 'background:#E6F1FB;color:#0C447C;',
+        'Completed' => 'background:#EAF3DE;color:#27500A;',
+        'Cancelled' => 'background:#F1F5F9;color:#475569;',
+        'No-Show' => 'background:#FAEEDA;color:#633806;',
+    ];
+@endphp
+
 <x-report-layout title="Counseling Report">
     <table>
         <thead>
@@ -16,7 +25,7 @@
                     <td>{{ $session->student->full_name }}</td>
                     <td>{{ $session->counselor->name }}</td>
                     <td>{{ $session->session_datetime->format('M d, Y g:i A') }}</td>
-                    <td>{{ $session->session_status }}</td>
+                    <td><span class="badge" style="{{ $statusBadgeStyles[$session->session_status] ?? '' }}">{{ $session->session_status }}</span></td>
                     <td>{{ $session->confidentiality_level }}</td>
                     <td>
                         @if ($session->isRestrictedFor($viewer))

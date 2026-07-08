@@ -12,11 +12,11 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased text-[#2C2C2A] bg-[linear-gradient(180deg,_#FBFAF7_0%,_#F8F6F0_100%)]">
+    <body class="overflow-x-hidden font-sans antialiased text-body bg-[linear-gradient(180deg,_#FBFAF7_0%,_#F8F6F0_100%)]">
         <div x-data="{ open: false }" class="min-h-screen">
             @include('layouts.navigation')
 
-            <div class="lg:pl-72">
+            <div class="md:pl-20 lg:pl-72">
                 @isset($header)
                     <header class="border-b border-slate-200/80 bg-white/80 backdrop-blur">
                         <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">

@@ -29,7 +29,9 @@ class DashboardService
     /**
      * @return array{
      *     totalStudents: int, totalAssessments: int, todaysAssessments: int,
-     *     flaggedStudentsSummary: int, recentAssessments: Collection<int, Assessment>
+     *     flaggedStudentsSummary: int, recentAssessments: Collection<int, Assessment>,
+     *     flaggedVolumeChart: array<int, array{label: string, count: int}>,
+     *     flagTypeChart: array<string, int>
      * }
      */
     public function guidanceCounselorStats(): array
@@ -44,7 +46,74 @@ class DashboardService
                 ->latest('submitted_at')
                 ->limit(5)
                 ->get(),
+            'flaggedVolumeChart' => $this->flaggedCaseVolumeSeries(),
+            'flagTypeChart' => $this->flagTypeDistribution(),
         ];
+    }
+
+    /**
+     * Flagged-assessment count per month for the last 6 months, zero-filled.
+     * Counts distinct assessments with at least one flagged case (matching
+     * the unit shown on the Flagged Cases listing), not raw flagged_cases
+     * rows, since one assessment can produce up to 3 of those.
+     *
+     * @return array<int, array{label: string, count: int}>
+     */
+    private function flaggedCaseVolumeSeries(): array
+    {
+        $sixMonthsAgo = now()->subMonths(5)->startOfMonth();
+
+        $counts = Assessment::query()
+            ->whereHas('flaggedCases')
+            ->selectRaw("DATE_FORMAT(submitted_at, '%Y-%m') as ym, COUNT(*) as total")
+            ->where('submitted_at', '>=', $sixMonthsAgo)
+            ->groupBy('ym')
+            ->pluck('total', 'ym');
+
+        $series = [];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $key = $month->format('Y-m');
+
+            $series[] = [
+                'label' => $month->format('M'),
+                'count' => (int) ($counts[$key] ?? 0),
+            ];
+        }
+
+        return $series;
+    }
+
+    /**
+     * Flagged assessments tallied by their priority flag type (Counseling
+     * Endorsement takes priority over Awareness Notification when an
+     * assessment has both, matching Assessment::priorityFlag() and the
+     * Flagged Cases tab filters).
+     *
+     * @return array<string, int>
+     */
+    private function flagTypeDistribution(): array
+    {
+        $flagsByAssessment = FlaggedCase::query()
+            ->select('assessment_id', 'flag_type')
+            ->get()
+            ->groupBy('assessment_id');
+
+        $tallies = [
+            FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT => 0,
+            FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION => 0,
+        ];
+
+        foreach ($flagsByAssessment as $flags) {
+            $priorityType = $flags->contains('flag_type', FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT)
+                ? FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT
+                : FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION;
+
+            $tallies[$priorityType]++;
+        }
+
+        return $tallies;
     }
 
     /**

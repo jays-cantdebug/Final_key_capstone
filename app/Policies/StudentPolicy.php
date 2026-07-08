@@ -24,14 +24,6 @@ class StudentPolicy
     }
 
     /**
-     * Determine whether the user can create students.
-     */
-    public function create(User $user): bool
-    {
-        return $user->hasRole('psychometrician');
-    }
-
-    /**
      * Determine whether the user can update the student.
      */
     public function update(User $user, Student $student): bool

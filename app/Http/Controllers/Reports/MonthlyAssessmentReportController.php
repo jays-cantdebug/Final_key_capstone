@@ -23,8 +23,8 @@ class MonthlyAssessmentReportController extends Controller
 
     public function index(ReportFilterRequest $request): View
     {
-        $year = $request->validated('year') ?? (int) now()->format('Y');
-        $month = $request->validated('month') ?? (int) now()->format('n');
+        $year = (int) ($request->validated('year') ?? now()->format('Y'));
+        $month = (int) ($request->validated('month') ?? now()->format('n'));
 
         return view('reports.monthly-assessments', [
             'year' => $year,
@@ -35,8 +35,8 @@ class MonthlyAssessmentReportController extends Controller
 
     public function print(ReportFilterRequest $request): View
     {
-        $year = $request->validated('year') ?? (int) now()->format('Y');
-        $month = $request->validated('month') ?? (int) now()->format('n');
+        $year = (int) ($request->validated('year') ?? now()->format('Y'));
+        $month = (int) ($request->validated('month') ?? now()->format('n'));
 
         return view('reports.print.monthly-assessments', [
             'year' => $year,
@@ -47,8 +47,8 @@ class MonthlyAssessmentReportController extends Controller
 
     public function pdf(ReportFilterRequest $request): Response
     {
-        $year = $request->validated('year') ?? (int) now()->format('Y');
-        $month = $request->validated('month') ?? (int) now()->format('n');
+        $year = (int) ($request->validated('year') ?? now()->format('Y'));
+        $month = (int) ($request->validated('month') ?? now()->format('n'));
 
         $data = [
             'year' => $year,

@@ -1,94 +1,69 @@
-@php
-    $severityBadgeClasses = [
-        'Normal' => 'bg-[#EAF3DE] text-[#27500A]',
-        'Mild' => 'bg-[#E6F1FB] text-[#0C447C]',
-        'Moderate' => 'bg-[#FAEEDA] text-[#633806]',
-        'Severe' => 'bg-[#FAECE7] text-[#712B13]',
-        'Extremely Severe' => 'bg-[#FCEBEB] text-[#791F1F]',
-    ];
-@endphp
-
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Assessment History</p>
-                <h2 class="text-2xl font-semibold text-slate-900">Assessments</h2>
+                <h2 class="text-2xl font-semibold text-body">Assessments</h2>
             </div>
             @if ($studentNumber)
                 <div class="flex flex-wrap gap-2">
-                    <a href="{{ route('reports.student-history.print', ['student_number' => $studentNumber]) }}" target="_blank" class="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                    <x-secondary-button :href="route('reports.student-history.print', ['student_number' => $studentNumber])" target="_blank">
                         Print Report
-                    </a>
-                    <a href="{{ route('reports.student-history.pdf', ['student_number' => $studentNumber]) }}" class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
+                    </x-secondary-button>
+                    <x-primary-button :href="route('reports.student-history.pdf', ['student_number' => $studentNumber])">
                         Download PDF
-                    </a>
+                    </x-primary-button>
                 </div>
             @endif
         </div>
     </x-slot>
 
-    <div class="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <x-card class="mb-6">
         <form method="GET" action="{{ route('assessments.index') }}" class="flex flex-wrap items-end gap-3">
             <div class="min-w-[220px] flex-1">
-                <x-input-label for="student_number" :value="__('Student Number')" />
-                <x-text-input id="student_number" name="student_number" type="text" class="mt-1 block w-full" value="{{ $studentNumber }}" placeholder="Search by student number" />
+                <x-input-label for="search" :value="__('Student Name')" />
+                <x-text-input id="search" name="search" type="text" class="mt-1 block w-full" value="{{ $search }}" placeholder="Search by student name" />
             </div>
             <x-secondary-button type="submit">{{ __('Search') }}</x-secondary-button>
-            @if ($studentNumber)
-                <a href="{{ route('assessments.index') }}" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50">
+            @if ($search || $studentNumber)
+                <x-secondary-button :href="route('assessments.index')">
                     {{ __('Clear') }}
-                </a>
+                </x-secondary-button>
             @endif
         </form>
-    </div>
+    </x-card>
 
-    <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
-                <thead class="bg-slate-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Student</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Student #</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Course / Year / Section</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Assessment Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Overall Severity</th>
-                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200 bg-white">
-                    @forelse ($assessments as $assessment)
-                        <tr>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">{{ $assessment->student->full_name }}</td>
-                            <td class="px-6 py-4 text-sm text-slate-700">{{ $assessment->student->student_number }}</td>
-                            <td class="px-6 py-4 text-sm text-slate-700">
-                                {{ $assessment->student->course?->course_code }} &mdash;
-                                {{ $assessment->student->yearLevel?->label }} &mdash;
-                                {{ $assessment->student->section?->section_name }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-slate-700">{{ $assessment->submitted_at->format('M d, Y g:i A') }}</td>
-                            <td class="px-6 py-4 text-sm">
-                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $severityBadgeClasses[$assessment->result?->highestSeverityLevel()] ?? 'bg-slate-200 text-slate-600' }}">
-                                    {{ $assessment->result?->highestSeverityLevel() ?? 'N/A' }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-right text-sm">
-                                <a href="{{ route('assessments.show', $assessment) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-sm text-slate-500">
-                                No assessments found.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+    <x-table>
+        <x-slot:head>
+            <x-table.th>Student</x-table.th>
+            <x-table.th>Student #</x-table.th>
+            <x-table.th>Course / Year / Section</x-table.th>
+            <x-table.th>Assessment Date</x-table.th>
+            <x-table.th>Overall Severity</x-table.th>
+            <x-table.th align="right">Actions</x-table.th>
+        </x-slot:head>
 
-        <div class="border-t border-slate-200 px-6 py-4">
+        @forelse ($assessments as $assessment)
+            <tr>
+                <x-table.td class="font-medium text-body">{{ $assessment->student->full_name }}</x-table.td>
+                <x-table.td>{{ $assessment->student->student_number }}</x-table.td>
+                <x-table.td>
+                    {{ $assessment->student->course?->course_code }} &mdash;
+                    {{ $assessment->student->yearLevel?->label }} &mdash;
+                    {{ $assessment->student->section?->section_name }}
+                </x-table.td>
+                <x-table.td>{{ $assessment->submitted_at->format('M d, Y g:i A') }}</x-table.td>
+                <x-table.td><x-severity-badge :level="$assessment->result?->highestSeverityLevel()" /></x-table.td>
+                <x-table.td align="right">
+                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                </x-table.td>
+            </tr>
+        @empty
+            <x-table.empty :colspan="6">No assessments found.</x-table.empty>
+        @endforelse
+
+        <x-slot:footer>
             {{ $assessments->links() }}
-        </div>
-    </div>
+        </x-slot:footer>
+    </x-table>
 </x-app-layout>

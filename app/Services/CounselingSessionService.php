@@ -23,9 +23,26 @@ class CounselingSessionService
     {
     }
 
-    public function findStudentByNumber(string $studentNumber): ?Student
+    /**
+     * @return Collection<int, Student>
+     */
+    public function searchStudentsByName(string $search): Collection
     {
-        return Student::query()->where('student_number', $studentNumber)->first();
+        return Student::query()
+            ->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"])
+                    ->orWhereRaw("CONCAT(first_name, ' ', middle_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
+            })
+            ->orderBy('first_name')
+            ->limit(20)
+            ->get();
+    }
+
+    public function findStudentById(int $id): ?Student
+    {
+        return Student::query()->find($id);
     }
 
     /**
@@ -41,14 +58,19 @@ class CounselingSessionService
 
     /**
      * Paginate counseling sessions, most recent first, optionally
-     * filtered by student number.
+     * filtered by student name.
      */
-    public function paginate(?string $studentNumber, int $perPage = 10): LengthAwarePaginator
+    public function paginate(?string $search, int $perPage = 10): LengthAwarePaginator
     {
         return CounselingSession::query()
             ->with(['student', 'counselor', 'assessment'])
-            ->when($studentNumber, function ($query, string $value) {
-                $query->whereHas('student', fn ($q) => $q->where('student_number', 'like', "%{$value}%"));
+            ->when($search, function ($query, string $value) {
+                $query->whereHas('student', function ($q) use ($value) {
+                    $q->where('first_name', 'like', "%{$value}%")
+                        ->orWhere('last_name', 'like', "%{$value}%")
+                        ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$value}%"])
+                        ->orWhereRaw("CONCAT(first_name, ' ', middle_name, ' ', last_name) LIKE ?", ["%{$value}%"]);
+                });
             })
             ->orderByDesc('session_datetime')
             ->paginate($perPage)

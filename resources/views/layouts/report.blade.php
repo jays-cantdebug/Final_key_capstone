@@ -14,7 +14,7 @@
         dl { width: 100%; overflow: hidden; margin: 12px 0; }
         dt { float: left; width: 40%; font-weight: bold; color: #555555; font-size: 11px; padding: 3px 0; }
         dd { float: left; width: 60%; margin: 0; font-size: 11px; padding: 3px 0; }
-        .badge { padding: 2px 6px; border: 1px solid #999999; border-radius: 3px; font-size: 10px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; }
         .footer { margin-top: 24px; font-size: 10px; color: #999999; }
         .empty { color: #999999; font-style: italic; }
     </style>

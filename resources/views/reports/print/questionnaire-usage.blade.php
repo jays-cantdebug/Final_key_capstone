@@ -1,3 +1,11 @@
+@php
+    $statusBadgeStyles = [
+        'Draft' => 'background:#F1F5F9;color:#475569;',
+        'Active' => 'background:#EAF3DE;color:#27500A;',
+        'Archived' => 'background:#FAEEDA;color:#633806;',
+    ];
+@endphp
+
 <x-report-layout title="Questionnaire Usage Report">
     <table>
         <thead>
@@ -14,7 +22,7 @@
                 <tr>
                     <td>{{ $version->questionnaire->title }}</td>
                     <td>v{{ $version->version_number }}</td>
-                    <td>{{ $version->status }}</td>
+                    <td><span class="badge" style="{{ $statusBadgeStyles[$version->status] ?? '' }}">{{ $version->status }}</span></td>
                     <td>{{ $version->questions_count }}</td>
                     <td>{{ $version->assessments_count }}</td>
                 </tr>

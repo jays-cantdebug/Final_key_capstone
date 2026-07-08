@@ -22,11 +22,11 @@ class CounselingSessionController extends Controller
     {
         Gate::authorize('viewAny', CounselingSession::class);
 
-        $studentNumber = $request->get('student_number');
+        $search = $request->get('search');
 
         return view('counseling-sessions.index', [
-            'sessions' => $this->sessionService->paginate($studentNumber),
-            'studentNumber' => $studentNumber,
+            'sessions' => $this->sessionService->paginate($search),
+            'search' => $search,
         ]);
     }
 
@@ -34,18 +34,24 @@ class CounselingSessionController extends Controller
     {
         Gate::authorize('create', CounselingSession::class);
 
-        $searched = $request->filled('student_number');
         $foundStudent = null;
+        $matches = collect();
 
-        if ($searched) {
-            $foundStudent = $this->sessionService->findStudentByNumber(
-                $request->string('student_number')->toString()
-            );
+        if ($request->filled('student_id')) {
+            $foundStudent = $this->sessionService->findStudentById((int) $request->input('student_id'));
+        } elseif ($request->filled('search')) {
+            $matches = $this->sessionService->searchStudentsByName($request->string('search')->toString());
+
+            if ($matches->count() === 1) {
+                $foundStudent = $matches->first();
+            }
         }
 
         return view('counseling-sessions.create', [
             'foundStudent' => $foundStudent,
-            'searched' => $searched,
+            'matches' => $foundStudent ? collect() : $matches,
+            'search' => $request->get('search'),
+            'searched' => $request->filled('search') || $request->filled('student_id'),
             'assessments' => $foundStudent ? $this->sessionService->assessmentsForStudent($foundStudent) : collect(),
         ]);
     }

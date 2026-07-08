@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(curl -s -D - -o C:/Users/arnhe/AppData/Local/Temp/claude/C--Users-arnhe-Documents-Mycapstone/167356d5-59fc-4ae8-9d54-abecf0f6c270/scratchpad/dashboard.html -b C:/Users/arnhe/AppData/Local/Temp/claude/C--Users-arnhe-Documents-Mycapstone/167356d5-59fc-4ae8-9d54-abecf0f6c270/scratchpad/cookies.txt -c C:/Users/arnhe/AppData/Local/Temp/claude/C--Users-arnhe-Documents-Mycapstone/167356d5-59fc-4ae8-9d54-abecf0f6c270/scratchpad/cookies.txt http://127.0.0.1:8001/dashboard -w '\\\\nHTTPCODE:%{http_code}\\\\n')",
+      "Bash(php artisan tinker '--execute= *)"
     ]
   }
 }

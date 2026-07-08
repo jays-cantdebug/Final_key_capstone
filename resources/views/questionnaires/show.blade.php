@@ -1,8 +1,8 @@
 @php
-    $versionStatusClasses = [
-        'Draft' => 'bg-slate-200 text-slate-600',
-        'Active' => 'bg-emerald-100 text-emerald-700',
-        'Archived' => 'bg-amber-100 text-amber-700',
+    $versionStatusColors = [
+        'Draft' => 'slate',
+        'Active' => 'green',
+        'Archived' => 'amber',
     ];
 @endphp
 
@@ -11,107 +11,97 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Questionnaire Management</p>
-                <h2 class="text-2xl font-semibold text-slate-900">{{ $questionnaire->title }}</h2>
+                <h2 class="text-2xl font-semibold text-body">{{ $questionnaire->title }}</h2>
             </div>
             <div class="flex flex-wrap gap-2">
-                <a href="{{ route('questionnaires.edit', $questionnaire) }}" class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
+                <x-primary-button :href="route('questionnaires.edit', $questionnaire)">
                     Edit questionnaire
-                </a>
-                <a href="{{ route('questionnaires.index') }}" class="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                </x-primary-button>
+                <x-secondary-button :href="route('questionnaires.index')">
                     Back to list
-                </a>
+                </x-secondary-button>
             </div>
         </div>
     </x-slot>
 
     @if (session('status'))
-        <div class="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-            {{ session('status') }}
-        </div>
+        <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>
     @endif
 
     @error('version')
-        <div class="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-            {{ $message }}
-        </div>
+        <x-alert type="error" class="mb-6">{{ $message }}</x-alert>
     @enderror
 
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex items-start justify-between gap-4 border-b border-slate-200 pb-6">
-            <div>
-                <p class="text-sm text-slate-500">{{ $questionnaire->description }}</p>
+    <x-card class="mb-6">
+        <div class="flex items-start justify-between gap-4">
+            <p class="text-sm text-slate-500">{{ $questionnaire->description }}</p>
+            <div class="text-right">
+                <x-badge :color="$questionnaire->status === 'Active' ? 'green' : 'slate'">{{ $questionnaire->status }}</x-badge>
+                <p class="mt-1 max-w-[14rem] text-[11px] leading-snug text-slate-500">Template status &mdash; controls whether this questionnaire can be selected at all.</p>
             </div>
-            <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $questionnaire->status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600' }}">
-                {{ $questionnaire->status }}
-            </span>
         </div>
+    </x-card>
 
-        <div class="mt-6 flex items-center justify-between gap-2">
-            <h3 class="text-lg font-semibold text-slate-900">Questionnaire Versions</h3>
-            <a href="{{ route('questionnaires.versions.create', $questionnaire) }}" class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
+    <x-table>
+        <x-slot:header>
+            <div>
+                <h3 class="text-lg font-semibold text-body">Questionnaire Versions</h3>
+                <p class="mt-1 text-xs text-slate-500">Version status &mdash; controls which version is currently used for new assessments. Independent from the template status above.</p>
+            </div>
+            <x-primary-button :href="route('questionnaires.versions.create', $questionnaire)">
                 Create version
-            </a>
-        </div>
+            </x-primary-button>
+        </x-slot:header>
+        <x-slot:head>
+            <x-table.th>Version</x-table.th>
+            <x-table.th>Effective Date</x-table.th>
+            <x-table.th>Questions</x-table.th>
+            <x-table.th>Version Status</x-table.th>
+            <x-table.th align="right">Actions</x-table.th>
+        </x-slot:head>
 
-        <div class="mt-4 overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
-                <thead class="bg-slate-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Version</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Effective Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Questions</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200 bg-white">
-                    @forelse ($versions as $version)
-                        <tr>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">v{{ $version->version_number }}</td>
-                            <td class="px-6 py-4 text-sm text-slate-700">{{ $version->effective_date->format('M d, Y') }}</td>
-                            <td class="px-6 py-4 text-sm text-slate-700">{{ $version->questions_count }}</td>
-                            <td class="px-6 py-4 text-sm">
-                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $versionStatusClasses[$version->status] ?? 'bg-slate-200 text-slate-600' }}">
-                                    {{ $version->status }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-right text-sm">
-                                <div class="inline-flex flex-wrap justify-end gap-2">
-                                    <a href="{{ route('questionnaires.versions.show', [$questionnaire, $version]) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+        @forelse ($versions as $version)
+            <tr>
+                <x-table.td class="font-medium text-body">v{{ $version->version_number }}</x-table.td>
+                <x-table.td>{{ $version->effective_date->format('M d, Y') }}</x-table.td>
+                <x-table.td>{{ $version->questions_count }}</x-table.td>
+                <x-table.td><x-badge :color="$versionStatusColors[$version->status] ?? 'slate'">{{ $version->status }}</x-badge></x-table.td>
+                <x-table.td align="right">
+                    <div class="inline-flex flex-wrap justify-end gap-2">
+                        <a href="{{ route('questionnaires.versions.show', [$questionnaire, $version]) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
 
-                                    @if ($version->isEditable())
-                                        <a href="{{ route('questionnaires.versions.edit', [$questionnaire, $version]) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                        @if ($version->isEditable())
+                            <a href="{{ route('questionnaires.versions.edit', [$questionnaire, $version]) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
 
-                                        <form method="POST" action="{{ route('questionnaires.versions.activate', [$questionnaire, $version]) }}">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="rounded-full border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50">Activate</button>
-                                        </form>
+                            <form method="POST" action="{{ route('questionnaires.versions.activate', [$questionnaire, $version]) }}">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="rounded-full border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50">Activate</button>
+                            </form>
 
-                                        <form method="POST" action="{{ route('questionnaires.versions.destroy', [$questionnaire, $version]) }}" onsubmit="return confirm('Delete this draft version?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="rounded-full border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
-                                        </form>
-                                    @elseif ($version->status === 'Active')
-                                        <form method="POST" action="{{ route('questionnaires.versions.archive', [$questionnaire, $version]) }}">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="rounded-full border border-amber-200 px-3 py-1.5 font-medium text-amber-700 transition hover:bg-amber-50">Archive</button>
-                                        </form>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-sm text-slate-500">
-                                No versions have been created yet.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
+                            <form method="POST" action="{{ route('questionnaires.versions.destroy', [$questionnaire, $version]) }}" onsubmit="return confirm('Delete this draft version?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="rounded-full border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
+                            </form>
+                        @elseif ($version->status === 'Active')
+                            <form method="POST" action="{{ route('questionnaires.versions.archive', [$questionnaire, $version]) }}">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="rounded-full border border-amber-200 px-3 py-1.5 font-medium text-amber-700 transition hover:bg-amber-50">Archive</button>
+                            </form>
+                        @else
+                            <form method="POST" action="{{ route('questionnaires.versions.activate', [$questionnaire, $version]) }}">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="rounded-full border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50">Activate</button>
+                            </form>
+                        @endif
+                    </div>
+                </x-table.td>
+            </tr>
+        @empty
+            <x-table.empty :colspan="5">No versions have been created yet.</x-table.empty>
+        @endforelse
+    </x-table>
 </x-app-layout>

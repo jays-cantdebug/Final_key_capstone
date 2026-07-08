@@ -4,6 +4,14 @@
         ['label' => 'Anxiety', 'score' => $assessment->result->anxiety_final_score, 'level' => $assessment->result->anxiety_level],
         ['label' => 'Stress', 'score' => $assessment->result->stress_final_score, 'level' => $assessment->result->stress_level],
     ];
+
+    $severityBadgeStyles = [
+        'Normal' => 'background:#EAF3DE;color:#27500A;',
+        'Mild' => 'background:#E6F1FB;color:#0C447C;',
+        'Moderate' => 'background:#FAEEDA;color:#633806;',
+        'Severe' => 'background:#FAECE7;color:#712B13;',
+        'Extremely Severe' => 'background:#FCEBEB;color:#791F1F;',
+    ];
 @endphp
 
 <x-report-layout title="Assessment Report">
@@ -39,13 +47,13 @@
                 <tr>
                     <td>{{ $subscale['label'] }}</td>
                     <td>{{ $subscale['score'] }}</td>
-                    <td>{{ $subscale['level'] }}</td>
+                    <td><span class="badge" style="{{ $severityBadgeStyles[$subscale['level']] ?? '' }}">{{ $subscale['level'] }}</span></td>
                 </tr>
             @endforeach
             <tr>
                 <td><strong>Overall</strong></td>
                 <td></td>
-                <td><strong>{{ $assessment->result->highestSeverityLevel() }}</strong></td>
+                <td><span class="badge" style="{{ $severityBadgeStyles[$assessment->result->highestSeverityLevel()] ?? '' }}"><strong>{{ $assessment->result->highestSeverityLevel() }}</strong></span></td>
             </tr>
         </tbody>
     </table>

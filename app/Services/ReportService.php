@@ -75,8 +75,13 @@ class ReportService
     {
         return FlaggedCase::query()
             ->with(['assessment.student.course', 'assessment.student.yearLevel', 'assessment.student.section'])
-            ->when($filters['student_number'] ?? null, function (Builder $query, string $value) {
-                $query->whereHas('assessment.student', fn (Builder $q) => $q->where('student_number', 'like', "%{$value}%"));
+            ->when($filters['search'] ?? null, function (Builder $query, string $value) {
+                $query->whereHas('assessment.student', function (Builder $q) use ($value) {
+                    $q->where('first_name', 'like', "%{$value}%")
+                        ->orWhere('last_name', 'like', "%{$value}%")
+                        ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$value}%"])
+                        ->orWhereRaw("CONCAT(first_name, ' ', middle_name, ' ', last_name) LIKE ?", ["%{$value}%"]);
+                });
             })
             ->when($filters['course_id'] ?? null, function (Builder $query, $value) {
                 $query->whereHas('assessment.student', fn (Builder $q) => $q->where('course_id', $value));
@@ -99,7 +104,7 @@ class ReportService
 
     /**
      * Counseling Report: counseling sessions matching the given student
-     * number filter. Session note redaction (Module 9's confidentiality
+     * name filter. Session note redaction (Module 9's confidentiality
      * rule) is applied in the view, not here.
      *
      * @param array<string, mixed> $filters
@@ -109,8 +114,13 @@ class ReportService
     {
         return CounselingSession::query()
             ->with(['student', 'counselor', 'assessment'])
-            ->when($filters['student_number'] ?? null, function (Builder $query, string $value) {
-                $query->whereHas('student', fn (Builder $q) => $q->where('student_number', 'like', "%{$value}%"));
+            ->when($filters['search'] ?? null, function (Builder $query, string $value) {
+                $query->whereHas('student', function (Builder $q) use ($value) {
+                    $q->where('first_name', 'like', "%{$value}%")
+                        ->orWhere('last_name', 'like', "%{$value}%")
+                        ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$value}%"])
+                        ->orWhereRaw("CONCAT(first_name, ' ', middle_name, ' ', last_name) LIKE ?", ["%{$value}%"]);
+                });
             })
             ->when($filters['date_from'] ?? null, fn (Builder $q, $v) => $q->whereDate('session_datetime', '>=', $v))
             ->when($filters['date_to'] ?? null, fn (Builder $q, $v) => $q->whereDate('session_datetime', '<=', $v))

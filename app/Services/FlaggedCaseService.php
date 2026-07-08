@@ -136,8 +136,13 @@ class FlaggedCaseService
             ->when($tab === 'normal', function ($query) {
                 $query->whereDoesntHave('flaggedCases');
             })
-            ->when($filters['student_number'] ?? null, function ($query, string $value) {
-                $query->whereHas('student', fn ($q) => $q->where('student_number', 'like', "%{$value}%"));
+            ->when($filters['search'] ?? null, function ($query, string $value) {
+                $query->whereHas('student', function ($q) use ($value) {
+                    $q->where('first_name', 'like', "%{$value}%")
+                        ->orWhere('last_name', 'like', "%{$value}%")
+                        ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$value}%"])
+                        ->orWhereRaw("CONCAT(first_name, ' ', middle_name, ' ', last_name) LIKE ?", ["%{$value}%"]);
+                });
             })
             ->when($filters['course_id'] ?? null, function ($query, $value) {
                 $query->whereHas('student', fn ($q) => $q->where('course_id', $value));

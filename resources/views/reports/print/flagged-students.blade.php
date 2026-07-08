@@ -1,3 +1,10 @@
+@php
+    $flagBadgeStyles = [
+        'counseling_endorsement' => 'background:#E3F4F1;color:#0F5C50;',
+        'awareness_notification' => 'background:#F1E9FB;color:#4A1E82;',
+    ];
+@endphp
+
 <x-report-layout title="Flagged Students Report">
     <table>
         <thead>
@@ -22,7 +29,7 @@
                         {{ $flaggedCase->assessment->student->section?->section_name }}
                     </td>
                     <td>{{ $flaggedCase->assessment->submitted_at->format('M d, Y') }}</td>
-                    <td>{{ $flaggedCase->flag_type === 'counseling_endorsement' ? 'Counseling Endorsement' : 'Awareness Notification' }}</td>
+                    <td><span class="badge" style="{{ $flagBadgeStyles[$flaggedCase->flag_type] ?? '' }}">{{ $flaggedCase->flag_type === 'counseling_endorsement' ? 'Counseling Endorsement' : 'Awareness Notification' }}</span></td>
                     <td>{{ ucfirst($flaggedCase->triggering_subscale) }}</td>
                     <td>{{ $flaggedCase->status }}</td>
                 </tr>

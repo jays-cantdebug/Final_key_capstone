@@ -12,17 +12,17 @@
 
     <div class="sm:col-span-2">
         <x-input-label for="description" :value="__('Description')" />
-        <textarea id="description" name="description" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>{{ old('description', $questionnaire?->description) }}</textarea>
+        <x-textarea id="description" name="description" rows="4" class="mt-1 block w-full" required>{{ old('description', $questionnaire?->description) }}</x-textarea>
         <x-input-error class="mt-2" :messages="$errors->get('description')" />
     </div>
 
     <div>
         <x-input-label for="status" :value="__('Status')" />
-        <select id="status" name="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+        <x-select id="status" name="status" class="mt-1 block w-full">
             @foreach (['Active', 'Inactive', 'Archived'] as $status)
                 <option value="{{ $status }}" @selected(old('status', $questionnaire?->status ?? 'Active') === $status)>{{ $status }}</option>
             @endforeach
-        </select>
+        </x-select>
         <x-input-error class="mt-2" :messages="$errors->get('status')" />
     </div>
 </div>
@@ -32,7 +32,7 @@
         {{ $buttonLabel ?? __('Save Questionnaire') }}
     </x-primary-button>
 
-    <a href="{{ route('questionnaires.index') }}" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50">
+    <x-secondary-button :href="route('questionnaires.index')">
         {{ __('Cancel') }}
-    </a>
+    </x-secondary-button>
 </div>

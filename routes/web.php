@@ -50,7 +50,7 @@ Route::middleware('auth')->group(function (): void {
         ->name('guidance-counselor.dashboard');
 
     Route::middleware('role:psychometrician')->group(function (): void {
-        Route::resource('students', StudentController::class);
+        Route::resource('students', StudentController::class)->except(['create', 'store']);
 
         Route::resource('questionnaires', QuestionnaireController::class)->except(['destroy']);
 

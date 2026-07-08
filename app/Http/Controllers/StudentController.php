@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Services\StudentService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class StudentController extends Controller
@@ -17,27 +18,16 @@ class StudentController extends Controller
     {
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
         Gate::authorize('viewAny', Student::class);
 
+        $search = $request->get('search');
+
         return view('students.index', [
-            'students' => $this->studentService->paginate(),
+            'students' => $this->studentService->paginate($search),
+            'search' => $search,
         ]);
-    }
-
-    public function create(): View
-    {
-        Gate::authorize('create', Student::class);
-
-        return view('students.create', $this->studentService->formData());
-    }
-
-    public function store(StudentFormRequest $request): RedirectResponse
-    {
-        $this->studentService->create($request->validated());
-
-        return redirect()->route('students.index')->with('status', 'Student record created successfully.');
     }
 
     public function show(Student $student): View

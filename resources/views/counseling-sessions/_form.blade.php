@@ -1,19 +1,20 @@
 @php
     /** @var \App\Models\CounselingSession|null $session */
     $session = $session ?? null;
+    $followUpRequiredChecked = (bool) old('follow_up_required', $session?->follow_up_required ?? false);
 @endphp
 
 <div class="grid gap-6 sm:grid-cols-2">
     <div>
         <x-input-label for="assessment_id" :value="__('Related Assessment (optional)')" />
-        <select id="assessment_id" name="assessment_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+        <x-select id="assessment_id" name="assessment_id" class="mt-1 block w-full">
             <option value="">No related assessment</option>
             @foreach ($assessments as $assessment)
                 <option value="{{ $assessment->id }}" @selected((string) old('assessment_id', $session?->assessment_id) === (string) $assessment->id)>
                     {{ $assessment->submitted_at->format('M d, Y g:i A') }} &mdash; {{ $assessment->result?->highestSeverityLevel() ?? 'N/A' }}
                 </option>
             @endforeach
-        </select>
+        </x-select>
         <x-input-error class="mt-2" :messages="$errors->get('assessment_id')" />
     </div>
 
@@ -25,35 +26,35 @@
 
     <div class="sm:col-span-2">
         <x-input-label for="session_notes" :value="__('Session Notes')" />
-        <textarea id="session_notes" name="session_notes" rows="5" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>{{ old('session_notes', $session?->session_notes) }}</textarea>
+        <x-textarea id="session_notes" name="session_notes" rows="5" class="mt-1 block w-full" required>{{ old('session_notes', $session?->session_notes) }}</x-textarea>
         <x-input-error class="mt-2" :messages="$errors->get('session_notes')" />
     </div>
 
     <div>
         <x-input-label for="session_status" :value="__('Session Status')" />
-        <select id="session_status" name="session_status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+        <x-select id="session_status" name="session_status" class="mt-1 block w-full">
             @foreach (['Scheduled', 'Completed', 'Cancelled', 'No-Show'] as $status)
                 <option value="{{ $status }}" @selected(old('session_status', $session?->session_status ?? 'Scheduled') === $status)>{{ $status }}</option>
             @endforeach
-        </select>
+        </x-select>
         <x-input-error class="mt-2" :messages="$errors->get('session_status')" />
     </div>
 
     <div>
         <x-input-label for="confidentiality_level" :value="__('Confidentiality Level')" />
-        <select id="confidentiality_level" name="confidentiality_level" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+        <x-select id="confidentiality_level" name="confidentiality_level" class="mt-1 block w-full">
             @foreach (['Standard', 'Restricted'] as $level)
                 <option value="{{ $level }}" @selected(old('confidentiality_level', $session?->confidentiality_level ?? 'Standard') === $level)>{{ $level }}</option>
             @endforeach
-        </select>
+        </x-select>
         <p class="mt-1 text-xs text-slate-500">Restricted notes are visible only to you.</p>
         <x-input-error class="mt-2" :messages="$errors->get('confidentiality_level')" />
     </div>
 
-    <div class="sm:col-span-2" x-data="{ followUpRequired: {{ old('follow_up_required', $session?->follow_up_required ?? false) ? 'true' : 'false' }} }">
+    <div class="sm:col-span-2" x-data="{ followUpRequired: {{ $followUpRequiredChecked ? 'true' : 'false' }} }">
         <label class="inline-flex items-center gap-2">
             <input type="hidden" name="follow_up_required" value="0" />
-            <input type="checkbox" name="follow_up_required" value="1" x-model="followUpRequired" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+            <x-checkbox name="follow_up_required" value="1" x-model="followUpRequired" />
             <span class="text-sm text-slate-700">{{ __('Follow-up required') }}</span>
         </label>
         <x-input-error class="mt-2" :messages="$errors->get('follow_up_required')" />
@@ -71,7 +72,7 @@
         {{ $buttonLabel ?? __('Save Session') }}
     </x-primary-button>
 
-    <a href="{{ route('counseling-sessions.index') }}" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50">
+    <x-secondary-button :href="route('counseling-sessions.index')">
         {{ __('Cancel') }}
-    </a>
+    </x-secondary-button>
 </div>

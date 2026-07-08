@@ -1,3 +1,13 @@
+@php
+    $severityBadgeStyles = [
+        'Normal' => 'background:#EAF3DE;color:#27500A;',
+        'Mild' => 'background:#E6F1FB;color:#0C447C;',
+        'Moderate' => 'background:#FAEEDA;color:#633806;',
+        'Severe' => 'background:#FAECE7;color:#712B13;',
+        'Extremely Severe' => 'background:#FCEBEB;color:#791F1F;',
+    ];
+@endphp
+
 <x-report-layout title="Student Assessment History Report">
     @if ($student)
         <dl>
@@ -26,10 +36,10 @@
                 @forelse ($assessments as $assessment)
                     <tr>
                         <td>{{ $assessment->submitted_at->format('M d, Y g:i A') }}</td>
-                        <td>{{ $assessment->result?->depression_level ?? 'N/A' }}</td>
-                        <td>{{ $assessment->result?->anxiety_level ?? 'N/A' }}</td>
-                        <td>{{ $assessment->result?->stress_level ?? 'N/A' }}</td>
-                        <td>{{ $assessment->result?->highestSeverityLevel() ?? 'N/A' }}</td>
+                        <td><span class="badge" style="{{ $severityBadgeStyles[$assessment->result?->depression_level] ?? '' }}">{{ $assessment->result?->depression_level ?? 'N/A' }}</span></td>
+                        <td><span class="badge" style="{{ $severityBadgeStyles[$assessment->result?->anxiety_level] ?? '' }}">{{ $assessment->result?->anxiety_level ?? 'N/A' }}</span></td>
+                        <td><span class="badge" style="{{ $severityBadgeStyles[$assessment->result?->stress_level] ?? '' }}">{{ $assessment->result?->stress_level ?? 'N/A' }}</span></td>
+                        <td><span class="badge" style="{{ $severityBadgeStyles[$assessment->result?->highestSeverityLevel()] ?? '' }}">{{ $assessment->result?->highestSeverityLevel() ?? 'N/A' }}</span></td>
                     </tr>
                 @empty
                     <tr>

@@ -22,7 +22,7 @@
         {{ $buttonLabel ?? __('Save Version') }}
     </x-primary-button>
 
-    <a href="{{ route('questionnaires.show', $questionnaire) }}" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50">
+    <x-secondary-button :href="route('questionnaires.show', $questionnaire)">
         {{ __('Cancel') }}
-    </a>
+    </x-secondary-button>
 </div>

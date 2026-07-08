@@ -15,16 +15,29 @@ class StudentService
 {
     public function __construct(
         private readonly DatabaseManager $database,
-        private readonly StudentNumberGeneratorService $studentNumberGenerator,
     ) {
     }
 
-    public function paginate(int $perPage = 10): LengthAwarePaginator
+    /**
+     * Students are only ever created through New Assessment Step 1
+     * (AssessmentService::registerStudent()) — this listing supports
+     * View, Search, Edit, and Assessment History only, never creation.
+     */
+    public function paginate(?string $search = null, int $perPage = 10): LengthAwarePaginator
     {
         return Student::query()
             ->with(['course', 'yearLevel', 'section'])
+            ->when($search, function ($query, string $value) {
+                $query->where(function ($q) use ($value) {
+                    $q->where('first_name', 'like', "%{$value}%")
+                        ->orWhere('last_name', 'like', "%{$value}%")
+                        ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$value}%"])
+                        ->orWhereRaw("CONCAT(first_name, ' ', middle_name, ' ', last_name) LIKE ?", ["%{$value}%"]);
+                });
+            })
             ->orderBy('student_number')
-            ->paginate($perPage);
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     /**
@@ -37,17 +50,6 @@ class StudentService
             'yearLevels' => YearLevel::query()->orderBy('display_order')->get(),
             'sections' => Section::query()->orderBy('section_name')->get(),
         ];
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    public function create(array $data): Student
-    {
-        return $this->database->transaction(fn (): Student => Student::query()->create([
-            ...$data,
-            'student_number' => $this->studentNumberGenerator->generate(),
-        ]));
     }
 
     /**

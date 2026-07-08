@@ -11,6 +11,12 @@ use Illuminate\Validation\Rule;
  * Shared filter validation for all report routes. Not every report uses
  * every field; each report's controller/service reads only the fields
  * relevant to it.
+ *
+ * `search` (student name) is the user-facing filter carried through from
+ * the Flagged Cases and Counseling Sessions listings. `student_number` is
+ * only used by the Student Assessment History report, reached via an
+ * exact deep link from a specific student's profile rather than typed
+ * manually — it's never a search field a user fills in directly.
  */
 class ReportFilterRequest extends FormRequest
 {
@@ -30,6 +36,7 @@ class ReportFilterRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'search' => ['nullable', 'string', 'max:100'],
             'student_number' => ['nullable', 'string', 'max:50'],
             'course_id' => ['nullable', 'integer', 'exists:courses,id'],
             'year_level_id' => ['nullable', 'integer', 'exists:year_levels,id'],

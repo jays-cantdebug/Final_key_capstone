@@ -1,3 +1,13 @@
+@php
+    $severityBadgeStyles = [
+        'Normal' => 'background:#EAF3DE;color:#27500A;',
+        'Mild' => 'background:#E6F1FB;color:#0C447C;',
+        'Moderate' => 'background:#FAEEDA;color:#633806;',
+        'Severe' => 'background:#FAECE7;color:#712B13;',
+        'Extremely Severe' => 'background:#FCEBEB;color:#791F1F;',
+    ];
+@endphp
+
 <x-report-layout title="Assessment Summary Report">
     <dl>
         <dt>Date Range</dt>
@@ -19,7 +29,7 @@
         <tbody>
             @foreach ($bySeverity as $severity => $count)
                 <tr>
-                    <td>{{ $severity }}</td>
+                    <td><span class="badge" style="{{ $severityBadgeStyles[$severity] ?? '' }}">{{ $severity }}</span></td>
                     <td>{{ $count }}</td>
                 </tr>
             @endforeach

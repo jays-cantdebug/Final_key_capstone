@@ -18,11 +18,11 @@
 
     <div>
         <x-input-label for="role_id" :value="__('Role')" />
-        <select id="role_id" name="role_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+        <x-select id="role_id" name="role_id" class="mt-1 block w-full">
             @foreach ($roles as $role)
                 <option value="{{ $role->id }}" @selected((string) old('role_id', $user?->role_id) === (string) $role->id)>{{ $role->display_name }}</option>
             @endforeach
-        </select>
+        </x-select>
         <x-input-error class="mt-2" :messages="$errors->get('role_id')" />
     </div>
 </div>

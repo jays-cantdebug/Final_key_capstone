@@ -2,38 +2,36 @@
     <x-slot name="header">
         <div>
             <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Settings</p>
-            <h2 class="text-2xl font-semibold text-slate-900">System Settings</h2>
+            <h2 class="text-2xl font-semibold text-body">System Settings</h2>
         </div>
     </x-slot>
 
     @include('settings._tabs', ['active' => 'general'])
 
     @if (session('status'))
-        <div class="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-            {{ session('status') }}
-        </div>
+        <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>
     @endif
 
-    <div class="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 class="text-lg font-semibold text-slate-900">Active Questionnaire</h3>
+    <x-card class="mb-6">
+        <h3 class="text-lg font-semibold text-body">Active Questionnaire</h3>
         <p class="mt-1 text-sm text-slate-600">The active questionnaire version is managed in Questionnaire Management, not here, to avoid two conflicting sources of truth.</p>
 
         <div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4">
             @if ($activeQuestionnaireVersion)
                 <div>
-                    <p class="text-sm font-medium text-slate-900">{{ $activeQuestionnaireVersion->questionnaire->title }} v{{ $activeQuestionnaireVersion->version_number }}</p>
+                    <p class="text-sm font-medium text-body">{{ $activeQuestionnaireVersion->questionnaire->title }} v{{ $activeQuestionnaireVersion->version_number }}</p>
                     <p class="text-xs text-slate-500">Effective {{ $activeQuestionnaireVersion->effective_date->format('M d, Y') }}</p>
                 </div>
             @else
                 <p class="text-sm text-slate-500">No questionnaire version is currently active.</p>
             @endif
-            <a href="{{ route('questionnaires.index') }}" class="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            <x-secondary-button :href="route('questionnaires.index')">
                 Manage in Questionnaire Management
-            </a>
+            </x-secondary-button>
         </div>
-    </div>
+    </x-card>
 
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <x-card>
         <form method="POST" action="{{ route('settings.update') }}">
             @csrf
             @method('PUT')
@@ -53,22 +51,22 @@
 
                 <div>
                     <x-input-label for="notification_severity_threshold" :value="__('Notification Severity Threshold')" />
-                    <select id="notification_severity_threshold" name="notification_severity_threshold" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <x-select id="notification_severity_threshold" name="notification_severity_threshold" class="mt-1 block w-full">
                         @foreach (['Moderate', 'Severe', 'Extremely Severe'] as $level)
                             <option value="{{ $level }}" @selected(old('notification_severity_threshold', $settings->get(\App\Models\SystemSetting::KEY_NOTIFICATION_SEVERITY_THRESHOLD)?->value) === $level)>{{ $level }}</option>
                         @endforeach
-                    </select>
+                    </x-select>
                     <p class="mt-1 text-xs text-slate-500">Minimum severity that triggers a Guidance Counselor notification and Flagged Case. Only affects assessments submitted after this change.</p>
                     <x-input-error class="mt-2" :messages="$errors->get('notification_severity_threshold')" />
                 </div>
 
                 <div>
                     <x-input-label for="assessment_availability" :value="__('Assessment Availability')" />
-                    <select id="assessment_availability" name="assessment_availability" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <x-select id="assessment_availability" name="assessment_availability" class="mt-1 block w-full">
                         @foreach (['Available', 'Unavailable'] as $availability)
                             <option value="{{ $availability }}" @selected(old('assessment_availability', $settings->get(\App\Models\SystemSetting::KEY_ASSESSMENT_AVAILABILITY)?->value) === $availability)>{{ $availability }}</option>
                         @endforeach
-                    </select>
+                    </x-select>
                     <p class="mt-1 text-xs text-slate-500">Informational only in this phase &mdash; does not currently restrict the New Assessment workflow.</p>
                     <x-input-error class="mt-2" :messages="$errors->get('assessment_availability')" />
                 </div>
@@ -85,5 +83,5 @@
                 <x-primary-button>{{ __('Save Settings') }}</x-primary-button>
             </div>
         </form>
-    </div>
+    </x-card>
 </x-app-layout>

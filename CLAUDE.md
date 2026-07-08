@@ -8,9 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The codebase is driven from a large user-owned "Master Prompt" spec, revealed and approved module-by-module. Nearly the full module list is implemented end-to-end: auth/roles, Course/YearLevel/Section management, Student Information Management, Questionnaire Management (+ versions + questions), Classification Thresholds, New Assessment (3-step wizard), AI Classification, Differentiated Flagging, Notifications, Feedback Loop, Assessment History/Results, Counseling Sessions, Reports (PDF), User Management, Settings, Audit Logs.
 
-**Known open gaps** (tracked, not yet fixed):
-- The login page's visual design doesn't fully match the approved mockup (dark/near-black background, "LOGIN" heading and button copy, exact project title text) — currently a lighter two-column Breeze-style layout.
-- No full pixel-level UI audit has been done across every dashboard/report/flagged-cases view against the exact brand palette and differentiated-flag display rules (priority badge collapsing, "+1 Notification" secondary indicator, etc.) — several were fixed opportunistically when their underlying data changed, but a systematic pass hasn't run.
+**Known open gaps**: none tracked as of 2026-07-08. A full design pass (component library, brand palette, differentiated-flag display rules), login page mockup fidelity, a mobile/tablet responsive pass (code-audited and user-visually-confirmed), and an automated test suite covering every domain module are all complete.
 
 **Local DB is MySQL, not SQLite**, despite `database/database.sqlite` existing and `.env.example` defaulting to sqlite: the working `.env` has `DB_CONNECTION=mysql`, `DB_DATABASE=student_mental_health_system`. Check `.env` before assuming which connection is live.
 
@@ -32,9 +30,9 @@ Run PHP commands via `php artisan`, `vendor/bin/...`. Bring up the frontend buil
 - Fresh DB + seed: `php artisan migrate:fresh --seed` (requires `ADMIN_DEFAULT_PASSWORD` in `.env` first)
 - Tinker (REPL): `php artisan tinker`
 
-Test environment uses the `array` driver for cache/session and `sync` queue (see `phpunit.xml`); the sqlite in-memory `DB_CONNECTION`/`DB_DATABASE` override lines in `phpunit.xml` are commented out, so `RefreshDatabase` tests currently run against whatever `.env` points at (MySQL `student_mental_health_system`, see below) unless you uncomment those lines or override env vars.
+Test environment uses the `array` driver for cache/session, `sync` queue, and sqlite in-memory `DB_CONNECTION`/`DB_DATABASE` (see `phpunit.xml`) — `RefreshDatabase` tests run fully isolated from the real dev MySQL database (`student_mental_health_system`), never touching or wiping it.
 
-Existing tests only cover Breeze auth flows (login, password reset/confirm/update) and profile editing — there is no test coverage yet for the domain modules (Student, Assessment, AI, Flagging, Feedback Loop, etc). Per the Master Prompt, feature/unit tests are intentionally deferred until explicitly requested.
+114 tests (`php artisan test`), covering Breeze auth flows plus every domain module: DASS scoring (pure arithmetic), AI classification (`RuleBasedDASSProvider` severity boundaries, provider factory resolution), differentiated flagging (all 0-3 flag-row combinations, notifications going to Guidance Counselors only — never the Psychometrician, tested as an explicit regression), the Feedback Loop (including the Psychometrician-only 403 regression), the New Assessment wizard end-to-end (name-splitting edge cases, full submit pipeline), Student/Questionnaire/Classification Threshold/Counseling Session/Notification/Report/Audit Log CRUD and role gating, and cross-cutting authorization (inactive-user login block, rate limiting, the User deactivation safety net). Shared fixtures live in `tests/Concerns/InteractsWithDomainData.php` (acting-as helpers, official threshold seeding, a configurable DASS-21 questionnaire version whose per-subscale raw score can be dialed to hit an exact severity band).
 
 ## Architecture
 

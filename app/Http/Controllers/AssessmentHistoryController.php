@@ -22,10 +22,12 @@ class AssessmentHistoryController extends Controller
 
     public function index(AssessmentHistoryRequest $request): View
     {
+        $search = $request->validated('search');
         $studentNumber = $request->validated('student_number');
 
         return view('assessments.index', [
-            'assessments' => $this->historyService->paginate($studentNumber),
+            'assessments' => $this->historyService->paginate($search, $studentNumber),
+            'search' => $search,
             'studentNumber' => $studentNumber,
         ]);
     }
