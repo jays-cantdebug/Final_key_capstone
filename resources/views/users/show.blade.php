@@ -42,7 +42,7 @@
                         <form method="POST" action="{{ route('users.deactivate', $user) }}">
                             @csrf
                             @method('PATCH')
-                            <button type="submit" class="inline-flex items-center justify-center rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50">
+                            <button type="submit" class="inline-flex items-center justify-center rounded-md border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50">
                                 Deactivate account
                             </button>
                         </form>
@@ -54,7 +54,7 @@
                         <form method="POST" action="{{ route('users.activate', $user) }}">
                             @csrf
                             @method('PATCH')
-                            <button type="submit" class="inline-flex items-center justify-center rounded-xl border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">
+                            <button type="submit" class="inline-flex items-center justify-center rounded-md border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">
                                 Activate account
                             </button>
                         </form>
@@ -74,13 +74,13 @@
 
                     <div>
                         <x-input-label for="password" :value="__('New Password')" />
-                        <x-text-input id="password" name="password" type="password" class="mt-1 block w-full" required />
+                        <x-password-input id="password" name="password" class="mt-1 block w-full" required />
                         <x-input-error class="mt-2" :messages="$errors->get('password')" />
                     </div>
 
                     <div>
                         <x-input-label for="password_confirmation" :value="__('Confirm New Password')" />
-                        <x-text-input id="password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" required />
+                        <x-password-input id="password_confirmation" name="password_confirmation" class="mt-1 block w-full" required />
                         <x-input-error class="mt-2" :messages="$errors->get('password_confirmation')" />
                     </div>
 

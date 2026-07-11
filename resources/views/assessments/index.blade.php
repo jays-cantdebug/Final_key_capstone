@@ -18,22 +18,21 @@
         </div>
     </x-slot>
 
-    <x-card class="mb-6">
-        <form method="GET" action="{{ route('assessments.index') }}" class="flex flex-wrap items-end gap-3">
-            <div class="min-w-[220px] flex-1">
-                <x-input-label for="search" :value="__('Student Name')" />
-                <x-text-input id="search" name="search" type="text" class="mt-1 block w-full" value="{{ $search }}" placeholder="Search by student name" />
-            </div>
-            <x-secondary-button type="submit">{{ __('Search') }}</x-secondary-button>
-            @if ($search || $studentNumber)
-                <x-secondary-button :href="route('assessments.index')">
-                    {{ __('Clear') }}
-                </x-secondary-button>
-            @endif
-        </form>
-    </x-card>
-
     <x-table>
+        <x-slot:header>
+            <form method="GET" action="{{ route('assessments.index') }}" class="flex flex-wrap items-end gap-2">
+                <div>
+                    <x-input-label for="search" :value="__('Student Name')" />
+                    <x-text-input id="search" name="search" type="text" class="mt-1 w-72" value="{{ $search }}" placeholder="Search by student name" />
+                </div>
+                <x-secondary-button type="submit">{{ __('Search') }}</x-secondary-button>
+                @if ($search || $studentNumber)
+                    <x-secondary-button :href="route('assessments.index')">
+                        {{ __('Clear') }}
+                    </x-secondary-button>
+                @endif
+            </form>
+        </x-slot:header>
         <x-slot:head>
             <x-table.th>Student</x-table.th>
             <x-table.th>Student #</x-table.th>
@@ -55,7 +54,7 @@
                 <x-table.td>{{ $assessment->submitted_at->format('M d, Y g:i A') }}</x-table.td>
                 <x-table.td><x-severity-badge :level="$assessment->result?->highestSeverityLevel()" /></x-table.td>
                 <x-table.td align="right">
-                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
                 </x-table.td>
             </tr>
         @empty

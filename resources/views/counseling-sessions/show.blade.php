@@ -46,15 +46,15 @@
             </div>
 
             <dl class="mt-6 grid gap-4 sm:grid-cols-2">
-                <div class="rounded-2xl bg-slate-50 p-4">
+                <div class="rounded-lg bg-slate-50 p-4">
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Counselor</dt>
                     <dd class="mt-2 text-sm font-medium text-body">{{ $session->counselor->name }}</dd>
                 </div>
-                <div class="rounded-2xl bg-slate-50 p-4">
+                <div class="rounded-lg bg-slate-50 p-4">
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Session Date &amp; Time</dt>
                     <dd class="mt-2 text-sm font-medium text-body">{{ $session->session_datetime->format('M d, Y g:i A') }}</dd>
                 </div>
-                <div class="rounded-2xl bg-slate-50 p-4">
+                <div class="rounded-lg bg-slate-50 p-4">
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Related Assessment</dt>
                     <dd class="mt-2 text-sm font-medium text-body">
                         @if ($session->assessment)
@@ -66,7 +66,7 @@
                         @endif
                     </dd>
                 </div>
-                <div class="rounded-2xl bg-slate-50 p-4">
+                <div class="rounded-lg bg-slate-50 p-4">
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Follow-Up</dt>
                     <dd class="mt-2 text-sm font-medium text-body">
                         @if ($session->follow_up_required)
@@ -76,7 +76,7 @@
                         @endif
                     </dd>
                 </div>
-                <div class="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
+                <div class="rounded-lg bg-slate-50 p-4 sm:col-span-2">
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Confidentiality Level</dt>
                     <dd class="mt-2 text-sm font-medium text-body">{{ $session->confidentiality_level }}</dd>
                 </div>
@@ -86,11 +86,11 @@
         <x-card>
             <h3 class="text-lg font-semibold text-body">Session Notes</h3>
             @if ($session->isRestrictedFor(auth()->user()))
-                <p class="mt-4 rounded-2xl bg-slate-50 p-4 text-sm italic text-slate-500">
+                <p class="mt-4 rounded-lg bg-slate-50 p-4 text-sm italic text-slate-500">
                     These session notes are marked Restricted and are only visible to the counselor who created this session.
                 </p>
             @else
-                <p class="mt-4 whitespace-pre-line rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">{{ $session->session_notes }}</p>
+                <p class="mt-4 whitespace-pre-line rounded-lg bg-slate-50 p-4 text-sm text-slate-700">{{ $session->session_notes }}</p>
             @endif
         </x-card>
     </div>

@@ -1,6 +1,6 @@
 @props(['padded' => true])
 
-<div {{ $attributes->merge(['class' => 'w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm']) }}>
+<div {{ $attributes->merge(['class' => 'w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm']) }}>
     @isset($header)
         <div class="border-b border-slate-200 px-6 py-4">
             {{ $header }}

@@ -32,22 +32,21 @@
         <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>
     @endif
 
-    <x-card class="mb-6">
-        <form method="GET" action="{{ route('counseling-sessions.index') }}" class="flex flex-wrap items-end gap-3">
-            <div class="min-w-[220px] flex-1">
-                <x-input-label for="search" :value="__('Student Name')" />
-                <x-text-input id="search" name="search" type="text" class="mt-1 block w-full" value="{{ $search }}" placeholder="Search by student name" />
-            </div>
-            <x-secondary-button type="submit">{{ __('Search') }}</x-secondary-button>
-            @if ($search)
-                <x-secondary-button :href="route('counseling-sessions.index')">
-                    {{ __('Clear') }}
-                </x-secondary-button>
-            @endif
-        </form>
-    </x-card>
-
     <x-table>
+        <x-slot:header>
+            <form method="GET" action="{{ route('counseling-sessions.index') }}" class="flex flex-wrap items-end gap-2">
+                <div>
+                    <x-input-label for="search" :value="__('Student Name')" />
+                    <x-text-input id="search" name="search" type="text" class="mt-1 w-72" value="{{ $search }}" placeholder="Search by student name" />
+                </div>
+                <x-secondary-button type="submit">{{ __('Search') }}</x-secondary-button>
+                @if ($search)
+                    <x-secondary-button :href="route('counseling-sessions.index')">
+                        {{ __('Clear') }}
+                    </x-secondary-button>
+                @endif
+            </form>
+        </x-slot:header>
         <x-slot:head>
             <x-table.th>Student</x-table.th>
             <x-table.th>Counselor</x-table.th>
@@ -66,15 +65,15 @@
                 <x-table.td>{{ $session->confidentiality_level }}</x-table.td>
                 <x-table.td align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
-                        <a href="{{ route('counseling-sessions.show', $session) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                        <a href="{{ route('counseling-sessions.show', $session) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
                         @can('update', $session)
-                            <a href="{{ route('counseling-sessions.edit', $session) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                            <a href="{{ route('counseling-sessions.edit', $session) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
                         @endcan
                         @can('delete', $session)
                             <form method="POST" action="{{ route('counseling-sessions.destroy', $session) }}" onsubmit="return confirm('Delete this counseling session?');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-full border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
+                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
                             </form>
                         @endcan
                     </div>

@@ -15,7 +15,7 @@
             @php
                 $student = $notification->assessment->student;
             @endphp
-            <div class="rounded-3xl border {{ $notification->is_read ? 'border-slate-200 bg-white' : 'border-primary/30 bg-tint' }} p-6 shadow-sm">
+            <div class="rounded-lg border {{ $notification->is_read ? 'border-slate-200 bg-white' : 'border-primary/30 bg-tint' }} p-6 shadow-sm">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <div class="flex items-center gap-2">
@@ -49,7 +49,7 @@
                 </div>
             </div>
         @empty
-            <div class="rounded-3xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500 shadow-sm">
+            <div class="rounded-lg border border-slate-200 bg-white p-12 text-center text-sm text-slate-500 shadow-sm">
                 No notifications yet.
             </div>
         @endforelse

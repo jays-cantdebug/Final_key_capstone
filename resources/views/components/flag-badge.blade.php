@@ -14,10 +14,12 @@ $labels = [
 $title = $secondaryCount > 0 ? "Also has {$secondaryCount} additional flag(s)" : null;
 @endphp
 
-<x-badge :color="$colors[$type] ?? 'slate'" :title="$title" {{ $attributes }}>
-    {{ $labels[$type] ?? 'Normal' }}
+<div class="inline-flex flex-col items-start gap-1">
+    <x-badge :color="$colors[$type] ?? 'slate'" :title="$title" {{ $attributes }}>
+        {{ $labels[$type] ?? 'Normal' }}
+        {{ $slot }}
+    </x-badge>
     @if ($secondaryCount > 0)
-        <span class="opacity-75">+{{ $secondaryCount }} Notification</span>
+        <span class="text-[10px] font-medium text-slate-500">+{{ $secondaryCount }} Notification</span>
     @endif
-    {{ $slot }}
-</x-badge>
+</div>

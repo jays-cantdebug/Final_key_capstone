@@ -37,8 +37,8 @@
                 </x-table.td>
                 <x-table.td align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
-                        <a href="{{ route('questionnaires.show', $questionnaire) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
-                        <a href="{{ route('questionnaires.edit', $questionnaire) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                        <a href="{{ route('questionnaires.show', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                        <a href="{{ route('questionnaires.edit', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
                     </div>
                 </x-table.td>
             </tr>

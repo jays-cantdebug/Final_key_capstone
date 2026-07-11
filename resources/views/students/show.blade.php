@@ -30,19 +30,19 @@
             </div>
 
             <dl class="mt-6 grid gap-4 sm:grid-cols-2">
-                <div class="rounded-2xl bg-slate-50 p-4">
+                <div class="rounded-lg bg-slate-50 p-4">
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Gender</dt>
                     <dd class="mt-2 text-sm font-medium text-body">{{ $student->gender }}</dd>
                 </div>
-                <div class="rounded-2xl bg-slate-50 p-4">
+                <div class="rounded-lg bg-slate-50 p-4">
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Year Level</dt>
                     <dd class="mt-2 text-sm font-medium text-body">{{ $student->yearLevel?->label }}</dd>
                 </div>
-                <div class="rounded-2xl bg-slate-50 p-4">
+                <div class="rounded-lg bg-slate-50 p-4">
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Section</dt>
                     <dd class="mt-2 text-sm font-medium text-body">{{ $student->section?->section_name }}</dd>
                 </div>
-                <div class="rounded-2xl bg-slate-50 p-4">
+                <div class="rounded-lg bg-slate-50 p-4">
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Course</dt>
                     <dd class="mt-2 text-sm font-medium text-body">{{ $student->course?->course_code }}</dd>
                 </div>

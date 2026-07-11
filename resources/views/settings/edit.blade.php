@@ -16,7 +16,7 @@
         <h3 class="text-lg font-semibold text-body">Active Questionnaire</h3>
         <p class="mt-1 text-sm text-slate-600">The active questionnaire version is managed in Questionnaire Management, not here, to avoid two conflicting sources of truth.</p>
 
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4">
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-lg bg-slate-50 p-4">
             @if ($activeQuestionnaireVersion)
                 <div>
                     <p class="text-sm font-medium text-body">{{ $activeQuestionnaireVersion->questionnaire->title }} v{{ $activeQuestionnaireVersion->version_number }}</p>

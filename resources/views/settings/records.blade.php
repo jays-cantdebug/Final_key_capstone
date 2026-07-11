@@ -40,11 +40,11 @@
                     <x-table.td><x-badge :color="$statusColors[$course->status] ?? 'slate'">{{ $course->status }}</x-badge></x-table.td>
                     <x-table.td align="right">
                         <div class="inline-flex flex-wrap justify-end gap-2">
-                            <a href="{{ route('courses.edit', $course) }}" class="rounded-full border border-slate-300 px-3 py-1 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                            <a href="{{ route('courses.edit', $course) }}" class="rounded-md border border-slate-300 px-3 py-1 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
                             <form method="POST" action="{{ route('courses.destroy', $course) }}" onsubmit="return confirm('Delete this course? This is blocked if any student references it.');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-full border border-rose-200 px-3 py-1 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
+                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
                             </form>
                         </div>
                     </x-table.td>
@@ -73,11 +73,11 @@
                     <x-table.td><x-badge :color="$statusColors[$yearLevel->status] ?? 'slate'">{{ $yearLevel->status }}</x-badge></x-table.td>
                     <x-table.td align="right">
                         <div class="inline-flex flex-wrap justify-end gap-2">
-                            <a href="{{ route('year-levels.edit', $yearLevel) }}" class="rounded-full border border-slate-300 px-3 py-1 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                            <a href="{{ route('year-levels.edit', $yearLevel) }}" class="rounded-md border border-slate-300 px-3 py-1 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
                             <form method="POST" action="{{ route('year-levels.destroy', $yearLevel) }}" onsubmit="return confirm('Delete this year level? This is blocked if any student references it.');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-full border border-rose-200 px-3 py-1 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
+                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
                             </form>
                         </div>
                     </x-table.td>
@@ -106,11 +106,11 @@
                     <x-table.td><x-badge :color="$statusColors[$section->status] ?? 'slate'">{{ $section->status }}</x-badge></x-table.td>
                     <x-table.td align="right">
                         <div class="inline-flex flex-wrap justify-end gap-2">
-                            <a href="{{ route('sections.edit', $section) }}" class="rounded-full border border-slate-300 px-3 py-1 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                            <a href="{{ route('sections.edit', $section) }}" class="rounded-md border border-slate-300 px-3 py-1 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
                             <form method="POST" action="{{ route('sections.destroy', $section) }}" onsubmit="return confirm('Delete this section? This is blocked if any student references it.');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-full border border-rose-200 px-3 py-1 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
+                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
                             </form>
                         </div>
                     </x-table.td>

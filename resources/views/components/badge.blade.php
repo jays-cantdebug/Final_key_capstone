@@ -13,6 +13,6 @@ $colorClasses = [
 ][$color] ?? 'bg-slate-100 text-slate-600';
 @endphp
 
-<span {{ $attributes->merge(['class' => "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold $colorClasses"]) }}>
+<span {{ $attributes->merge(['class' => "inline-flex items-center gap-1 rounded-md px-3 py-1 text-xs font-semibold $colorClasses"]) }}>
     {{ $slot }}
 </span>

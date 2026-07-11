@@ -84,7 +84,7 @@
             </label>
             <x-input-error class="mt-2" :messages="$errors->get('privacy_consent')" />
 
-            <div class="mt-6">
+            <div class="mt-6 flex justify-center">
                 <x-primary-button>{{ __('Next: Questionnaire') }}</x-primary-button>
             </div>
         </form>

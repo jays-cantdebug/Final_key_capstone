@@ -62,7 +62,7 @@
                                 <p class="text-sm font-medium text-body">{{ $student->full_name }}</p>
                                 <p class="text-xs text-slate-500">{{ $student->course?->course_code }} &mdash; {{ $student->yearLevel?->label }} / {{ $student->section?->section_name }}</p>
                             </div>
-                            <a href="{{ route('counseling-sessions.create', ['student_id' => $student->id]) }}" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">Select</a>
+                            <a href="{{ route('counseling-sessions.create', ['student_id' => $student->id]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">Select</a>
                         </li>
                     @endforeach
                 </ul>

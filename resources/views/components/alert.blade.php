@@ -11,7 +11,7 @@ $variants = [
 [$classes, $iconPath] = $variants;
 @endphp
 
-<div {{ $attributes->merge(['class' => "flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm font-medium $classes"]) }}>
+<div {{ $attributes->merge(['class' => "flex items-start gap-3 rounded-lg border px-4 py-3 text-sm font-medium $classes"]) }}>
     <svg class="mt-0.5 h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="{{ $iconPath }}" /></svg>
     <div>{{ $slot }}</div>
 </div>

@@ -80,7 +80,7 @@
                 </div>
                 <div class="mt-4 grid gap-4 sm:grid-cols-3">
                     @foreach ($subscales as $subscale)
-                        <div class="rounded-2xl bg-slate-50 p-4">
+                        <div class="rounded-lg bg-slate-50 p-4">
                             <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ $subscale['label'] }}</p>
                             <p class="mt-2 text-2xl font-semibold text-body">{{ $subscale['score'] }}</p>
                             <x-severity-badge :level="$subscale['level']" class="mt-2" />
@@ -103,7 +103,7 @@
                 <p class="mt-1 text-xs text-slate-500">Confirm the AI's classification as accurate, or correct it. This does not change the scores or flags already recorded above.</p>
 
                 @if ($feedback)
-                    <div class="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                    <div class="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
                         <p class="font-semibold text-body">
                             {{ $feedback->is_confirmed ? 'Confirmed' : 'Corrected' }} by {{ $feedback->psychometrician->name }}
                         </p>
@@ -173,13 +173,13 @@
                     <x-input-error :messages="$errors->get('corrected_stress_level')" class="mt-2" />
 
                     <div class="flex flex-wrap gap-3">
-                        <button type="submit" name="is_confirmed" value="1" class="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark">
+                        <button type="submit" name="is_confirmed" value="1" class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark">
                             Confirm
                         </button>
-                        <button type="submit" name="is_confirmed" value="0" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                        <button type="submit" name="is_confirmed" value="0" class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
                             Correct
                         </button>
-                        <a href="{{ route('assessments.show', $assessment) }}" class="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-50">
+                        <a href="{{ route('assessments.show', $assessment) }}" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-50">
                             Cancel
                         </a>
                     </div>

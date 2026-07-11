@@ -1,6 +1,6 @@
 @props(['fixed' => false])
 
-<div {{ $attributes->merge(['class' => 'w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm']) }}>
+<div {{ $attributes->merge(['class' => 'w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm']) }}>
     @isset($header)
         <div class="flex items-center justify-between gap-4 border-b border-slate-200 p-6">
             {{ $header }}

@@ -34,7 +34,7 @@
                 @foreach (array_filter(['course_id' => $filters['course_id'] ?? null, 'year_level_id' => $filters['year_level_id'] ?? null]) as $key => $value)
                     <input type="hidden" name="{{ $key }}" value="{{ $value }}" />
                 @endforeach
-                <x-select name="period" onchange="this.form.submit()" class="!w-auto rounded-2xl text-sm font-semibold text-slate-700">
+                <x-select name="period" onchange="this.form.submit()" class="!w-auto rounded-lg text-sm font-semibold text-slate-700">
                     @foreach ($periodLabels as $value => $label)
                         <option value="{{ $value }}" @selected($period === $value)>{{ $label }}</option>
                     @endforeach
@@ -164,7 +164,7 @@
                 </x-table.td>
                 <x-table.td>{{ $assessment->submitted_at->format('M d, Y') }}</x-table.td>
                 <x-table.td align="right">
-                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
                 </x-table.td>
             </tr>
         @empty

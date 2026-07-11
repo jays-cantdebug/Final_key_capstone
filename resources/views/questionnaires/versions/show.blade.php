@@ -70,7 +70,7 @@
                     <form method="POST" action="{{ route('questionnaires.versions.activate', [$questionnaire, $version]) }}">
                         @csrf
                         @method('PATCH')
-                        <button type="submit" class="inline-flex items-center justify-center rounded-xl border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">
+                        <button type="submit" class="inline-flex items-center justify-center rounded-md border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">
                             Activate version
                         </button>
                     </form>
@@ -78,7 +78,7 @@
                     <form method="POST" action="{{ route('questionnaires.versions.archive', [$questionnaire, $version]) }}">
                         @csrf
                         @method('PATCH')
-                        <button type="submit" class="inline-flex items-center justify-center rounded-xl border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-50">
+                        <button type="submit" class="inline-flex items-center justify-center rounded-md border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-50">
                             Archive version
                         </button>
                     </form>
@@ -86,7 +86,7 @@
                     <form method="POST" action="{{ route('questionnaires.versions.activate', [$questionnaire, $version]) }}">
                         @csrf
                         @method('PATCH')
-                        <button type="submit" class="inline-flex items-center justify-center rounded-xl border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">
+                        <button type="submit" class="inline-flex items-center justify-center rounded-md border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">
                             Activate version
                         </button>
                     </form>
@@ -114,11 +114,11 @@
                 @if ($version->isEditable())
                     <x-table.td align="right">
                         <div class="inline-flex flex-wrap justify-end gap-2">
-                            <a href="{{ route('questionnaires.versions.questions.edit', [$questionnaire, $version, $question]) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                            <a href="{{ route('questionnaires.versions.questions.edit', [$questionnaire, $version, $question]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
                             <form method="POST" action="{{ route('questionnaires.versions.questions.destroy', [$questionnaire, $version, $question]) }}" onsubmit="return confirm('Delete this question?');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-full border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
+                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
                             </form>
                         </div>
                     </x-table.td>

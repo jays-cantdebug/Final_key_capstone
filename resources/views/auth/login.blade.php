@@ -8,7 +8,7 @@
             <p class="mt-1 text-sm uppercase tracking-[0.3em] text-white/60">Well-being System</p>
         </div>
 
-        <div class="mx-auto w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
+        <div class="mx-auto w-full max-w-md rounded-lg bg-white p-8 shadow-2xl">
             <h2 class="text-center text-2xl font-bold uppercase tracking-wide text-body">Login</h2>
 
             <x-auth-session-status class="mt-4" :status="session('status')" />
@@ -24,7 +24,7 @@
 
                 <div>
                     <x-input-label for="password" :value="__('Password')" />
-                    <x-text-input id="password" class="mt-1 block w-full" type="password" name="password" required autocomplete="current-password" />
+                    <x-password-input id="password" class="mt-1 block w-full" name="password" required autocomplete="current-password" />
                     <x-input-error :messages="$errors->get('password')" class="mt-2" />
                 </div>
 
@@ -41,7 +41,7 @@
                     @endif
                 </div>
 
-                <button type="submit" class="w-full rounded-xl bg-primary py-3 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-primary/30 transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                <button type="submit" class="w-full rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-primary/30 transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
                     {{ __('Login') }}
                 </button>
             </form>

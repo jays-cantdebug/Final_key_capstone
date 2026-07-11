@@ -10,24 +10,24 @@
         <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>
     @endif
 
-    <x-card class="mb-6">
-        <form method="GET" action="{{ route('students.index') }}" class="flex flex-wrap items-end gap-3">
-            <div class="min-w-[220px] flex-1">
-                <x-input-label for="search" :value="__('Search')" />
-                <x-text-input id="search" name="search" type="text" class="mt-1 block w-full" value="{{ $search }}" placeholder="Search by name" />
-            </div>
-            <x-secondary-button type="submit">{{ __('Search') }}</x-secondary-button>
-            @if ($search)
-                <x-secondary-button :href="route('students.index')">
-                    {{ __('Clear') }}
-                </x-secondary-button>
-            @endif
-        </form>
-    </x-card>
-
     <x-table>
         <x-slot:header>
-            <p class="text-sm text-slate-600">Every student record originates from New Assessment Step 1 — students cannot be registered here directly.</p>
+            <div class="flex w-full flex-wrap items-center justify-between gap-4">
+                <p class="text-sm text-slate-600">Every student record originates from New Assessment Step 1 — students cannot be registered here directly.</p>
+
+                <form method="GET" action="{{ route('students.index') }}" class="flex flex-wrap items-end gap-2">
+                    <div>
+                        <x-input-label for="search" :value="__('Search')" />
+                        <x-text-input id="search" name="search" type="text" class="mt-1 w-72" value="{{ $search }}" placeholder="Search by name" />
+                    </div>
+                    <x-secondary-button type="submit">{{ __('Search') }}</x-secondary-button>
+                    @if ($search)
+                        <x-secondary-button :href="route('students.index')">
+                            {{ __('Clear') }}
+                        </x-secondary-button>
+                    @endif
+                </form>
+            </div>
         </x-slot:header>
         <x-slot:head>
             <x-table.th>Student #</x-table.th>
@@ -51,12 +51,12 @@
                 <x-table.td>{{ $student->gender }}</x-table.td>
                 <x-table.td align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
-                        <a href="{{ route('students.show', $student) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
-                        <a href="{{ route('students.edit', $student) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                        <a href="{{ route('students.show', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                        <a href="{{ route('students.edit', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
                         <form method="POST" action="{{ route('students.destroy', $student) }}" onsubmit="return confirm('Delete this student record?');">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="rounded-full border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
+                            <button type="submit" class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
                         </form>
                     </div>
                 </x-table.td>

@@ -20,13 +20,13 @@
             <div class="mt-6 grid gap-6 sm:grid-cols-2">
                 <div>
                     <x-input-label for="password" :value="__('Password')" />
-                    <x-text-input id="password" name="password" type="password" class="mt-1 block w-full" required />
+                    <x-password-input id="password" name="password" class="mt-1 block w-full" required />
                     <x-input-error class="mt-2" :messages="$errors->get('password')" />
                 </div>
 
                 <div>
                     <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-                    <x-text-input id="password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" required />
+                    <x-password-input id="password_confirmation" name="password_confirmation" class="mt-1 block w-full" required />
                     <x-input-error class="mt-2" :messages="$errors->get('password_confirmation')" />
                 </div>
             </div>

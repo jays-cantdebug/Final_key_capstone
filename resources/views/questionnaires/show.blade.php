@@ -68,33 +68,33 @@
                 <x-table.td><x-badge :color="$versionStatusColors[$version->status] ?? 'slate'">{{ $version->status }}</x-badge></x-table.td>
                 <x-table.td align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
-                        <a href="{{ route('questionnaires.versions.show', [$questionnaire, $version]) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                        <a href="{{ route('questionnaires.versions.show', [$questionnaire, $version]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
 
                         @if ($version->isEditable())
-                            <a href="{{ route('questionnaires.versions.edit', [$questionnaire, $version]) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                            <a href="{{ route('questionnaires.versions.edit', [$questionnaire, $version]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
 
                             <form method="POST" action="{{ route('questionnaires.versions.activate', [$questionnaire, $version]) }}">
                                 @csrf
                                 @method('PATCH')
-                                <button type="submit" class="rounded-full border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50">Activate</button>
+                                <button type="submit" class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50">Activate</button>
                             </form>
 
                             <form method="POST" action="{{ route('questionnaires.versions.destroy', [$questionnaire, $version]) }}" onsubmit="return confirm('Delete this draft version?');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-full border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
+                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
                             </form>
                         @elseif ($version->status === 'Active')
                             <form method="POST" action="{{ route('questionnaires.versions.archive', [$questionnaire, $version]) }}">
                                 @csrf
                                 @method('PATCH')
-                                <button type="submit" class="rounded-full border border-amber-200 px-3 py-1.5 font-medium text-amber-700 transition hover:bg-amber-50">Archive</button>
+                                <button type="submit" class="rounded-md border border-amber-200 px-3 py-1.5 font-medium text-amber-700 transition hover:bg-amber-50">Archive</button>
                             </form>
                         @else
                             <form method="POST" action="{{ route('questionnaires.versions.activate', [$questionnaire, $version]) }}">
                                 @csrf
                                 @method('PATCH')
-                                <button type="submit" class="rounded-full border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50">Activate</button>
+                                <button type="submit" class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50">Activate</button>
                             </form>
                         @endif
                     </div>

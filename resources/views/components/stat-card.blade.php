@@ -10,10 +10,10 @@ $accentClasses = $accentColors[$accent] ?? 'bg-tint text-primary';
 $tag = $href ? 'a' : 'div';
 @endphp
 
-<{{ $tag }} @if($href) href="{{ $href }}" @endif {{ $attributes->merge(['class' => 'block rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition' . ($href ? ' hover:border-primary/40 hover:shadow-md' : '')]) }}>
+<{{ $tag }} @if($href) href="{{ $href }}" @endif {{ $attributes->merge(['class' => 'block rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition' . ($href ? ' hover:border-primary/40 hover:shadow-md' : '')]) }}>
     @isset($icon)
         <div class="flex items-center gap-3">
-            <span @class(['flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl', $accentClasses])>
+            <span @class(['flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg', $accentClasses])>
                 {{ $icon }}
             </span>
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ $label }}</p>

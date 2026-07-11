@@ -4,13 +4,13 @@ $userCardClass ??= '';
 $linkJustifyClass ??= 'justify-start';
 
 $navLinkClasses = fn (bool $active) => $active
-    ? "flex items-center gap-3 rounded-2xl bg-tint px-4 py-3 text-sm font-semibold text-primary shadow-sm $linkJustifyClass"
-    : "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-tint hover:text-primary $linkJustifyClass";
+    ? "flex items-center gap-3 rounded-lg bg-tint px-4 py-3 text-sm font-semibold text-primary shadow-sm $linkJustifyClass"
+    : "group flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-tint hover:text-primary $linkJustifyClass";
 
 $iconClasses = fn (bool $active) => $active ? 'h-5 w-5 flex-shrink-0 text-primary' : 'h-5 w-5 flex-shrink-0 text-white/70 transition group-hover:text-primary';
 @endphp
 
-<div class="{{ $userCardClass }} rounded-2xl border border-white/10 bg-white/10 px-4 py-4 backdrop-blur">
+<div class="{{ $userCardClass }} rounded-lg border border-white/10 bg-white/10 px-4 py-4 backdrop-blur">
     <p class="text-xs uppercase tracking-[0.3em] text-white/60">Signed in as</p>
     <p class="mt-2 text-sm font-semibold">{{ auth()->user()->name }}</p>
     <p class="text-xs text-white/75">{{ auth()->user()->role?->display_name ?? 'Unassigned Role' }}</p>
@@ -80,7 +80,7 @@ $iconClasses = fn (bool $active) => $active ? 'h-5 w-5 flex-shrink-0 text-primar
                     <svg class="{{ $iconClasses(request()->routeIs('notifications.*')) }}" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a6 6 0 0 0-6 6c0 3.5-1 5-1 5h14s-1-1.5-1-5a6 6 0 0 0-6-6Zm0 16a2 2 0 0 0 2-2H8a2 2 0 0 0 2 2Z" /></svg>
                     <span class="{{ $labelClass }}">Notifications</span>
                     @if($unreadNotificationsCount > 0)
-                        <span class="ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-gold px-1.5 py-0.5 text-xs font-bold text-white">{{ $unreadNotificationsCount }}</span>
+                        <span class="ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-md bg-gold px-1.5 py-0.5 text-xs font-bold text-white">{{ $unreadNotificationsCount }}</span>
                     @endif
                 </a>
             </li>
@@ -100,7 +100,7 @@ $iconClasses = fn (bool $active) => $active ? 'h-5 w-5 flex-shrink-0 text-primar
         <li class="mt-auto pt-6">
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button type="submit" class="group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-tint hover:text-primary">
+                <button type="submit" class="group flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-tint hover:text-primary">
                     <svg class="h-5 w-5 text-gold transition group-hover:text-primary" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 4a1 1 0 0 0-1 1v2h2V6h6v8H8v-1H6v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H7Zm-.293 3.707L3.414 10H12v-1.5H3.414l3.293-2.707-1-1.086Z" /></svg>
                     <span class="{{ $labelClass }}">Logout</span>
                 </button>

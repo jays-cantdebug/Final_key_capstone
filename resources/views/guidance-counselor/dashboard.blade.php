@@ -89,7 +89,7 @@
                 <x-table.td>{{ $assessment->submitted_at->format('M d, Y') }}</x-table.td>
                 <x-table.td><x-severity-badge :level="$assessment->result?->highestSeverityLevel()" /></x-table.td>
                 <x-table.td align="right">
-                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
                 </x-table.td>
             </tr>
         @empty

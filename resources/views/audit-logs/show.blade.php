@@ -16,7 +16,7 @@
             <x-card>
                 <h3 class="text-lg font-semibold text-body">Old Values</h3>
                 @if ($log->old_values)
-                    <pre class="mt-4 overflow-x-auto rounded-2xl bg-slate-50 p-4 text-xs text-slate-700">{{ json_encode($log->old_values, JSON_PRETTY_PRINT) }}</pre>
+                    <pre class="mt-4 overflow-x-auto rounded-lg bg-slate-50 p-4 text-xs text-slate-700">{{ json_encode($log->old_values, JSON_PRETTY_PRINT) }}</pre>
                 @else
                     <p class="mt-4 text-sm text-slate-500">No previous values recorded.</p>
                 @endif
@@ -25,7 +25,7 @@
             <x-card>
                 <h3 class="text-lg font-semibold text-body">New Values</h3>
                 @if ($log->new_values)
-                    <pre class="mt-4 overflow-x-auto rounded-2xl bg-slate-50 p-4 text-xs text-slate-700">{{ json_encode($log->new_values, JSON_PRETTY_PRINT) }}</pre>
+                    <pre class="mt-4 overflow-x-auto rounded-lg bg-slate-50 p-4 text-xs text-slate-700">{{ json_encode($log->new_values, JSON_PRETTY_PRINT) }}</pre>
                 @else
                     <p class="mt-4 text-sm text-slate-500">No new values recorded.</p>
                 @endif
