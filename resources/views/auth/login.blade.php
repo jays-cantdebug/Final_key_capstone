@@ -2,7 +2,7 @@
     <div class="grid items-center gap-10 lg:grid-cols-2">
         <div class="text-center lg:text-left">
             <h1 class="text-3xl font-bold uppercase leading-tight tracking-wide text-white sm:text-4xl lg:text-5xl">
-                Web-Based Student Depression, Anxiety and Stress Predictor
+                Web-Based Student Depression, Anxiety and Stress Assessment
             </h1>
             <p class="mt-6 text-lg font-semibold text-white/90">Northern Mindanao Colleges, Inc.</p>
             <p class="mt-1 text-sm uppercase tracking-[0.3em] text-white/60">Well-being System</p>

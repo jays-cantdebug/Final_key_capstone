@@ -7,10 +7,12 @@ namespace App\Services;
 use App\Models\Assessment;
 use App\Models\ClassificationThreshold;
 use App\Models\CounselingSession;
+use App\Models\Course;
 use App\Models\DassResult;
 use App\Models\FlaggedCase;
 use App\Models\QuestionnaireVersion;
 use App\Models\Student;
+use App\Models\YearLevel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -180,51 +182,98 @@ class ReportService
     }
 
     /**
-     * Assessment Summary Report: aggregate counts over an optional date
-     * range - total assessments, counts by overall severity, and the
-     * flagged count.
+     * Assessment Summary Report: an institution-wide overview - totals
+     * (students, assessments, counseling endorsements, awareness
+     * notifications) plus a separate 5-tier severity breakdown for each of
+     * Depression, Anxiety, and Stress, optionally scoped by course, year
+     * level, gender, and/or date range.
      *
-     * @return array{total: int, bySeverity: array<string, int>, flaggedCount: int, dateFrom: ?string, dateTo: ?string}
+     * "Total Students" counts the distinct students behind the filtered
+     * assessments (not every student in the system), so all four totals
+     * describe the same filtered scope.
+     *
+     * @param array{course_id?: ?int, year_level_id?: ?int, gender?: ?string, date_from?: ?string, date_to?: ?string} $filters
+     * @return array{
+     *     totalStudents: int,
+     *     totalAssessments: int,
+     *     counselingEndorsements: int,
+     *     awarenessNotifications: int,
+     *     depressionBySeverity: array<string, int>,
+     *     anxietyBySeverity: array<string, int>,
+     *     stressBySeverity: array<string, int>,
+     *     courseId: ?int,
+     *     yearLevelId: ?int,
+     *     gender: ?string,
+     *     dateFrom: ?string,
+     *     dateTo: ?string,
+     * }
      */
-    public function assessmentSummaryData(?string $dateFrom, ?string $dateTo): array
+    public function assessmentSummaryData(array $filters): array
     {
+        $studentFilter = function (Builder $query) use ($filters): void {
+            $query
+                ->when($filters['course_id'] ?? null, fn (Builder $q, $v) => $q->where('course_id', $v))
+                ->when($filters['year_level_id'] ?? null, fn (Builder $q, $v) => $q->where('year_level_id', $v))
+                ->when($filters['gender'] ?? null, fn (Builder $q, $v) => $q->where('gender', $v));
+        };
+
         $assessmentIds = Assessment::query()
-            ->when($dateFrom, fn (Builder $q, string $v) => $q->whereDate('submitted_at', '>=', $v))
-            ->when($dateTo, fn (Builder $q, string $v) => $q->whereDate('submitted_at', '<=', $v))
+            ->whereHas('student', $studentFilter)
+            ->when($filters['date_from'] ?? null, fn (Builder $q, $v) => $q->whereDate('submitted_at', '>=', $v))
+            ->when($filters['date_to'] ?? null, fn (Builder $q, $v) => $q->whereDate('submitted_at', '<=', $v))
             ->pluck('id');
 
-        $total = $assessmentIds->count();
+        $totalAssessments = $assessmentIds->count();
 
-        // "Overall severity" is no longer a stored column (differentiated
-        // flagging classifies each subscale independently — see
-        // flagged_cases) — computed here as the highest of the three
-        // subscale levels per assessment, tallied in PHP.
-        $bySeverity = DassResult::query()
+        $totalStudents = Assessment::query()
+            ->whereIn('id', $assessmentIds)
+            ->distinct('student_id')
+            ->count('student_id');
+
+        $results = DassResult::query()
             ->whereIn('assessment_id', $assessmentIds)
-            ->get(['depression_level', 'anxiety_level', 'stress_level'])
-            ->countBy(fn (DassResult $result): string => $result->highestSeverityLevel());
+            ->get(['depression_level', 'anxiety_level', 'stress_level']);
 
-        $orderedSeverities = [
-            ClassificationThreshold::SEVERITY_NORMAL,
-            ClassificationThreshold::SEVERITY_MILD,
-            ClassificationThreshold::SEVERITY_MODERATE,
-            ClassificationThreshold::SEVERITY_SEVERE,
-            ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE,
-        ];
+        $bySeverity = function (string $column) use ($results): array {
+            $counts = [];
+            foreach (ClassificationThreshold::severityOrder() as $severity) {
+                $counts[$severity] = $results->where($column, $severity)->count();
+            }
 
-        $bySeverityOrdered = [];
-        foreach ($orderedSeverities as $severity) {
-            $bySeverityOrdered[$severity] = $bySeverity[$severity] ?? 0;
-        }
+            return $counts;
+        };
 
-        $flaggedCount = FlaggedCase::query()->whereIn('assessment_id', $assessmentIds)->count();
+        $flaggedCases = FlaggedCase::query()->whereIn('assessment_id', $assessmentIds);
 
         return [
-            'total' => $total,
-            'bySeverity' => $bySeverityOrdered,
-            'flaggedCount' => $flaggedCount,
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
+            'totalStudents' => $totalStudents,
+            'totalAssessments' => $totalAssessments,
+            'counselingEndorsements' => (clone $flaggedCases)->where('flag_type', FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT)->count(),
+            'awarenessNotifications' => (clone $flaggedCases)->where('flag_type', FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION)->count(),
+            'depressionBySeverity' => $bySeverity('depression_level'),
+            'anxietyBySeverity' => $bySeverity('anxiety_level'),
+            'stressBySeverity' => $bySeverity('stress_level'),
+            'courseId' => $filters['course_id'] ?? null,
+            'yearLevelId' => $filters['year_level_id'] ?? null,
+            'gender' => $filters['gender'] ?? null,
+            'dateFrom' => $filters['date_from'] ?? null,
+            'dateTo' => $filters['date_to'] ?? null,
         ];
+    }
+
+    /**
+     * @return Collection<int, Course>
+     */
+    public function courseOptions(): Collection
+    {
+        return Course::query()->orderBy('course_code')->get();
+    }
+
+    /**
+     * @return Collection<int, YearLevel>
+     */
+    public function yearLevelOptions(): Collection
+    {
+        return YearLevel::query()->orderBy('display_order')->get();
     }
 }

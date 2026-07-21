@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-"NORMI" — a Web-Based Student Depression, Anxiety and Stress Predictor (DASS-21) for Northern Mindanao Colleges, Inc.: a Laravel 11 school guidance/psychometric records portal (student capstone project). Public registration is disabled; only `psychometrician` and `guidance_counselor` roles are provisioned by seeders. Backend is PHP 8.2/Blade with Laravel Breeze for auth scaffolding (registration removed); frontend uses Tailwind + Alpine.js via Vite (no SPA framework).
+"NORMI" — a Web-Based Student Depression, Anxiety and Stress Assessment (DASS-21) for Northern Mindanao Colleges, Inc.: a Laravel 11 school guidance/psychometric records portal (student capstone project). Public registration is disabled; only `psychometrician` and `guidance_counselor` roles are provisioned by seeders. Backend is PHP 8.2/Blade with Laravel Breeze for auth scaffolding (registration removed); frontend uses Tailwind + Alpine.js via Vite (no SPA framework).
 
 The codebase is driven from a large user-owned "Master Prompt" spec, revealed and approved module-by-module. Nearly the full module list is implemented end-to-end: auth/roles, Course/YearLevel/Section management, Student Information Management, Questionnaire Management (+ versions + questions), Classification Thresholds, New Assessment (3-step wizard), AI Classification, Differentiated Flagging, Notifications, Feedback Loop, Assessment History/Results, Counseling Sessions, Reports (PDF), User Management, Settings, Audit Logs.
 

@@ -42,7 +42,7 @@
 
             <x-card>
                 <h3 class="text-lg font-semibold text-body">Assessment Summary Report</h3>
-                <p class="mt-2 text-sm text-slate-600">Aggregate totals and severity breakdown over a date range.</p>
+                <p class="mt-2 text-sm text-slate-600">Institution-wide totals and per-condition severity breakdown, filterable by course, year level, gender, and date range.</p>
                 <x-primary-button :href="route('reports.assessment-summary')" class="mt-4">
                     View Report
                 </x-primary-button>

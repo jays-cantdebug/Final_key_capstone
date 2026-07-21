@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\Assessment;
+use App\Models\ClassificationThreshold;
+use App\Models\Course;
 use App\Models\DassResult;
+use App\Models\FlaggedCase;
+use App\Models\Student;
+use App\Models\YearLevel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\InteractsWithDomainData;
 use Tests\TestCase;
@@ -96,5 +101,66 @@ class ReportsTest extends TestCase
         $psychometrician = $this->psychometrician();
 
         $this->actingAs($psychometrician)->get(route('reports.assessment-summary'))->assertOk();
+    }
+
+    public function test_assessment_summary_report_shows_institution_wide_totals_and_per_condition_breakdowns(): void
+    {
+        $psychometrician = $this->psychometrician();
+
+        $bsit = Course::factory()->create(['course_code' => 'BSIT']);
+        $bscs = Course::factory()->create(['course_code' => 'BSCS']);
+        $yearOne = YearLevel::factory()->create(['display_order' => 1]);
+
+        $bsitStudent = Student::factory()->create(['course_id' => $bsit->id, 'year_level_id' => $yearOne->id, 'gender' => 'Male']);
+        $bscsStudent = Student::factory()->create(['course_id' => $bscs->id, 'year_level_id' => $yearOne->id, 'gender' => 'Female']);
+
+        $bsitAssessment = Assessment::factory()->create(['student_id' => $bsitStudent->id]);
+        DassResult::factory()->withLevels(
+            ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE,
+            ClassificationThreshold::SEVERITY_NORMAL,
+            ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE,
+        )->create(['assessment_id' => $bsitAssessment->id]);
+        FlaggedCase::factory()->create(['assessment_id' => $bsitAssessment->id, 'flag_type' => FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION]);
+        FlaggedCase::factory()->endorsement()->create(['assessment_id' => $bsitAssessment->id]);
+
+        $bscsAssessment = Assessment::factory()->create(['student_id' => $bscsStudent->id]);
+        DassResult::factory()->create(['assessment_id' => $bscsAssessment->id]);
+
+        // Unfiltered: both students/assessments count.
+        $response = $this->actingAs($psychometrician)->get(route('reports.assessment-summary'));
+        $response->assertOk();
+        $response->assertViewHas('totalStudents', 2);
+        $response->assertViewHas('totalAssessments', 2);
+        $response->assertViewHas('counselingEndorsements', 1);
+        $response->assertViewHas('awarenessNotifications', 1);
+        $response->assertViewHas('depressionBySeverity', fn (array $counts) => $counts[ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE] === 1);
+        $response->assertViewHas('stressBySeverity', fn (array $counts) => $counts[ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE] === 1);
+
+        // Filtered to BSIT only: excludes the BSCS student/assessment entirely.
+        $filtered = $this->actingAs($psychometrician)->get(route('reports.assessment-summary', ['course_id' => $bsit->id]));
+        $filtered->assertOk();
+        $filtered->assertViewHas('totalStudents', 1);
+        $filtered->assertViewHas('totalAssessments', 1);
+        $filtered->assertViewHas('counselingEndorsements', 1);
+        $filtered->assertViewHas('awarenessNotifications', 1);
+
+        // Filtered to a gender with no matching students: zeroed out, not an error.
+        $genderFiltered = $this->actingAs($psychometrician)->get(route('reports.assessment-summary', ['gender' => 'Prefer not to say']));
+        $genderFiltered->assertOk();
+        $genderFiltered->assertViewHas('totalStudents', 0);
+        $genderFiltered->assertViewHas('totalAssessments', 0);
+    }
+
+    public function test_assessment_summary_report_print_and_pdf_render(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $assessment = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $assessment->id]);
+
+        $this->actingAs($psychometrician)->get(route('reports.assessment-summary.print'))->assertOk();
+
+        $pdfResponse = $this->actingAs($psychometrician)->get(route('reports.assessment-summary.pdf'));
+        $pdfResponse->assertOk();
+        $this->assertSame('application/pdf', $pdfResponse->headers->get('Content-Type'));
     }
 }

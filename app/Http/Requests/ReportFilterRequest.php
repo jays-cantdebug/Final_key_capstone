@@ -41,6 +41,7 @@ class ReportFilterRequest extends FormRequest
             'course_id' => ['nullable', 'integer', 'exists:courses,id'],
             'year_level_id' => ['nullable', 'integer', 'exists:year_levels,id'],
             'section_id' => ['nullable', 'integer', 'exists:sections,id'],
+            'gender' => ['nullable', Rule::in(['Male', 'Female', 'Prefer not to say'])],
             'overall_status' => [
                 'nullable',
                 Rule::in(['Normal', 'Mild', 'Moderate', 'Severe', 'Extremely Severe']),
