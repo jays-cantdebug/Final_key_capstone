@@ -65,24 +65,11 @@ class DashboardService
 
         $counts = Assessment::query()
             ->whereHas('flaggedCases')
-            ->selectRaw("DATE_FORMAT(submitted_at, '%Y-%m') as ym, COUNT(*) as total")
             ->where('submitted_at', '>=', $sixMonthsAgo)
-            ->groupBy('ym')
-            ->pluck('total', 'ym');
+            ->get(['submitted_at'])
+            ->countBy(fn (Assessment $assessment): string => $assessment->submitted_at->format('Y-m'));
 
-        $series = [];
-
-        for ($i = 5; $i >= 0; $i--) {
-            $month = now()->subMonths($i);
-            $key = $month->format('Y-m');
-
-            $series[] = [
-                'label' => $month->format('M'),
-                'count' => (int) ($counts[$key] ?? 0),
-            ];
-        }
-
-        return $series;
+        return $this->zeroFilledSixMonthSeries($counts);
     }
 
     /**
@@ -252,11 +239,22 @@ class DashboardService
         $sixMonthsAgo = now()->subMonths(5)->startOfMonth();
 
         $counts = Assessment::query()
-            ->selectRaw("DATE_FORMAT(submitted_at, '%Y-%m') as ym, COUNT(*) as total")
             ->where('submitted_at', '>=', $sixMonthsAgo)
-            ->groupBy('ym')
-            ->pluck('total', 'ym');
+            ->get(['submitted_at'])
+            ->countBy(fn (Assessment $assessment): string => $assessment->submitted_at->format('Y-m'));
 
+        return $this->zeroFilledSixMonthSeries($counts);
+    }
+
+    /**
+     * Zero-fills a "Y-m" => count tally into the last 6 months in
+     * chronological order, for the volume-chart series.
+     *
+     * @param \Illuminate\Support\Collection<string, int> $counts
+     * @return array<int, array{label: string, count: int}>
+     */
+    private function zeroFilledSixMonthSeries(\Illuminate\Support\Collection $counts): array
+    {
         $series = [];
 
         for ($i = 5; $i >= 0; $i--) {
