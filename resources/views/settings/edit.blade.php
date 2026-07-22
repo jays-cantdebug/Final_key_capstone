@@ -50,17 +50,6 @@
                 </div>
 
                 <div>
-                    <x-input-label for="notification_severity_threshold" :value="__('Notification Severity Threshold')" />
-                    <x-select id="notification_severity_threshold" name="notification_severity_threshold" class="mt-1 block w-full">
-                        @foreach (['Moderate', 'Severe', 'Extremely Severe'] as $level)
-                            <option value="{{ $level }}" @selected(old('notification_severity_threshold', $settings->get(\App\Models\SystemSetting::KEY_NOTIFICATION_SEVERITY_THRESHOLD)?->value) === $level)>{{ $level }}</option>
-                        @endforeach
-                    </x-select>
-                    <p class="mt-1 text-xs text-slate-500">Minimum severity that triggers a Guidance Counselor notification and Flagged Case. Only affects assessments submitted after this change.</p>
-                    <x-input-error class="mt-2" :messages="$errors->get('notification_severity_threshold')" />
-                </div>
-
-                <div>
                     <x-input-label for="assessment_availability" :value="__('Assessment Availability')" />
                     <x-select id="assessment_availability" name="assessment_availability" class="mt-1 block w-full">
                         @foreach (['Available', 'Unavailable'] as $availability)

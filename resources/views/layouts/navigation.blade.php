@@ -4,7 +4,7 @@
             <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
                 <x-application-logo class="h-11 w-11 flex-shrink-0 text-white" />
                 <div class="hidden lg:block">
-                    <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/65">NORMI</p>
+                    <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
                     <p class="text-sm font-semibold">Assessment Portal</p>
                 </div>
             </a>
@@ -24,7 +24,7 @@
             <span class="sr-only">Open sidebar</span>
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5m-16.5 6h16.5m-16.5 6h16.5" /></svg>
         </button>
-        <div class="flex-1 text-sm font-semibold text-white">{{ config('app.name', 'Laravel') }}</div>
+        <div class="flex-1 text-sm font-semibold text-white">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</div>
     </div>
 
     <div x-show="open" x-transition.opacity class="fixed inset-0 z-50 bg-body/60" @click="open = false"></div>
@@ -35,7 +35,7 @@
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
                     <x-application-logo class="h-11 w-11 text-white" />
                     <div>
-                        <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/65">NORMI</p>
+                        <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
                         <p class="text-sm font-semibold">Assessment Portal</p>
                     </div>
                 </a>

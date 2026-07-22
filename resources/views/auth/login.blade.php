@@ -4,7 +4,7 @@
             <h1 class="text-3xl font-bold uppercase leading-tight tracking-wide text-white sm:text-4xl lg:text-5xl">
                 Web-Based Student Depression, Anxiety and Stress Assessment
             </h1>
-            <p class="mt-6 text-lg font-semibold text-white/90">Northern Mindanao Colleges, Inc.</p>
+            <p class="mt-6 text-lg font-semibold text-white/90">{{ app(\App\Services\SystemSettingService::class)->schoolName() }}</p>
             <p class="mt-1 text-sm uppercase tracking-[0.3em] text-white/60">Well-being System</p>
         </div>
 

@@ -17,8 +17,6 @@ class SystemSetting extends Model
 
     public const KEY_ACTIVE_QUESTIONNAIRE_VERSION_ID = 'active_questionnaire_version_id';
 
-    public const KEY_NOTIFICATION_SEVERITY_THRESHOLD = 'notification_severity_threshold';
-
     public const KEY_ASSESSMENT_AVAILABILITY = 'assessment_availability';
 
     public const KEY_DATA_RETENTION_PERIOD = 'data_retention_period';

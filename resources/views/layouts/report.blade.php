@@ -20,7 +20,8 @@
     </style>
 </head>
 <body>
-    <h1>NORMI &mdash; {{ $title }}</h1>
+    <h1>{{ app(\App\Services\SystemSettingService::class)->systemName() }} &mdash; {{ $title }}</h1>
+    <p class="subtitle">{{ app(\App\Services\SystemSettingService::class)->schoolName() }}</p>
     <p class="subtitle">Generated on {{ now()->format('M d, Y g:i A') }}</p>
 
     {{ $slot }}

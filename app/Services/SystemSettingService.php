@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\ClassificationThreshold;
 use App\Models\QuestionnaireVersion;
 use App\Models\SystemSetting;
 use Illuminate\Database\DatabaseManager;
@@ -58,17 +57,23 @@ class SystemSettingService
     }
 
     /**
-     * The currently configured Notification Severity Threshold, used by
-     * DassScoringService to determine whether an assessment should be
-     * flagged. Defaults to "Moderate" if unset, matching the documented
-     * seed default.
+     * The configured System Name, displayed in the browser tab title,
+     * sidebar header, and PDF report header. Falls back to config('app.name')
+     * if unset, matching the fallback pattern used elsewhere in this service.
      */
-    public function notificationSeverityThreshold(): string
+    public function systemName(): string
     {
-        return $this->get(
-            SystemSetting::KEY_NOTIFICATION_SEVERITY_THRESHOLD,
-            ClassificationThreshold::SEVERITY_MODERATE
-        );
+        return $this->get(SystemSetting::KEY_SYSTEM_NAME, config('app.name', 'Laravel'));
+    }
+
+    /**
+     * The configured School Name, displayed on the login page and in the
+     * PDF report header. Falls back to an empty string if unset, since
+     * unlike systemName() there is no app-config equivalent to fall back to.
+     */
+    public function schoolName(): string
+    {
+        return $this->get(SystemSetting::KEY_SCHOOL_NAME, '');
     }
 
     /**
