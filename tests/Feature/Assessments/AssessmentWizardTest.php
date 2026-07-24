@@ -8,7 +8,6 @@ use App\Models\Assessment;
 use App\Models\Course;
 use App\Models\FlaggedCase;
 use App\Models\Section;
-use App\Models\Student;
 use App\Models\YearLevel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\InteractsWithDomainData;
@@ -28,7 +27,7 @@ class AssessmentWizardTest extends TestCase
         ];
     }
 
-    public function test_step_one_registers_a_brand_new_student_every_time(): void
+    public function test_step_one_stages_the_student_in_session_without_persisting(): void
     {
         $psychometrician = $this->psychometrician();
         $ids = $this->lookupIds();
@@ -43,13 +42,35 @@ class AssessmentWizardTest extends TestCase
         ]);
 
         $response->assertRedirect(route('assessments.create.questionnaire'));
-        $this->assertDatabaseCount('students', 1);
 
-        $student = Student::first();
-        $this->assertSame('Juan', $student->first_name);
-        $this->assertSame('Dela', $student->middle_name);
-        $this->assertSame('Cruz', $student->last_name);
-        $this->assertNotEmpty($student->student_number);
+        // Nothing is written to the database until final submit, so
+        // abandoning the wizard here leaves no orphan student row.
+        $this->assertDatabaseCount('students', 0);
+        $this->assertSame('Juan', session('assessment_wizard.student_data.first_name'));
+        $this->assertSame('Dela', session('assessment_wizard.student_data.middle_name'));
+        $this->assertSame('Cruz', session('assessment_wizard.student_data.last_name'));
+    }
+
+    public function test_abandoning_wizard_after_step_two_leaves_no_orphan_student(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $this->seedOfficialThresholds();
+        $version = $this->createActiveQuestionnaireVersion();
+        $ids = $this->lookupIds();
+
+        $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
+            'full_name' => 'Ana Lopez',
+            'gender' => 'Female',
+            'privacy_consent' => '1',
+            ...$ids,
+        ]);
+
+        $responses = $this->buildResponses($version, depressionRaw: 1, anxietyRaw: 1, stressRaw: 1);
+        $this->actingAs($psychometrician)->post(route('assessments.create.questionnaire.store'), ['responses' => $responses]);
+
+        // Wizard abandoned here -- Step 3 submit is never posted.
+        $this->assertDatabaseCount('students', 0);
+        $this->assertDatabaseCount('assessments', 0);
     }
 
     /**
@@ -74,10 +95,9 @@ class AssessmentWizardTest extends TestCase
             return;
         }
 
-        $student = Student::first();
-        $this->assertSame($first, $student->first_name);
-        $this->assertSame($middle, $student->middle_name);
-        $this->assertSame($last, $student->last_name);
+        $this->assertSame($first, session('assessment_wizard.student_data.first_name'));
+        $this->assertSame($middle, session('assessment_wizard.student_data.middle_name'));
+        $this->assertSame($last, session('assessment_wizard.student_data.last_name'));
     }
 
     public static function fullNameSplits(): array

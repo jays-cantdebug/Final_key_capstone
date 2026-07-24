@@ -36,11 +36,6 @@ class AssessmentService
     ) {
     }
 
-    public function findStudentOrFail(int $id): Student
-    {
-        return Student::query()->findOrFail($id);
-    }
-
     /**
      * @return Collection<int, Course>
      */
@@ -66,8 +61,9 @@ class AssessmentService
     }
 
     /**
-     * Register a new student for this assessment, recording privacy
-     * consent immediately.
+     * Register a new student. `$data` already carries `privacy_consent_at`
+     * (captured at the moment consent was given in Step 1 of the wizard,
+     * not whenever the wizard eventually finishes).
      *
      * @param array<string, mixed> $data
      */
@@ -77,7 +73,6 @@ class AssessmentService
             return Student::query()->create([
                 ...$data,
                 'student_number' => $this->studentNumberGenerator->generate(),
-                'privacy_consent_at' => now(),
             ]);
         });
     }
@@ -91,20 +86,26 @@ class AssessmentService
     }
 
     /**
-     * Submit a completed assessment inside a single transaction: save the
-     * assessment and its responses, compute the DASS-21 scores, pass them
-     * to the AI Service for classification, save the results, then
-     * evaluate and create any differentiated flagged cases/notifications.
+     * Register the student and submit their completed assessment inside a
+     * single transaction: create the student, save the assessment and its
+     * responses, compute the DASS-21 scores, pass them to the AI Service
+     * for classification, save the results, then evaluate and create any
+     * differentiated flagged cases/notifications. Registering the student
+     * here — rather than earlier in the wizard — means an abandoned
+     * wizard run never leaves an orphan `students` row behind.
      *
+     * @param array<string, mixed> $studentData
      * @param array<int, int> $responses Question ID => answer value (0-3).
      */
     public function submit(
-        Student $student,
+        array $studentData,
         QuestionnaireVersion $version,
         User $psychometrician,
         array $responses
     ): Assessment {
-        return $this->database->transaction(function () use ($student, $version, $psychometrician, $responses): Assessment {
+        return $this->database->transaction(function () use ($studentData, $version, $psychometrician, $responses): Assessment {
+            $student = $this->registerStudent($studentData);
+
             $assessment = Assessment::query()->create([
                 'student_id' => $student->id,
                 'questionnaire_version_id' => $version->id,

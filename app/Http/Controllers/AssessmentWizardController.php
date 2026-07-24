@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AssessmentResponseFormRequest;
 use App\Http\Requests\AssessmentStudentRequest;
+use App\Models\Student;
 use App\Services\AssessmentService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -13,10 +14,11 @@ use Illuminate\Http\Request;
 
 /**
  * Drives the 3-step New Assessment workflow (Student -> Questionnaire ->
- * Result). Wizard state (the selected/registered student and in-progress
- * responses) is held in the session between steps; nothing is persisted
- * to the assessments/dass_responses/dass_results tables until the final
- * Submit & Calculate Score action.
+ * Result). Wizard state (the intake data and in-progress responses) is
+ * held in the session between steps; nothing is persisted to the
+ * students/assessments/dass_responses/dass_results tables until the
+ * final Submit & Calculate Score action, so abandoning the wizard at any
+ * point leaves no trace in the database.
  */
 class AssessmentWizardController extends Controller
 {
@@ -42,16 +44,18 @@ class AssessmentWizardController extends Controller
     }
 
     /**
-     * STEP 1 (POST): Register a new student, then advance to Step 2. A
-     * fresh `students` row is created on every submission of this step.
+     * STEP 1 (POST): Validate the intake form and stage it in session,
+     * then advance to Step 2. Nothing is written to the `students` table
+     * yet — that only happens on final submit (Step 3), so a fresh
+     * `students` row is guaranteed on every *completed* wizard run
+     * without leaving an orphan row behind for abandoned ones.
      */
     public function confirmStudent(AssessmentStudentRequest $request): RedirectResponse
     {
-        $student = $this->assessmentService->registerStudent(
-            $request->safe()->except(['privacy_consent', 'full_name'])
-        );
+        $studentData = $request->safe()->except(['privacy_consent', 'full_name']);
+        $studentData['privacy_consent_at'] = now();
 
-        $request->session()->put(self::SESSION_KEY.'.student_id', $student->id);
+        $request->session()->put(self::SESSION_KEY.'.student_data', $studentData);
         $request->session()->forget(self::SESSION_KEY.'.responses');
 
         return redirect()->route('assessments.create.questionnaire');
@@ -62,9 +66,9 @@ class AssessmentWizardController extends Controller
      */
     public function showQuestionnaireStep(Request $request): View|RedirectResponse
     {
-        $studentId = $request->session()->get(self::SESSION_KEY.'.student_id');
+        $studentData = $request->session()->get(self::SESSION_KEY.'.student_data');
 
-        if ($studentId === null) {
+        if ($studentData === null) {
             return redirect()->route('assessments.create')
                 ->withErrors(['student' => 'Please select or register a student before continuing.']);
         }
@@ -77,7 +81,7 @@ class AssessmentWizardController extends Controller
         }
 
         return view('assessments.create.questionnaire', [
-            'student' => $this->assessmentService->findStudentOrFail($studentId),
+            'student' => new Student($studentData),
             'version' => $version,
             'existingResponses' => $request->session()->get(self::SESSION_KEY.'.responses', []),
         ]);
@@ -88,9 +92,9 @@ class AssessmentWizardController extends Controller
      */
     public function storeResponses(AssessmentResponseFormRequest $request): RedirectResponse
     {
-        $studentId = $request->session()->get(self::SESSION_KEY.'.student_id');
+        $studentData = $request->session()->get(self::SESSION_KEY.'.student_data');
 
-        if ($studentId === null) {
+        if ($studentData === null) {
             return redirect()->route('assessments.create')
                 ->withErrors(['student' => 'Please select or register a student before continuing.']);
         }
@@ -105,10 +109,10 @@ class AssessmentWizardController extends Controller
      */
     public function showResultStep(Request $request): View|RedirectResponse
     {
-        $studentId = $request->session()->get(self::SESSION_KEY.'.student_id');
+        $studentData = $request->session()->get(self::SESSION_KEY.'.student_data');
         $responses = $request->session()->get(self::SESSION_KEY.'.responses');
 
-        if ($studentId === null || $responses === null) {
+        if ($studentData === null || $responses === null) {
             return redirect()->route('assessments.create')
                 ->withErrors(['student' => 'Please complete the previous steps before reviewing the assessment.']);
         }
@@ -116,7 +120,7 @@ class AssessmentWizardController extends Controller
         $version = $this->assessmentService->activeQuestionnaireVersion();
 
         return view('assessments.create.result', [
-            'student' => $this->assessmentService->findStudentOrFail($studentId),
+            'student' => new Student($studentData),
             'version' => $version,
             'responseCount' => count($responses),
             'questionCount' => $version?->questions->count() ?? 0,
@@ -129,10 +133,10 @@ class AssessmentWizardController extends Controller
      */
     public function submit(Request $request): RedirectResponse
     {
-        $studentId = $request->session()->get(self::SESSION_KEY.'.student_id');
+        $studentData = $request->session()->get(self::SESSION_KEY.'.student_data');
         $responses = $request->session()->get(self::SESSION_KEY.'.responses');
 
-        if ($studentId === null || $responses === null) {
+        if ($studentData === null || $responses === null) {
             return redirect()->route('assessments.create')
                 ->withErrors(['student' => 'Please complete the previous steps before submitting.']);
         }
@@ -144,9 +148,7 @@ class AssessmentWizardController extends Controller
                 ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
         }
 
-        $student = $this->assessmentService->findStudentOrFail($studentId);
-
-        $assessment = $this->assessmentService->submit($student, $version, $request->user(), $responses);
+        $assessment = $this->assessmentService->submit($studentData, $version, $request->user(), $responses);
 
         $request->session()->forget(self::SESSION_KEY);
 

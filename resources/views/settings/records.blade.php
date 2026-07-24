@@ -20,8 +20,21 @@
         <x-alert type="error" class="mb-6">{{ $errors->first() }}</x-alert>
     @endif
 
-    <div class="grid gap-6 lg:grid-cols-3">
-        <x-table>
+    <style>
+        /* Scoped to Settings > Records only: keep these narrow 3-up tables from
+           needing horizontal scroll inside their card (few columns, tight width). */
+        .records-grid .records-table td,
+        .records-grid .records-table th {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        .records-grid .records-table td {
+            white-space: normal;
+        }
+    </style>
+
+    <div class="records-grid grid gap-6 lg:grid-cols-3">
+        <x-table class="records-table">
             <x-slot:header>
                 <h3 class="text-lg font-semibold text-body">Courses</h3>
                 <x-primary-button :href="route('courses.create')" class="!text-xs">Add</x-primary-button>
@@ -39,12 +52,16 @@
                     <x-table.td>{{ $course->course_name }}</x-table.td>
                     <x-table.td><x-badge :color="$statusColors[$course->status] ?? 'slate'">{{ $course->status }}</x-badge></x-table.td>
                     <x-table.td align="right">
-                        <div class="inline-flex flex-wrap justify-end gap-2">
-                            <a href="{{ route('courses.edit', $course) }}" class="rounded-md border border-slate-300 px-3 py-1 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
-                            <form method="POST" action="{{ route('courses.destroy', $course) }}" onsubmit="return confirm('Delete this course? This is blocked if any student references it.');">
+                        <div class="inline-flex items-center justify-end gap-1.5">
+                            <a href="{{ route('courses.edit', $course) }}" title="Edit" aria-label="Edit course" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 transition hover:bg-slate-50">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" /></svg>
+                            </a>
+                            <form method="POST" action="{{ route('courses.destroy', $course) }}" class="ml-2" onsubmit="return confirm('Delete this course? This is blocked if any student references it.');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
+                                <button type="submit" title="Delete" aria-label="Delete course" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-rose-200 text-rose-700 transition hover:bg-rose-50">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" /></svg>
+                                </button>
                             </form>
                         </div>
                     </x-table.td>
@@ -54,7 +71,7 @@
             @endforelse
         </x-table>
 
-        <x-table>
+        <x-table class="records-table">
             <x-slot:header>
                 <h3 class="text-lg font-semibold text-body">Year Levels</h3>
                 <x-primary-button :href="route('year-levels.create')" class="!text-xs">Add</x-primary-button>
@@ -72,12 +89,16 @@
                     <x-table.td>{{ $yearLevel->display_order }}</x-table.td>
                     <x-table.td><x-badge :color="$statusColors[$yearLevel->status] ?? 'slate'">{{ $yearLevel->status }}</x-badge></x-table.td>
                     <x-table.td align="right">
-                        <div class="inline-flex flex-wrap justify-end gap-2">
-                            <a href="{{ route('year-levels.edit', $yearLevel) }}" class="rounded-md border border-slate-300 px-3 py-1 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
-                            <form method="POST" action="{{ route('year-levels.destroy', $yearLevel) }}" onsubmit="return confirm('Delete this year level? This is blocked if any student references it.');">
+                        <div class="inline-flex items-center justify-end gap-1.5">
+                            <a href="{{ route('year-levels.edit', $yearLevel) }}" title="Edit" aria-label="Edit year level" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 transition hover:bg-slate-50">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" /></svg>
+                            </a>
+                            <form method="POST" action="{{ route('year-levels.destroy', $yearLevel) }}" class="ml-2" onsubmit="return confirm('Delete this year level? This is blocked if any student references it.');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
+                                <button type="submit" title="Delete" aria-label="Delete year level" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-rose-200 text-rose-700 transition hover:bg-rose-50">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" /></svg>
+                                </button>
                             </form>
                         </div>
                     </x-table.td>
@@ -87,7 +108,7 @@
             @endforelse
         </x-table>
 
-        <x-table>
+        <x-table class="records-table">
             <x-slot:header>
                 <h3 class="text-lg font-semibold text-body">Sections</h3>
                 <x-primary-button :href="route('sections.create')" class="!text-xs">Add</x-primary-button>
@@ -105,12 +126,16 @@
                     <x-table.td>{{ $section->capacity ?? '—' }}</x-table.td>
                     <x-table.td><x-badge :color="$statusColors[$section->status] ?? 'slate'">{{ $section->status }}</x-badge></x-table.td>
                     <x-table.td align="right">
-                        <div class="inline-flex flex-wrap justify-end gap-2">
-                            <a href="{{ route('sections.edit', $section) }}" class="rounded-md border border-slate-300 px-3 py-1 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
-                            <form method="POST" action="{{ route('sections.destroy', $section) }}" onsubmit="return confirm('Delete this section? This is blocked if any student references it.');">
+                        <div class="inline-flex items-center justify-end gap-1.5">
+                            <a href="{{ route('sections.edit', $section) }}" title="Edit" aria-label="Edit section" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 transition hover:bg-slate-50">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" /></svg>
+                            </a>
+                            <form method="POST" action="{{ route('sections.destroy', $section) }}" class="ml-2" onsubmit="return confirm('Delete this section? This is blocked if any student references it.');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
+                                <button type="submit" title="Delete" aria-label="Delete section" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-rose-200 text-rose-700 transition hover:bg-rose-50">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" /></svg>
+                                </button>
                             </form>
                         </div>
                     </x-table.td>

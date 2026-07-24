@@ -17,7 +17,7 @@
         <p class="mt-2 text-sm text-slate-600">
             You have answered {{ $responseCount }} of {{ $questionCount }} questions for
             <span class="font-semibold text-body">{{ $student->full_name }}</span>
-            ({{ $student->student_number }}) using questionnaire version v{{ $version?->version_number }}.
+            using questionnaire version v{{ $version?->version_number }}.
         </p>
         <p class="mt-2 text-sm text-slate-600">
             Clicking "Submit &amp; Calculate Score" will permanently save this assessment and compute the official DASS-21 results. The assessment cannot be edited after submission.
