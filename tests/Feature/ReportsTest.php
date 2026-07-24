@@ -26,30 +26,6 @@ class ReportsTest extends TestCase
         $this->actingAs($this->guidanceCounselor())->get(route('reports.index'))->assertOk();
     }
 
-    /**
-     * Regression test: submitting the on-screen year/month filter used to
-     * 500 with a TypeError because `(int) ($validated ?? default)` cast the
-     * whole nullable expression instead of the plain string value.
-     */
-    public function test_monthly_assessment_report_accepts_a_real_year_and_month_filter(): void
-    {
-        $psychometrician = $this->psychometrician();
-
-        $response = $this->actingAs($psychometrician)->get(route('reports.monthly-assessments', [
-            'year' => (string) now()->year,
-            'month' => (string) now()->month,
-        ]));
-
-        $response->assertOk();
-    }
-
-    public function test_monthly_assessment_report_defaults_to_the_current_month_when_no_filter_given(): void
-    {
-        $psychometrician = $this->psychometrician();
-
-        $this->actingAs($psychometrician)->get(route('reports.monthly-assessments'))->assertOk();
-    }
-
     public function test_assessment_report_pdf_downloads_successfully(): void
     {
         $psychometrician = $this->psychometrician();
@@ -80,20 +56,29 @@ class ReportsTest extends TestCase
         $this->actingAs($psychometrician)->get(route('reports.counseling.print'))->assertForbidden();
     }
 
-    public function test_questionnaire_usage_report_is_psychometrician_only(): void
+    public function test_flagged_students_report_flag_type_filter_narrows_results(): void
     {
-        $psychometrician = $this->psychometrician();
         $counselor = $this->guidanceCounselor();
 
-        $this->actingAs($psychometrician)->get(route('reports.questionnaire-usage'))->assertOk();
-        $this->actingAs($counselor)->get(route('reports.questionnaire-usage'))->assertForbidden();
-    }
+        $endorsement = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $endorsement->id]);
+        FlaggedCase::factory()->endorsement()->create(['assessment_id' => $endorsement->id]);
 
-    public function test_daily_assessment_report_renders(): void
-    {
-        $psychometrician = $this->psychometrician();
+        $notification = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $notification->id]);
+        FlaggedCase::factory()->create(['assessment_id' => $notification->id, 'flag_type' => FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION]);
 
-        $this->actingAs($psychometrician)->get(route('reports.daily-assessments'))->assertOk();
+        $unfiltered = $this->actingAs($counselor)->get(route('reports.flagged-students.print'));
+        $unfiltered->assertOk();
+        $unfiltered->assertSee('Counseling Endorsement');
+        $unfiltered->assertSee('Awareness Notification');
+
+        $endorsementOnly = $this->actingAs($counselor)->get(route('reports.flagged-students.print', [
+            'flag_type' => FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT,
+        ]));
+        $endorsementOnly->assertOk();
+        $endorsementOnly->assertSee('Counseling Endorsement');
+        $endorsementOnly->assertDontSee('Awareness Notification');
     }
 
     public function test_assessment_summary_report_renders(): void

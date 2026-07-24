@@ -10,7 +10,6 @@ use App\Models\CounselingSession;
 use App\Models\Course;
 use App\Models\DassResult;
 use App\Models\FlaggedCase;
-use App\Models\QuestionnaireVersion;
 use App\Models\Student;
 use App\Models\YearLevel;
 use Illuminate\Database\Eloquent\Builder;
@@ -68,7 +67,8 @@ class ReportService
 
     /**
      * Flagged Students Report: flagged cases matching the given filters
-     * (mirrors Flagged Cases' own filter set from Module 8).
+     * (mirrors Flagged Cases' own filter set from Module 8), optionally
+     * narrowed to one flag type (`FlaggedCase::FLAG_TYPE_*`).
      *
      * @param array<string, mixed> $filters
      * @return Collection<int, FlaggedCase>
@@ -100,6 +100,9 @@ class ReportService
             ->when($filters['date_to'] ?? null, function (Builder $query, $value) {
                 $query->whereHas('assessment', fn (Builder $q) => $q->whereDate('submitted_at', '<=', $value));
             })
+            ->when($filters['flag_type'] ?? null, function (Builder $query, string $value) {
+                $query->where('flag_type', $value);
+            })
             ->orderByDesc('flagged_at')
             ->get();
     }
@@ -128,57 +131,6 @@ class ReportService
             ->when($filters['date_to'] ?? null, fn (Builder $q, $v) => $q->whereDate('session_datetime', '<=', $v))
             ->orderByDesc('session_datetime')
             ->get();
-    }
-
-    /**
-     * Questionnaire Usage Report: every questionnaire version with its
-     * question count and the number of assessments that used it.
-     *
-     * Computed via a direct count query per version (rather than adding
-     * an `assessments()` relation to QuestionnaireVersion) so Module 4
-     * remains untouched.
-     *
-     * @return Collection<int, QuestionnaireVersion>
-     */
-    public function questionnaireUsageForReport(): Collection
-    {
-        return QuestionnaireVersion::query()
-            ->with('questionnaire')
-            ->withCount('questions')
-            ->orderByDesc('version_number')
-            ->get()
-            ->map(function (QuestionnaireVersion $version): QuestionnaireVersion {
-                $version->setAttribute(
-                    'assessments_count',
-                    Assessment::query()->where('questionnaire_version_id', $version->id)->count()
-                );
-
-                return $version;
-            });
-    }
-
-    /**
-     * Daily Assessment Report: all assessments submitted on the given date.
-     */
-    public function dailyAssessmentsQuery(string $date): Builder
-    {
-        return Assessment::query()
-            ->with(['student', 'result', 'psychometrician'])
-            ->whereDate('submitted_at', $date)
-            ->orderBy('submitted_at');
-    }
-
-    /**
-     * Monthly Assessment Report: all assessments submitted in the given
-     * year/month.
-     */
-    public function monthlyAssessmentsQuery(int $year, int $month): Builder
-    {
-        return Assessment::query()
-            ->with(['student', 'result', 'psychometrician'])
-            ->whereYear('submitted_at', $year)
-            ->whereMonth('submitted_at', $month)
-            ->orderBy('submitted_at');
     }
 
     /**

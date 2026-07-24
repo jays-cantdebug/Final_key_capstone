@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\FlaggedCase;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -17,6 +18,7 @@ use Illuminate\Validation\Rule;
  * only used by the Student Assessment History report, reached via an
  * exact deep link from a specific student's profile rather than typed
  * manually — it's never a search field a user fills in directly.
+ * `flag_type` is only used by the Flagged Students Report.
  */
 class ReportFilterRequest extends FormRequest
 {
@@ -48,9 +50,10 @@ class ReportFilterRequest extends FormRequest
             ],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
-            'date' => ['nullable', 'date'],
-            'month' => ['nullable', 'integer', 'between:1,12'],
-            'year' => ['nullable', 'integer', 'min:2000', 'max:2100'],
+            'flag_type' => [
+                'nullable',
+                Rule::in([FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT, FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION]),
+            ],
         ];
     }
 }

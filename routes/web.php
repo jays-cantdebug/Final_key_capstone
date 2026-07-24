@@ -19,10 +19,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Reports\AssessmentReportController;
 use App\Http\Controllers\Reports\AssessmentSummaryReportController;
 use App\Http\Controllers\Reports\CounselingReportController;
-use App\Http\Controllers\Reports\DailyAssessmentReportController;
 use App\Http\Controllers\Reports\FlaggedStudentsReportController;
-use App\Http\Controllers\Reports\MonthlyAssessmentReportController;
-use App\Http\Controllers\Reports\QuestionnaireUsageReportController;
 use App\Http\Controllers\Reports\StudentHistoryReportController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\SettingsController;
@@ -144,14 +141,6 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/student-history/print', [StudentHistoryReportController::class, 'print'])->name('student-history.print');
             Route::get('/student-history/pdf', [StudentHistoryReportController::class, 'pdf'])->name('student-history.pdf');
 
-            Route::get('/daily-assessments', [DailyAssessmentReportController::class, 'index'])->name('daily-assessments');
-            Route::get('/daily-assessments/print', [DailyAssessmentReportController::class, 'print'])->name('daily-assessments.print');
-            Route::get('/daily-assessments/pdf', [DailyAssessmentReportController::class, 'pdf'])->name('daily-assessments.pdf');
-
-            Route::get('/monthly-assessments', [MonthlyAssessmentReportController::class, 'index'])->name('monthly-assessments');
-            Route::get('/monthly-assessments/print', [MonthlyAssessmentReportController::class, 'print'])->name('monthly-assessments.print');
-            Route::get('/monthly-assessments/pdf', [MonthlyAssessmentReportController::class, 'pdf'])->name('monthly-assessments.pdf');
-
             Route::get('/assessment-summary', [AssessmentSummaryReportController::class, 'index'])->name('assessment-summary');
             Route::get('/assessment-summary/print', [AssessmentSummaryReportController::class, 'print'])->name('assessment-summary.print');
             Route::get('/assessment-summary/pdf', [AssessmentSummaryReportController::class, 'pdf'])->name('assessment-summary.pdf');
@@ -166,15 +155,6 @@ Route::middleware('auth')->group(function (): void {
 
             Route::get('/counseling/print', [CounselingReportController::class, 'print'])->name('counseling.print');
             Route::get('/counseling/pdf', [CounselingReportController::class, 'pdf'])->name('counseling.pdf');
-        });
-
-    Route::middleware('role:psychometrician')
-        ->prefix('reports')
-        ->name('reports.')
-        ->group(function (): void {
-            Route::get('/questionnaire-usage', [QuestionnaireUsageReportController::class, 'index'])->name('questionnaire-usage');
-            Route::get('/questionnaire-usage/print', [QuestionnaireUsageReportController::class, 'print'])->name('questionnaire-usage.print');
-            Route::get('/questionnaire-usage/pdf', [QuestionnaireUsageReportController::class, 'pdf'])->name('questionnaire-usage.pdf');
         });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
