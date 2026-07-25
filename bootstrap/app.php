@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->trustProxies(at: '127.0.0.1');
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
         ]);
