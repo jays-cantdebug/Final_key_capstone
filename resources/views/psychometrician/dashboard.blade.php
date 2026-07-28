@@ -31,7 +31,7 @@
             </div>
 
             <form method="GET" action="{{ route('psychometrician.dashboard') }}">
-                @foreach (array_filter(['course_id' => $filters['course_id'] ?? null, 'year_level_id' => $filters['year_level_id'] ?? null]) as $key => $value)
+                @foreach (array_filter(['course_id' => $filters['course_id'] ?? null, 'year_level_id' => $filters['year_level_id'] ?? null, 'severity_subscale' => $filters['severity_subscale'] ?? null]) as $key => $value)
                     <input type="hidden" name="{{ $key }}" value="{{ $value }}" />
                 @endforeach
                 <x-select name="period" onchange="this.form.submit()" class="!w-auto rounded-lg text-sm font-semibold text-slate-700">
@@ -112,6 +112,9 @@
         <h3 class="text-lg font-semibold text-body">All Assessments</h3>
         <form method="GET" action="{{ route('psychometrician.dashboard') }}" class="flex flex-wrap items-end gap-3">
             <input type="hidden" name="period" value="{{ $period }}" />
+            @if ($filters['severity_subscale'] ?? null)
+                <input type="hidden" name="severity_subscale" value="{{ $filters['severity_subscale'] }}" />
+            @endif
             <x-select name="course_id" onchange="this.form.submit()" class="!w-auto text-sm">
                 <option value="">All Course</option>
                 @foreach ($courses as $course)
@@ -132,7 +135,21 @@
         </form>
     </div>
 
-    <x-table class="mt-4">
+    <style>
+        /* Scoped to the Dashboard's All Assessments table only: 8 columns
+           forced wide by whitespace-nowrap pushed the row past the
+           viewport, causing horizontal scroll that cut off the left edge. */
+        .assessments-table td,
+        .assessments-table th {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        .assessments-table td {
+            white-space: normal;
+        }
+    </style>
+
+    <x-table class="mt-4 assessments-table">
         <x-slot:head>
             <x-table.th>Student</x-table.th>
             <x-table.th>Course</x-table.th>
@@ -150,7 +167,10 @@
                 $secondaryCount = $assessment->secondaryFlagCount();
             @endphp
             <tr>
-                <x-table.td class="font-medium text-body">{{ $assessment->student->full_name }}</x-table.td>
+                <x-table.td class="font-medium text-body">
+                    {{ $assessment->student->full_name }}
+                    <div class="text-xs font-normal text-slate-500">{{ $assessment->student->student_number }} &mdash; {{ $assessment->student->yearLevel?->label }} / {{ $assessment->student->section?->section_name }}</div>
+                </x-table.td>
                 <x-table.td>{{ $assessment->student->course?->course_code }}</x-table.td>
                 <x-table.td><x-severity-badge :level="$assessment->result?->stress_level" /></x-table.td>
                 <x-table.td><x-severity-badge :level="$assessment->result?->anxiety_level" /></x-table.td>

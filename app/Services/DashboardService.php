@@ -109,6 +109,15 @@ class DashboardService
      * length), the Assessment Volume and Severity Distribution charts,
      * and the paginated "All Assessments" table.
      *
+     * `course_id`/`year_level_id` scope everything above — stat cards,
+     * both trend comparisons (current and prior period), the Severity
+     * Distribution chart, and the table — not just the table, so the
+     * dashboard reads as one consistently-filtered view rather than a
+     * table filter sitting underneath institution-wide cards/chart.
+     * `severity_subscale` (set only via a stat card's own click-through)
+     * intentionally stays table-only: it narrows to "which assessments
+     * triggered this card," not "recompute the card itself by itself."
+     *
      * @param array<string, mixed> $filters period, course_id, year_level_id, severity_subscale
      * @return array{
      *     period: string,
@@ -123,8 +132,10 @@ class DashboardService
         $period = $filters['period'] ?? 'month';
         [$start, $end] = $this->periodRange($period);
 
-        $baseQuery = fn (): Builder => Assessment::query()
-            ->when($start, fn (Builder $q) => $q->whereBetween('submitted_at', [$start, $end]));
+        $baseQuery = fn (): Builder => $this->applyStudentScopeFilters(
+            Assessment::query()->when($start, fn (Builder $q) => $q->whereBetween('submitted_at', [$start, $end])),
+            $filters
+        );
 
         $totalAssessments = (clone $baseQuery())->count();
         $subscaleCounts = [
@@ -134,8 +145,10 @@ class DashboardService
         ];
 
         [$priorStart, $priorEnd] = $this->priorPeriodRange($period, $start, $end);
-        $priorQuery = fn (): Builder => Assessment::query()
-            ->when($priorStart, fn (Builder $q) => $q->whereBetween('submitted_at', [$priorStart, $priorEnd]));
+        $priorQuery = fn (): Builder => $this->applyStudentScopeFilters(
+            Assessment::query()->when($priorStart, fn (Builder $q) => $q->whereBetween('submitted_at', [$priorStart, $priorEnd])),
+            $filters
+        );
 
         $priorTotal = $priorStart ? (clone $priorQuery())->count() : null;
         $priorSubscaleCounts = [
@@ -181,6 +194,16 @@ class DashboardService
     private function countBySubscale(Builder $query, string $subscale): int
     {
         return $query->whereHas('result', fn (Builder $q) => $q->whereIn("{$subscale}_level", self::SEVERE_LEVELS))->count();
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function applyStudentScopeFilters(Builder $query, array $filters): Builder
+    {
+        return $query
+            ->when($filters['course_id'] ?? null, fn (Builder $q, $value) => $q->whereHas('student', fn (Builder $qq) => $qq->where('course_id', $value)))
+            ->when($filters['year_level_id'] ?? null, fn (Builder $q, $value) => $q->whereHas('student', fn (Builder $qq) => $qq->where('year_level_id', $value)));
     }
 
     /**
@@ -301,19 +324,17 @@ class DashboardService
     }
 
     /**
+     * `$query` arrives already scoped to period + course_id + year_level_id
+     * (see `applyStudentScopeFilters()` in `psychometricianStats()`); this
+     * only layers on the table-specific `severity_subscale` filter.
+     *
      * @param array<string, mixed> $filters
      * @return LengthAwarePaginator<int, Assessment>
      */
     private function allAssessmentsTable(Builder $query, array $filters): LengthAwarePaginator
     {
         return $query
-            ->with(['student.course', 'student.yearLevel', 'result', 'flaggedCases'])
-            ->when($filters['course_id'] ?? null, function (Builder $q, $value) {
-                $q->whereHas('student', fn (Builder $qq) => $qq->where('course_id', $value));
-            })
-            ->when($filters['year_level_id'] ?? null, function (Builder $q, $value) {
-                $q->whereHas('student', fn (Builder $qq) => $qq->where('year_level_id', $value));
-            })
+            ->with(['student.course', 'student.yearLevel', 'student.section', 'result', 'flaggedCases'])
             ->when($filters['severity_subscale'] ?? null, function (Builder $q, string $subscale) {
                 $q->whereHas('result', fn (Builder $qq) => $qq->whereIn("{$subscale}_level", self::SEVERE_LEVELS));
             })

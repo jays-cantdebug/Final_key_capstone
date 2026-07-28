@@ -81,6 +81,39 @@ class ReportsTest extends TestCase
         $endorsementOnly->assertDontSee('Awareness Notification');
     }
 
+    public function test_flagged_students_report_notification_filter_excludes_cases_that_also_have_an_endorsement(): void
+    {
+        $counselor = $this->guidanceCounselor();
+
+        // Same assessment flagged for both Stress (endorsement) and
+        // Depression (notification) — the Flagged Cases listing's
+        // "Notification" tab excludes this from view (Endorsement takes
+        // display priority), so the report's flag_type filter must match.
+        $both = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $both->id]);
+        FlaggedCase::factory()->endorsement()->create(['assessment_id' => $both->id]);
+        FlaggedCase::factory()->create(['assessment_id' => $both->id, 'flag_type' => FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION]);
+
+        $notificationOnly = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $notificationOnly->id]);
+        FlaggedCase::factory()->create(['assessment_id' => $notificationOnly->id, 'flag_type' => FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION]);
+
+        $notificationReport = $this->actingAs($counselor)->get(route('reports.flagged-students.print', [
+            'flag_type' => FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION,
+        ]));
+        $notificationReport->assertOk();
+        $notificationReport->assertSee($notificationOnly->fresh()->student->student_number);
+        $notificationReport->assertDontSee($both->fresh()->student->student_number);
+
+        // The same dual-flagged assessment must still surface under the
+        // Endorsement filter, unaffected by the exclusion above.
+        $endorsementReport = $this->actingAs($counselor)->get(route('reports.flagged-students.print', [
+            'flag_type' => FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT,
+        ]));
+        $endorsementReport->assertOk();
+        $endorsementReport->assertSee($both->fresh()->student->student_number);
+    }
+
     public function test_assessment_summary_report_renders(): void
     {
         $psychometrician = $this->psychometrician();

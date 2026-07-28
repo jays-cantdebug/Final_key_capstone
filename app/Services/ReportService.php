@@ -102,6 +102,18 @@ class ReportService
             })
             ->when($filters['flag_type'] ?? null, function (Builder $query, string $value) {
                 $query->where('flag_type', $value);
+
+                // Mirrors the Flagged Cases listing's "Notification" tab,
+                // which only shows assessments flagged for Awareness
+                // Notification and NOT also Counseling Endorsement (the
+                // listing gives Endorsement display priority when both
+                // exist) — otherwise the report would include rows the
+                // listing had excluded from the Notification view.
+                if ($value === FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION) {
+                    $query->whereDoesntHave('assessment.flaggedCases', function (Builder $q) {
+                        $q->where('flag_type', FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT);
+                    });
+                }
             })
             ->orderByDesc('flagged_at')
             ->get();

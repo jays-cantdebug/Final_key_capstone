@@ -14,14 +14,16 @@
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Flagged Students</p>
                 <h2 class="text-2xl font-semibold text-body">Student Flagged</h2>
             </div>
-            <div class="flex flex-wrap gap-2">
-                <x-secondary-button :href="route('reports.flagged-students.print', $filters)" target="_blank">
-                    Print Report
-                </x-secondary-button>
-                <x-primary-button :href="route('reports.flagged-students.pdf', $filters)">
-                    Download PDF
-                </x-primary-button>
-            </div>
+            @if ($canGenerateReport)
+                <div class="flex flex-wrap gap-2">
+                    <x-secondary-button :href="route('reports.flagged-students.print', $reportFilters)" target="_blank">
+                        Print Report
+                    </x-secondary-button>
+                    <x-primary-button :href="route('reports.flagged-students.pdf', $reportFilters)">
+                        Download PDF
+                    </x-primary-button>
+                </div>
+            @endif
         </div>
     </x-slot>
 

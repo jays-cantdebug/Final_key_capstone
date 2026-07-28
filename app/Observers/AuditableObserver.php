@@ -145,6 +145,12 @@ class AuditableObserver
             CounselingSession::class => 'Counseling Sessions',
             SystemSetting::class => 'Settings',
             FlaggedCase::class => 'Flagged Cases',
+            // Matches the 'Assessments' label hardcoded for the Create case
+            // in created() above — without this arm, Update/Delete/Restore
+            // fell through to class_basename() ('Assessment', singular),
+            // splitting one model's audit trail across two module names in
+            // the Audit Logs filter dropdown.
+            Assessment::class => 'Assessments',
             default => class_basename($model),
         };
     }

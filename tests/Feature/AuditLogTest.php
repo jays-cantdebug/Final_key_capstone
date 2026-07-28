@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Assessment;
 use App\Models\AuditLog;
 use App\Models\Course;
 use App\Models\Student;
@@ -37,6 +38,26 @@ class AuditLogTest extends TestCase
         $this->assertNotNull($log);
         $this->assertSame('Before', $log->old_values['first_name']);
         $this->assertSame('After', $log->new_values['first_name']);
+    }
+
+    public function test_assessment_create_update_and_delete_all_log_under_the_same_module_name(): void
+    {
+        $assessment = Assessment::factory()->create();
+        $assessment->update(['submitted_at' => now()->subDay()]);
+        $assessment->delete();
+
+        // Create was always hardcoded to 'Assessments' (plural); Update and
+        // Delete previously fell through to class_basename() and logged
+        // under 'Assessment' (singular) instead, silently splitting one
+        // model's audit trail across two entries in the Module filter.
+        $this->assertSame(
+            3,
+            AuditLog::query()->where('module', 'Assessments')->where('record_id', $assessment->id)->count()
+        );
+        $this->assertSame(
+            0,
+            AuditLog::query()->where('module', 'Assessment')->where('record_id', $assessment->id)->count()
+        );
     }
 
     public function test_psychometrician_can_view_the_audit_log_index(): void
