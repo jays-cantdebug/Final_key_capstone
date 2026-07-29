@@ -2,13 +2,21 @@
     <x-slot name="header">
         <div>
             <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Notifications</p>
-            <h2 class="text-2xl font-semibold text-body">Notifications</h2>
+            <h2 class="text-2xl font-semibold text-body">{{ $showArchived ? 'Archived Notifications' : 'Notifications' }}</h2>
         </div>
     </x-slot>
 
     @if (session('status'))
         <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>
     @endif
+
+    <div class="mb-4 text-sm">
+        @if ($showArchived)
+            <a href="{{ route('notifications.index') }}" class="font-semibold text-primary hover:underline">&larr; Back to Notifications</a>
+        @else
+            <a href="{{ route('notifications.index', ['archived' => 1]) }}" class="font-semibold text-primary hover:underline">View Archived</a>
+        @endif
+    </div>
 
     <div class="space-y-4">
         @forelse ($notifications as $notification)
@@ -46,11 +54,29 @@
                             </x-secondary-button>
                         </form>
                     @endunless
+
+                    @unless ($showArchived)
+                        <form method="POST" action="{{ route('notifications.archive', $notification) }}">
+                            @csrf
+                            @method('PATCH')
+                            <x-secondary-button type="submit">
+                                Archive
+                            </x-secondary-button>
+                        </form>
+                    @else
+                        <form method="POST" action="{{ route('notifications.unarchive', $notification) }}">
+                            @csrf
+                            @method('PATCH')
+                            <x-secondary-button type="submit">
+                                Unarchive
+                            </x-secondary-button>
+                        </form>
+                    @endif
                 </div>
             </div>
         @empty
             <div class="rounded-lg border border-slate-200 bg-white p-12 text-center text-sm text-slate-500 shadow-sm">
-                No notifications yet.
+                {{ $showArchived ? 'No archived notifications.' : 'No notifications yet.' }}
             </div>
         @endforelse
     </div>

@@ -28,6 +28,17 @@ class SystemNotificationFactory extends Factory
             'message' => $this->faker->sentence(),
             'is_read' => false,
             'read_at' => null,
+            'archived_at' => null,
         ];
+    }
+
+    /**
+     * Indicate that the notification has been archived.
+     */
+    public function archived(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'archived_at' => now(),
+        ]);
     }
 }

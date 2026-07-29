@@ -16,14 +16,17 @@ use Illuminate\Support\Facades\Gate;
  */
 class NotificationController extends Controller
 {
-    public function __construct(private readonly SystemNotificationService $notificationService)
-    {
-    }
+    public function __construct(private readonly SystemNotificationService $notificationService) {}
 
     public function index(Request $request): View
     {
+        $showArchived = $request->boolean('archived');
+
         return view('notifications.index', [
-            'notifications' => $this->notificationService->paginateForUser($request->user()),
+            'notifications' => $showArchived
+                ? $this->notificationService->paginateArchivedForUser($request->user())
+                : $this->notificationService->paginateForUser($request->user()),
+            'showArchived' => $showArchived,
         ]);
     }
 
@@ -49,5 +52,30 @@ class NotificationController extends Controller
         $this->notificationService->markAsRead($notification);
 
         return redirect()->route('assessments.show', $notification->assessment_id);
+    }
+
+    /**
+     * Archive a notification. The row is never deleted, only hidden from
+     * the default inbox for accountability purposes.
+     */
+    public function archive(SystemNotification $notification): RedirectResponse
+    {
+        Gate::authorize('update', $notification);
+
+        $this->notificationService->archive($notification);
+
+        return back()->with('status', 'Notification archived.');
+    }
+
+    /**
+     * Unarchive a notification, restoring it to the default inbox.
+     */
+    public function unarchive(SystemNotification $notification): RedirectResponse
+    {
+        Gate::authorize('update', $notification);
+
+        $this->notificationService->unarchive($notification);
+
+        return back()->with('status', 'Notification restored.');
     }
 }

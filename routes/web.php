@@ -122,6 +122,8 @@ Route::middleware('auth')->group(function (): void {
 
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+        Route::patch('/notifications/{notification}/archive', [NotificationController::class, 'archive'])->name('notifications.archive');
+        Route::patch('/notifications/{notification}/unarchive', [NotificationController::class, 'unarchive'])->name('notifications.unarchive');
         Route::get('/notifications/{notification}/view', [NotificationController::class, 'view'])->name('notifications.view');
 
         Route::resource('counseling-sessions', CounselingSessionController::class);
