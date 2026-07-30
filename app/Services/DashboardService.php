@@ -61,7 +61,7 @@ class DashboardService
      */
     private function flaggedCaseVolumeSeries(): array
     {
-        $sixMonthsAgo = now()->subMonths(5)->startOfMonth();
+        $sixMonthsAgo = now()->startOfMonth()->subMonths(5);
 
         $counts = Assessment::query()
             ->whereHas('flaggedCases')
@@ -259,7 +259,7 @@ class DashboardService
      */
     private function assessmentVolumeSeries(): array
     {
-        $sixMonthsAgo = now()->subMonths(5)->startOfMonth();
+        $sixMonthsAgo = now()->startOfMonth()->subMonths(5);
 
         $counts = Assessment::query()
             ->where('submitted_at', '>=', $sixMonthsAgo)
@@ -279,9 +279,10 @@ class DashboardService
     private function zeroFilledSixMonthSeries(\Illuminate\Support\Collection $counts): array
     {
         $series = [];
+        $currentMonthStart = now()->startOfMonth();
 
         for ($i = 5; $i >= 0; $i--) {
-            $month = now()->subMonths($i);
+            $month = $currentMonthStart->copy()->subMonths($i);
             $key = $month->format('Y-m');
 
             $series[] = [

@@ -8,15 +8,26 @@
 
     @php
         $maxFlaggedVolume = max(1, collect($flaggedVolumeChart)->max('count'));
+        $volumeBarShades = ['bg-primary/35', 'bg-primary/50', 'bg-primary/65', 'bg-primary/80', 'bg-primary', 'bg-primary-dark'];
+        $hasFlagTypeData = array_sum($flagTypeChart) > 0;
         $totalFlagged = max(1, array_sum($flagTypeChart));
 
         $flagTypeLabels = [
             'counseling_endorsement' => 'Counseling Endorsement',
             'awareness_notification' => 'Awareness Notification',
         ];
+        // Vibrant donut-specific palette (see dataviz skill validator).
+        // Both flag types share the red hue family on purpose, mapping
+        // intensity to urgency: Counseling Endorsement (direct escalation)
+        // is deep/saturated, Awareness Notification (lower urgency) is
+        // soft/light. Their lightness/saturation gap alone clears the CVD
+        // and normal-vision floors (ΔE 20.0 / 21.4), so the shared hue
+        // doesn't cause them to blur together. Badges elsewhere (Flag
+        // column, Notifications, Flagged Cases, Assessment Show) keep
+        // their existing teal/purple — this palette is donut-only.
         $flagTypeColors = [
-            'counseling_endorsement' => '#0F5C50',
-            'awareness_notification' => '#4A1E82',
+            'counseling_endorsement' => '#991B1B',
+            'awareness_notification' => '#F05252',
         ];
 
         $conicStops = [];
@@ -45,10 +56,10 @@
         <x-card>
             <h3 class="text-lg font-semibold text-body">Flagged Cases Volume</h3>
             <p class="text-xs text-slate-500">Flagged assessments per month, last 6 months</p>
-            <div class="mt-6 flex h-40 items-end gap-3">
+            <div class="mt-6 flex h-40 gap-3">
                 @foreach ($flaggedVolumeChart as $point)
-                    <div class="flex flex-1 flex-col items-center gap-2">
-                        <div class="w-full rounded-t-lg bg-primary" style="height: {{ max(4, ($point['count'] / $maxFlaggedVolume) * 100) }}%"></div>
+                    <div class="flex flex-1 flex-col items-center justify-end gap-2">
+                        <div class="w-full rounded-t-lg {{ $volumeBarShades[$loop->index] ?? 'bg-primary-dark' }}" style="height: {{ max(4, ($point['count'] / $maxFlaggedVolume) * 100) }}%"></div>
                         <p class="text-xs font-medium text-slate-500">{{ $point['label'] }}</p>
                     </div>
                 @endforeach
@@ -59,16 +70,21 @@
             <h3 class="text-lg font-semibold text-body">Flag Type Distribution</h3>
             <p class="text-xs text-slate-500">Counseling Endorsement vs. Awareness Notification, all time</p>
             <div class="mt-6 flex items-center gap-6">
-                <div class="h-32 w-32 shrink-0 rounded-full" style="background: {{ $flagTypeConicGradient }}"></div>
-                <ul class="space-y-2 text-sm">
-                    @foreach ($flagTypeChart as $type => $count)
-                        <li class="flex items-center gap-2">
-                            <span class="h-2.5 w-2.5 rounded-full" style="background: {{ $flagTypeColors[$type] }}"></span>
-                            <span class="text-slate-600">{{ $flagTypeLabels[$type] }}</span>
-                            <span class="font-semibold text-body">{{ $count }}</span>
-                        </li>
-                    @endforeach
-                </ul>
+                @if ($hasFlagTypeData)
+                    <div class="h-48 w-48 shrink-0 rounded-full" style="background: {{ $flagTypeConicGradient }}"></div>
+                    <ul class="space-y-2 text-sm">
+                        @foreach ($flagTypeChart as $type => $count)
+                            <li class="flex items-center gap-2">
+                                <span class="h-2.5 w-2.5 rounded-full" style="background: {{ $flagTypeColors[$type] }}"></span>
+                                <span class="text-slate-600">{{ $flagTypeLabels[$type] }}</span>
+                                <span class="font-semibold text-body">{{ $count }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <div class="h-48 w-48 shrink-0 rounded-full bg-slate-100"></div>
+                    <p class="text-sm text-slate-500">No flagged cases to display.</p>
+                @endif
             </div>
         </x-card>
     </div>

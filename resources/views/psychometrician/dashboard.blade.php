@@ -2,14 +2,25 @@
     $periodLabels = ['today' => 'Today', 'week' => 'This Week', 'month' => 'This Month', 'all' => 'All Time'];
 
     $maxVolume = max(1, collect($volumeChart)->max('count'));
+    $volumeBarShades = ['bg-primary/35', 'bg-primary/50', 'bg-primary/65', 'bg-primary/80', 'bg-primary', 'bg-primary-dark'];
+    $hasSeverityData = array_sum($severityChart) > 0;
     $totalSeverity = max(1, array_sum($severityChart));
 
+    // Vibrant donut-specific palette, validated for adjacent-pair
+    // colorblind-safe separation and lightness (see dataviz skill
+    // validator). Severe/Extremely Severe share the red hue family on
+    // purpose (soft red -> deep saturated red) to read as "same danger,
+    // different intensity" — their lightness/saturation gap alone clears
+    // the CVD and normal-vision floors (ΔE 20.0 / 21.4), so the shared hue
+    // doesn't cause them to blur together. Gold's sub-3:1 contrast against
+    // the card background is mitigated by the always-visible legend labels
+    // below, never color alone.
     $severityChartColors = [
-        'Normal' => '#8FBE6E',
-        'Mild' => '#6FA8DC',
-        'Moderate' => '#E8B75C',
-        'Severe' => '#E08E6D',
-        'Extremely Severe' => '#C0574F',
+        'Normal' => '#16A34A',
+        'Mild' => '#2563EB',
+        'Moderate' => '#D4A017',
+        'Severe' => '#F05252',
+        'Extremely Severe' => '#991B1B',
     ];
 
     $conicStops = [];
@@ -80,10 +91,10 @@
         <x-card>
             <h3 class="text-lg font-semibold text-body">Assessment Volume</h3>
             <p class="text-xs text-slate-500">Assessments submitted per month, last 6 months</p>
-            <div class="mt-6 flex h-40 items-end gap-3">
+            <div class="mt-6 flex h-40 gap-3">
                 @foreach ($volumeChart as $point)
-                    <div class="flex flex-1 flex-col items-center gap-2">
-                        <div class="w-full rounded-t-lg bg-primary" style="height: {{ max(4, ($point['count'] / $maxVolume) * 100) }}%"></div>
+                    <div class="flex flex-1 flex-col items-center justify-end gap-2">
+                        <div class="w-full rounded-t-lg {{ $volumeBarShades[$loop->index] ?? 'bg-primary-dark' }}" style="height: {{ max(4, ($point['count'] / $maxVolume) * 100) }}%"></div>
                         <p class="text-xs font-medium text-slate-500">{{ $point['label'] }}</p>
                     </div>
                 @endforeach
@@ -94,16 +105,21 @@
             <h3 class="text-lg font-semibold text-body">Severity Distribution</h3>
             <p class="text-xs text-slate-500">Highest severity tier across all 3 subscales, {{ $periodLabels[$period] }}</p>
             <div class="mt-6 flex items-center gap-6">
-                <div class="h-32 w-32 shrink-0 rounded-full" style="background: {{ $conicGradient }}"></div>
-                <ul class="space-y-2 text-sm">
-                    @foreach ($severityChart as $level => $count)
-                        <li class="flex items-center gap-2">
-                            <span class="h-2.5 w-2.5 rounded-full" style="background: {{ $severityChartColors[$level] }}"></span>
-                            <span class="text-slate-600">{{ $level }}</span>
-                            <span class="font-semibold text-body">{{ $count }}</span>
-                        </li>
-                    @endforeach
-                </ul>
+                @if ($hasSeverityData)
+                    <div class="h-48 w-48 shrink-0 rounded-full" style="background: {{ $conicGradient }}"></div>
+                    <ul class="space-y-2 text-sm">
+                        @foreach ($severityChart as $level => $count)
+                            <li class="flex items-center gap-2">
+                                <span class="h-2.5 w-2.5 rounded-full" style="background: {{ $severityChartColors[$level] }}"></span>
+                                <span class="text-slate-600">{{ $level }}</span>
+                                <span class="font-semibold text-body">{{ $count }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <div class="h-48 w-48 shrink-0 rounded-full bg-slate-100"></div>
+                    <p class="text-sm text-slate-500">No assessments for the selected filters.</p>
+                @endif
             </div>
         </x-card>
     </div>
