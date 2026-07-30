@@ -99,6 +99,7 @@ Route::middleware('auth')->group(function (): void {
         Route::prefix('assessments/create')
             ->name('assessments.create.')
             ->group(function (): void {
+                Route::get('/retake/{student}', [AssessmentWizardController::class, 'startRetake'])->name('retake');
                 Route::post('/student', [AssessmentWizardController::class, 'confirmStudent'])->name('student');
                 Route::get('/questionnaire', [AssessmentWizardController::class, 'showQuestionnaireStep'])->name('questionnaire');
                 Route::post('/questionnaire', [AssessmentWizardController::class, 'storeResponses'])->name('questionnaire.store');

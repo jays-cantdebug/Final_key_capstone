@@ -11,6 +11,7 @@ use App\Services\AssessmentService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Drives the 3-step New Assessment workflow (Student -> Questionnaire ->
@@ -44,11 +45,55 @@ class AssessmentWizardController extends Controller
     }
 
     /**
+     * "Take Again" entry point: starts a retake for an already-registered
+     * student (from their row on the Students list or their profile
+     * page), skipping Step 1 entirely — the student's existing course/
+     * year level/section/gender/name are staged straight into session,
+     * along with `existing_student_id` marking this as a retake, and the
+     * flow lands directly on Step 2. This is the only path that can make
+     * `submit()` attach a new assessment to an existing student instead
+     * of registering a fresh one; the regular Step 1 form never sets
+     * `existing_student_id`, so its "always a fresh student" behavior is
+     * untouched. Route-model binding on `$student` already 404s for an
+     * archived (soft-deleted) student, matching how they're excluded
+     * everywhere else.
+     */
+    public function startRetake(Student $student): RedirectResponse
+    {
+        Gate::authorize('view', $student);
+
+        $studentData = [
+            'first_name' => $student->first_name,
+            'middle_name' => $student->middle_name,
+            'last_name' => $student->last_name,
+            'gender' => $student->gender,
+            'course_id' => $student->course_id,
+            'year_level_id' => $student->year_level_id,
+            'section_id' => $student->section_id,
+        ];
+
+        session([
+            self::SESSION_KEY.'.student_data' => $studentData,
+            self::SESSION_KEY.'.existing_student_id' => $student->id,
+        ]);
+        session()->forget(self::SESSION_KEY.'.responses');
+        session()->forget(self::SESSION_KEY.'.privacy_consent_at');
+
+        return redirect()->route('assessments.create.questionnaire');
+    }
+
+    /**
      * STEP 1 (POST): Validate the intake form and stage it in session,
      * then advance to Step 2. Nothing is written to the `students` table
      * yet — that only happens on final submit (Step 3), so a fresh
      * `students` row is guaranteed on every *completed* wizard run
      * without leaving an orphan row behind for abandoned ones.
+     *
+     * Explicitly clears `existing_student_id`/`privacy_consent_at` in
+     * case a "Take Again" retake was started and abandoned earlier in
+     * this same session — without this, starting a regular New
+     * Assessment afterward would silently stay in retake mode and attach
+     * to that earlier student instead of registering a fresh one.
      */
     public function confirmStudent(AssessmentStudentRequest $request): RedirectResponse
     {
@@ -57,6 +102,8 @@ class AssessmentWizardController extends Controller
 
         $request->session()->put(self::SESSION_KEY.'.student_data', $studentData);
         $request->session()->forget(self::SESSION_KEY.'.responses');
+        $request->session()->forget(self::SESSION_KEY.'.existing_student_id');
+        $request->session()->forget(self::SESSION_KEY.'.privacy_consent_at');
 
         return redirect()->route('assessments.create.questionnaire');
     }
@@ -84,11 +131,18 @@ class AssessmentWizardController extends Controller
             'student' => new Student($studentData),
             'version' => $version,
             'existingResponses' => $request->session()->get(self::SESSION_KEY.'.responses', []),
+            'existingStudentId' => $request->session()->get(self::SESSION_KEY.'.existing_student_id'),
         ]);
     }
 
     /**
      * STEP 2 (POST): Validate and store responses, then advance to Step 3.
+     * In retake mode, `AssessmentResponseFormRequest` also requires and
+     * validates `privacy_consent` here (Step 2 doubles as the consent
+     * screen for a retake, since Step 1 — where the regular flow captures
+     * it — is skipped entirely); the timestamp is staged in session and
+     * only lands on the new assessment's own `privacy_consent_at` at
+     * final submit.
      */
     public function storeResponses(AssessmentResponseFormRequest $request): RedirectResponse
     {
@@ -100,6 +154,10 @@ class AssessmentWizardController extends Controller
         }
 
         $request->session()->put(self::SESSION_KEY.'.responses', $request->validated('responses'));
+
+        if ($request->session()->has(self::SESSION_KEY.'.existing_student_id')) {
+            $request->session()->put(self::SESSION_KEY.'.privacy_consent_at', now());
+        }
 
         return redirect()->route('assessments.create.result');
     }
@@ -124,6 +182,7 @@ class AssessmentWizardController extends Controller
             'version' => $version,
             'responseCount' => count($responses),
             'questionCount' => $version?->questions->count() ?? 0,
+            'existingStudentId' => $request->session()->get(self::SESSION_KEY.'.existing_student_id'),
         ]);
     }
 
@@ -148,7 +207,11 @@ class AssessmentWizardController extends Controller
                 ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
         }
 
-        $assessment = $this->assessmentService->submit($studentData, $version, $request->user(), $responses);
+        $existingStudentId = $request->session()->get(self::SESSION_KEY.'.existing_student_id');
+        $existingStudent = $existingStudentId !== null ? Student::findOrFail($existingStudentId) : null;
+        $privacyConsentAt = $request->session()->get(self::SESSION_KEY.'.privacy_consent_at');
+
+        $assessment = $this->assessmentService->submit($studentData, $version, $request->user(), $responses, $existingStudent, $privacyConsentAt);
 
         $request->session()->forget(self::SESSION_KEY);
 

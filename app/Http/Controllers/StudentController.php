@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StudentFormRequest;
 use App\Models\Student;
+use App\Services\AssessmentHistoryService;
 use App\Services\StudentService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -14,8 +15,10 @@ use Illuminate\Support\Facades\Gate;
 
 class StudentController extends Controller
 {
-    public function __construct(private readonly StudentService $studentService)
-    {
+    public function __construct(
+        private readonly StudentService $studentService,
+        private readonly AssessmentHistoryService $historyService,
+    ) {
     }
 
     public function index(Request $request): View
@@ -36,7 +39,10 @@ class StudentController extends Controller
 
         $student->load(['course', 'yearLevel', 'section']);
 
-        return view('students.show', compact('student'));
+        return view('students.show', [
+            'student' => $student,
+            'assessments' => $this->historyService->paginate(null, $student->student_number),
+        ]);
     }
 
     public function edit(Student $student): View

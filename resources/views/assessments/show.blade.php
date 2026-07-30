@@ -17,6 +17,11 @@
                 <h2 class="text-2xl font-semibold text-body">{{ $assessment->student->full_name }}</h2>
             </div>
             <div class="flex flex-wrap items-center gap-2">
+                @if ($backToCounselingSession)
+                    <x-secondary-button :href="route('counseling-sessions.show', $backToCounselingSession)">
+                        Back to Counseling Session
+                    </x-secondary-button>
+                @endif
                 <x-secondary-button :href="route('reports.assessment.print', $assessment)" target="_blank">
                     Print Report
                 </x-secondary-button>

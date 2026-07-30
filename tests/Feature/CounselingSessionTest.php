@@ -19,10 +19,12 @@ class CounselingSessionTest extends TestCase
     {
         $counselor = $this->guidanceCounselor();
         $student = Student::factory()->create();
+        $sessionAt = now()->addDay();
 
         $response = $this->actingAs($counselor)->post(route('counseling-sessions.store'), [
             'student_id' => $student->id,
-            'session_datetime' => now()->addDay()->format('Y-m-d H:i:s'),
+            'session_date' => $sessionAt->format('Y-m-d'),
+            'session_time' => $sessionAt->format('H:i'),
             'session_notes' => 'Initial consultation.',
             'session_status' => CounselingSession::STATUS_SCHEDULED,
             'follow_up_required' => false,
@@ -34,6 +36,25 @@ class CounselingSessionTest extends TestCase
             'student_id' => $student->id,
             'counselor_id' => $counselor->id,
         ]);
+    }
+
+    public function test_creating_a_session_requires_both_date_and_time_with_precise_per_field_errors(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $student = Student::factory()->create();
+
+        $response = $this->actingAs($counselor)->post(route('counseling-sessions.store'), [
+            'student_id' => $student->id,
+            'session_date' => now()->addDay()->format('Y-m-d'),
+            // session_time omitted entirely.
+            'session_notes' => 'Initial consultation.',
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+            'follow_up_required' => false,
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertSessionHasErrors('session_time');
+        $response->assertSessionDoesntHaveErrors('session_date');
     }
 
     public function test_a_unique_name_search_auto_selects_the_single_matching_student(): void

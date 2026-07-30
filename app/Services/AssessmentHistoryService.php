@@ -24,7 +24,7 @@ class AssessmentHistoryService
     public function paginate(?string $search, ?string $studentNumber = null, int $perPage = 10): LengthAwarePaginator
     {
         return Assessment::query()
-            ->with(['student.course', 'student.yearLevel', 'student.section', 'result'])
+            ->with(['student.course', 'student.yearLevel', 'student.section', 'result', 'flaggedCases'])
             ->when($studentNumber, function ($query, string $studentNumber) {
                 $query->whereHas('student', fn ($q) => $q->where('student_number', $studentNumber));
             })

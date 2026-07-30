@@ -94,6 +94,14 @@ class AssessmentService
      * here — rather than earlier in the wizard — means an abandoned
      * wizard run never leaves an orphan `students` row behind.
      *
+     * `$existingStudent` is only passed by the "Take Again" retake flow
+     * (see `AssessmentWizardController::startRetake()`), to attach a new
+     * assessment to an already-registered student instead of always
+     * minting a new one. The regular New Assessment wizard never passes
+     * it, so its "always a fresh student" behavior is unchanged.
+     * `$privacyConsentAt` is likewise retake-only — the regular flow's
+     * consent is captured on the `students` row at Step 1, not here.
+     *
      * @param array<string, mixed> $studentData
      * @param array<int, int> $responses Question ID => answer value (0-3).
      */
@@ -101,10 +109,12 @@ class AssessmentService
         array $studentData,
         QuestionnaireVersion $version,
         User $psychometrician,
-        array $responses
+        array $responses,
+        ?Student $existingStudent = null,
+        ?\DateTimeInterface $privacyConsentAt = null,
     ): Assessment {
-        return $this->database->transaction(function () use ($studentData, $version, $psychometrician, $responses): Assessment {
-            $student = $this->registerStudent($studentData);
+        return $this->database->transaction(function () use ($studentData, $version, $psychometrician, $responses, $existingStudent, $privacyConsentAt): Assessment {
+            $student = $existingStudent ?? $this->registerStudent($studentData);
 
             $assessment = Assessment::query()->create([
                 'student_id' => $student->id,
@@ -112,6 +122,7 @@ class AssessmentService
                 'psychometrician_id' => $psychometrician->id,
                 'status' => Assessment::STATUS_COMPLETED,
                 'submitted_at' => now(),
+                'privacy_consent_at' => $privacyConsentAt,
             ]);
 
             foreach ($responses as $questionId => $answerValue) {

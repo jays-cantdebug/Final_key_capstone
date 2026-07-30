@@ -19,6 +19,23 @@ class CounselingSessionFormRequest extends FormRequest
     }
 
     /**
+     * Combine the form's separate Date and Time inputs into a single
+     * `session_datetime` value before validation, per the approved UI's
+     * split fields (a native datetime-local input's combined date+time
+     * segments were confusing to interact with). Only combines when both
+     * are present so each field's own `required` rule still fires with a
+     * precise per-field message if one is left blank.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('session_date') && $this->filled('session_time')) {
+            $this->merge([
+                'session_datetime' => $this->input('session_date').' '.$this->input('session_time'),
+            ]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * `student_id` is only required on create; the student a session
@@ -38,6 +55,8 @@ class CounselingSessionFormRequest extends FormRequest
                 'integer',
                 Rule::exists('assessments', 'id')->where('student_id', $studentId),
             ],
+            'session_date' => ['required', 'date_format:Y-m-d'],
+            'session_time' => ['required', 'date_format:H:i'],
             'session_datetime' => ['required', 'date'],
             'session_notes' => ['required', 'string'],
             'session_status' => [

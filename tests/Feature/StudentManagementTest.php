@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Assessment;
+use App\Models\DassResult;
 use App\Models\Student;
 use App\Services\StudentNumberGeneratorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -101,5 +103,46 @@ class StudentManagementTest extends TestCase
         $response->assertOk();
         $response->assertSee('Unique');
         $response->assertDontSee('Someone Else');
+    }
+
+    public function test_student_profile_shows_their_assessment_history_with_no_search_field(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $student = Student::factory()->create();
+        $otherStudent = Student::factory()->create();
+
+        $assessment = Assessment::factory()->create(['student_id' => $student->id]);
+        DassResult::factory()->create(['assessment_id' => $assessment->id]);
+        $otherAssessment = Assessment::factory()->create(['student_id' => $otherStudent->id]);
+        DassResult::factory()->create(['assessment_id' => $otherAssessment->id]);
+
+        $response = $this->actingAs($psychometrician)->get(route('students.show', $student));
+
+        $response->assertOk();
+        $response->assertViewHas('assessments', fn ($paginator) => $paginator->total() === 1
+            && $paginator->first()->is($assessment));
+
+        // Report buttons that used to live only on the separate
+        // assessments.index page now live directly on the profile.
+        $response->assertSee(route('reports.student-history.print', ['student_number' => $student->student_number]), false);
+        $response->assertSee(route('reports.student-history.pdf', ['student_number' => $student->student_number]), false);
+
+        // The redundant "View assessment history" link is gone, and this
+        // page never needs a search box -- the student is already fixed.
+        $response->assertDontSee('View assessment history');
+        $response->assertDontSee('name="search"', false);
+    }
+
+    public function test_student_profile_hides_report_buttons_when_there_is_no_history_yet(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $student = Student::factory()->create();
+
+        $response = $this->actingAs($psychometrician)->get(route('students.show', $student));
+
+        $response->assertOk();
+        $response->assertSee('No assessments yet for this student.');
+        $response->assertDontSee('Print Report');
+        $response->assertDontSee('Download PDF');
     }
 }

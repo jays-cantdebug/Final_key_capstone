@@ -25,6 +25,12 @@ class AssessmentResponseFormRequest extends FormRequest
      * different question count or required/optional mix are supported
      * without any code change.
      *
+     * `privacy_consent` is only required in "Take Again" retake mode
+     * (flagged by `assessment_wizard.existing_student_id` in session) —
+     * Step 1, where the regular flow captures consent, is skipped for a
+     * retake, so this step doubles as the consent screen instead. The
+     * regular flow never has that session key, so it never sees this rule.
+     *
      * @return array<string, array<int, mixed>>
      */
     public function rules(): array
@@ -44,6 +50,10 @@ class AssessmentResponseFormRequest extends FormRequest
                 'integer',
                 'between:0,3',
             ];
+        }
+
+        if ($this->session()->has('assessment_wizard.existing_student_id')) {
+            $rules['privacy_consent'] = ['required', 'accepted'];
         }
 
         return $rules;

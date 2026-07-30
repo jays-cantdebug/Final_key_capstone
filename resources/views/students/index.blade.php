@@ -52,6 +52,7 @@
                 <x-table.td align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
                         <a href="{{ route('students.show', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                        <a href="{{ route('assessments.create.retake', $student) }}" class="rounded-md border border-primary/30 px-3 py-1.5 font-medium text-primary transition hover:bg-tint">Take Again</a>
                         <a href="{{ route('students.edit', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
                         <form method="POST" action="{{ route('students.destroy', $student) }}" onsubmit="return confirm('Delete this student record?');">
                             @csrf

@@ -27,6 +27,7 @@ class Assessment extends Model
         'psychometrician_id',
         'status',
         'submitted_at',
+        'privacy_consent_at',
     ];
 
     /**
@@ -38,6 +39,7 @@ class Assessment extends Model
     {
         return [
             'submitted_at' => 'datetime',
+            'privacy_consent_at' => 'datetime',
         ];
     }
 

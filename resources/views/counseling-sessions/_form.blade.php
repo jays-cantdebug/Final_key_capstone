@@ -19,9 +19,13 @@
     </div>
 
     <div>
-        <x-input-label for="session_datetime" :value="__('Session Date & Time')" />
-        <x-text-input id="session_datetime" name="session_datetime" type="datetime-local" class="mt-1 block w-full" :value="old('session_datetime', $session?->session_datetime?->format('Y-m-d\TH:i'))" required />
-        <x-input-error class="mt-2" :messages="$errors->get('session_datetime')" />
+        <x-input-label for="session_date" :value="__('Session Date & Time')" />
+        <div class="mt-1 flex gap-2">
+            <x-text-input id="session_date" name="session_date" type="date" class="block w-1/2" :value="old('session_date', $session?->session_datetime?->format('Y-m-d'))" required />
+            <x-text-input id="session_time" name="session_time" type="time" class="block w-1/2" :value="old('session_time', $session?->session_datetime?->format('H:i'))" required />
+        </div>
+        <x-input-error class="mt-2" :messages="$errors->get('session_date')" />
+        <x-input-error class="mt-1" :messages="$errors->get('session_time')" />
     </div>
 
     <div class="sm:col-span-2">
