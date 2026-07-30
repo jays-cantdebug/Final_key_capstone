@@ -8,6 +8,7 @@ use App\Models\Assessment;
 use App\Models\ClassificationThreshold;
 use App\Models\Course;
 use App\Models\DassResult;
+use App\Models\FlaggedCase;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\InteractsWithDomainData;
@@ -89,6 +90,32 @@ class DashboardTest extends TestCase
             && $cards['depression']['count'] === 0);
         $filtered->assertViewHas('severityChart', fn (array $chart) => array_sum($chart) === 1
             && $chart[ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE] === 1);
+    }
+
+    public function test_flagged_students_card_counts_distinct_assessments_not_raw_flagged_case_rows(): void
+    {
+        // A single assessment with Stress AND both Depression and Anxiety
+        // Severe/Extremely Severe produces 3 flagged_cases rows (one
+        // endorsement + two awareness notifications) for one student.
+        // The card previously counted raw flagged_cases rows, so one
+        // flagged student inflated the "Flagged Students" stat to 3.
+        $assessment = Assessment::factory()->create();
+        FlaggedCase::factory()->endorsement()->create(['assessment_id' => $assessment->id]);
+        FlaggedCase::factory()->create([
+            'assessment_id' => $assessment->id,
+            'triggering_subscale' => FlaggedCase::SUBSCALE_DEPRESSION,
+        ]);
+        FlaggedCase::factory()->create([
+            'assessment_id' => $assessment->id,
+            'triggering_subscale' => FlaggedCase::SUBSCALE_ANXIETY,
+        ]);
+
+        $this->assertSame(3, FlaggedCase::count());
+
+        $this->actingAs($this->guidanceCounselor())
+            ->get(route('guidance-counselor.dashboard'))
+            ->assertOk()
+            ->assertViewHas('flaggedStudentsSummary', 1);
     }
 
     public function test_generic_dashboard_route_redirects_to_the_role_specific_dashboard(): void

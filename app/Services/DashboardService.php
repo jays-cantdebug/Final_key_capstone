@@ -40,7 +40,9 @@ class DashboardService
             'totalStudents' => Student::query()->count(),
             'totalAssessments' => Assessment::query()->count(),
             'todaysAssessments' => Assessment::query()->whereDate('submitted_at', today())->count(),
-            'flaggedStudentsSummary' => FlaggedCase::query()->where('status', FlaggedCase::STATUS_OPEN)->count(),
+            'flaggedStudentsSummary' => Assessment::query()
+                ->whereHas('flaggedCases', fn (Builder $q) => $q->where('status', FlaggedCase::STATUS_OPEN))
+                ->count(),
             'recentAssessments' => Assessment::query()
                 ->with(['student', 'result'])
                 ->latest('submitted_at')

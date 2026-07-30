@@ -16,18 +16,16 @@
             'counseling_endorsement' => 'Counseling Endorsement',
             'awareness_notification' => 'Awareness Notification',
         ];
-        // Vibrant donut-specific palette (see dataviz skill validator).
-        // Both flag types share the red hue family on purpose, mapping
-        // intensity to urgency: Counseling Endorsement (direct escalation)
-        // is deep/saturated, Awareness Notification (lower urgency) is
-        // soft/light. Their lightness/saturation gap alone clears the CVD
-        // and normal-vision floors (ΔE 20.0 / 21.4), so the shared hue
-        // doesn't cause them to blur together. Badges elsewhere (Flag
-        // column, Notifications, Flagged Cases, Assessment Show) keep
-        // their existing teal/purple — this palette is donut-only.
+        // Vibrant donut-specific palette (see dataviz skill validator):
+        // teal/violet, the same hue families as the existing Flag Type
+        // badges, just modernized. CVD ΔE 21.0, normal-vision ΔE 30.2,
+        // both slots clear 3:1 contrast clean (no relief needed). Badges
+        // elsewhere (Flag column, Notifications, Flagged Cases, Assessment
+        // Show) keep their existing muted teal/purple — this palette is
+        // donut-only.
         $flagTypeColors = [
-            'counseling_endorsement' => '#991B1B',
-            'awareness_notification' => '#F05252',
+            'counseling_endorsement' => '#0D9488',
+            'awareness_notification' => '#7C3AED',
         ];
 
         $conicStops = [];
