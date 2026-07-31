@@ -27,11 +27,11 @@
         </div>
     </x-slot>
 
-    <div class="mb-6 flex gap-2 border-b border-slate-200">
+    <div class="mb-6 flex gap-2 overflow-x-auto border-b border-slate-200">
         @foreach ($tabs as $key => $label)
             <a
                 href="{{ route('flagged-cases.index', array_merge(array_diff_key($filters, ['tab' => null]), ['tab' => $key])) }}"
-                class="border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === $key ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700' }}"
+                class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === $key ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700' }}"
             >
                 {{ $label }}
             </a>
