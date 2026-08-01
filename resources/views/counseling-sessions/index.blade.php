@@ -70,11 +70,15 @@
                             <a href="{{ route('counseling-sessions.edit', $session) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
                         @endcan
                         @can('delete', $session)
-                            <form method="POST" action="{{ route('counseling-sessions.destroy', $session) }}" onsubmit="return confirm('Delete this counseling session?');">
+                            <form id="delete-session-form-{{ $session->id }}" method="POST" action="{{ route('counseling-sessions.destroy', $session) }}" class="hidden">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
                             </form>
+                            <button
+                                type="button"
+                                @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Delete this counseling session?', message: 'This action cannot be undone.', confirmLabel: 'Delete', formId: 'delete-session-form-{{ $session->id }}' })"
+                                class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50"
+                            >Delete</button>
                         @endcan
                     </div>
                 </x-table.td>
@@ -87,4 +91,6 @@
             {{ $sessions->links() }}
         </x-slot:footer>
     </x-table>
+
+    <x-confirm-modal />
 </x-app-layout>

@@ -60,19 +60,27 @@
                         <a href="{{ route('users.edit', $user) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
                         @if ($user->is_active)
                             @can('deactivate', $user)
-                                <form method="POST" action="{{ route('users.deactivate', $user) }}">
+                                <form id="deactivate-user-form-{{ $user->id }}" method="POST" action="{{ route('users.deactivate', $user) }}" class="hidden">
                                     @csrf
                                     @method('PATCH')
-                                    <button type="submit" class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Deactivate</button>
                                 </form>
+                                <button
+                                    type="button"
+                                    @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Deactivate this user account?', message: 'They will immediately be unable to log in until reactivated.', confirmLabel: 'Deactivate', formId: 'deactivate-user-form-{{ $user->id }}' })"
+                                    class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50"
+                                >Deactivate</button>
                             @endcan
                         @else
                             @can('activate', $user)
-                                <form method="POST" action="{{ route('users.activate', $user) }}">
+                                <form id="activate-user-form-{{ $user->id }}" method="POST" action="{{ route('users.activate', $user) }}" class="hidden">
                                     @csrf
                                     @method('PATCH')
-                                    <button type="submit" class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50">Activate</button>
                                 </form>
+                                <button
+                                    type="button"
+                                    @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Activate this user account?', message: 'They will regain the ability to log in.', confirmLabel: 'Activate', variant: 'primary', formId: 'activate-user-form-{{ $user->id }}' })"
+                                    class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50"
+                                >Activate</button>
                             @endcan
                         @endif
                     </div>
@@ -86,4 +94,6 @@
             {{ $users->links() }}
         </x-slot:footer>
     </x-table>
+
+    <x-confirm-modal />
 </x-app-layout>

@@ -118,7 +118,7 @@
                     <button
                         type="button"
                         @click="overrideMode = true; $dispatch('close-modal', 'enable-override-mode')"
-                        class="inline-flex items-center justify-center rounded-md bg-[#791F1F] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#601818]"
+                        class="inline-flex items-center justify-center rounded-md bg-[#B3261E] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#8F1E18]"
                     >
                         Yes, Enable Override Mode
                     </button>
@@ -130,11 +130,17 @@
     <x-card class="mt-6">
         <h3 class="text-sm font-semibold text-body">Restore Official Values</h3>
         <p class="mt-1 text-xs text-slate-500">Resets every threshold above back to the official, published DASS-21 cutoffs in one action.</p>
-        <form method="POST" action="{{ route('settings.classification-thresholds.restore') }}" class="mt-4" onsubmit="return confirm('Restore all classification thresholds to their official DASS-21 values? This cannot be undone.');">
+        <form id="restore-thresholds-form" method="POST" action="{{ route('settings.classification-thresholds.restore') }}" class="mt-4 hidden">
             @csrf
-            <button type="submit" class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
-                Restore Official Values
-            </button>
         </form>
+        <button
+            type="button"
+            @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Restore all classification thresholds?', message: 'This resets every threshold above back to the official, published DASS-21 values. This cannot be undone.', confirmLabel: 'Restore', formId: 'restore-thresholds-form' })"
+            class="mt-4 inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+        >
+            Restore Official Values
+        </button>
     </x-card>
+
+    <x-confirm-modal />
 </x-app-layout>

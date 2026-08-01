@@ -115,11 +115,15 @@
                     <x-table.td align="right">
                         <div class="inline-flex flex-wrap justify-end gap-2">
                             <a href="{{ route('questionnaires.versions.questions.edit', [$questionnaire, $version, $question]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
-                            <form method="POST" action="{{ route('questionnaires.versions.questions.destroy', [$questionnaire, $version, $question]) }}" onsubmit="return confirm('Delete this question?');">
+                            <form id="delete-question-form-{{ $question->id }}" method="POST" action="{{ route('questionnaires.versions.questions.destroy', [$questionnaire, $version, $question]) }}" class="hidden">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
                             </form>
+                            <button
+                                type="button"
+                                @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Delete this question?', message: 'This action cannot be undone.', confirmLabel: 'Delete', formId: 'delete-question-form-{{ $question->id }}' })"
+                                class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50"
+                            >Delete</button>
                         </div>
                     </x-table.td>
                 @endif
@@ -128,4 +132,6 @@
             <x-table.empty :colspan="$version->isEditable() ? 6 : 5">No questions have been added yet.</x-table.empty>
         @endforelse
     </x-table>
+
+    <x-confirm-modal />
 </x-app-layout>

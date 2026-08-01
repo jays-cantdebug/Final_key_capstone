@@ -79,11 +79,15 @@
                                 <button type="submit" class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50">Activate</button>
                             </form>
 
-                            <form method="POST" action="{{ route('questionnaires.versions.destroy', [$questionnaire, $version]) }}" onsubmit="return confirm('Delete this draft version?');">
+                            <form id="delete-version-form-{{ $version->id }}" method="POST" action="{{ route('questionnaires.versions.destroy', [$questionnaire, $version]) }}" class="hidden">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
                             </form>
+                            <button
+                                type="button"
+                                @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Delete this draft version?', message: 'This action cannot be undone.', confirmLabel: 'Delete', formId: 'delete-version-form-{{ $version->id }}' })"
+                                class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50"
+                            >Delete</button>
                         @elseif ($version->status === 'Active')
                             <form method="POST" action="{{ route('questionnaires.versions.archive', [$questionnaire, $version]) }}">
                                 @csrf
@@ -104,4 +108,6 @@
             <x-table.empty :colspan="5">No versions have been created yet.</x-table.empty>
         @endforelse
     </x-table>
+
+    <x-confirm-modal />
 </x-app-layout>

@@ -54,11 +54,15 @@
                         <a href="{{ route('students.show', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
                         <a href="{{ route('assessments.create.retake', $student) }}" class="rounded-md border border-primary/30 px-3 py-1.5 font-medium text-primary transition hover:bg-tint">Take Again</a>
                         <a href="{{ route('students.edit', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
-                        <form method="POST" action="{{ route('students.destroy', $student) }}" onsubmit="return confirm('Delete this student record?');">
+                        <form id="delete-student-form-{{ $student->id }}" method="POST" action="{{ route('students.destroy', $student) }}" class="hidden">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50">Delete</button>
                         </form>
+                        <button
+                            type="button"
+                            @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Delete this student record?', message: 'This will archive the student record — it can be reviewed later in Student Information Management.', confirmLabel: 'Delete', formId: 'delete-student-form-{{ $student->id }}' })"
+                            class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50"
+                        >Delete</button>
                     </div>
                 </x-table.td>
             </tr>
@@ -70,4 +74,6 @@
             {{ $students->links() }}
         </x-slot:footer>
     </x-table>
+
+    <x-confirm-modal />
 </x-app-layout>

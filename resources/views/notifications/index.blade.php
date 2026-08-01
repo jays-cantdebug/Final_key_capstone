@@ -56,21 +56,27 @@
                     @endunless
 
                     @unless ($showArchived)
-                        <form method="POST" action="{{ route('notifications.archive', $notification) }}">
+                        <form id="archive-notification-form-{{ $notification->id }}" method="POST" action="{{ route('notifications.archive', $notification) }}" class="hidden">
                             @csrf
                             @method('PATCH')
-                            <x-secondary-button type="submit">
-                                Archive
-                            </x-secondary-button>
                         </form>
+                        <x-secondary-button
+                            type="button"
+                            @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Archive this notification?', message: 'You can restore it later from View Archived.', confirmLabel: 'Archive', variant: 'primary', formId: 'archive-notification-form-{{ $notification->id }}' })"
+                        >
+                            Archive
+                        </x-secondary-button>
                     @else
-                        <form method="POST" action="{{ route('notifications.unarchive', $notification) }}">
+                        <form id="unarchive-notification-form-{{ $notification->id }}" method="POST" action="{{ route('notifications.unarchive', $notification) }}" class="hidden">
                             @csrf
                             @method('PATCH')
-                            <x-secondary-button type="submit">
-                                Unarchive
-                            </x-secondary-button>
                         </form>
+                        <x-secondary-button
+                            type="button"
+                            @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Unarchive this notification?', message: 'It will move back to your main Notifications list.', confirmLabel: 'Unarchive', variant: 'primary', formId: 'unarchive-notification-form-{{ $notification->id }}' })"
+                        >
+                            Unarchive
+                        </x-secondary-button>
                     @endif
                 </div>
             </div>
@@ -84,4 +90,6 @@
     <div class="mt-6">
         {{ $notifications->links() }}
     </div>
+
+    <x-confirm-modal />
 </x-app-layout>
