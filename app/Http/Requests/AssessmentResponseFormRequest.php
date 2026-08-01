@@ -58,4 +58,21 @@ class AssessmentResponseFormRequest extends FormRequest
 
         return $rules;
     }
+
+    /**
+     * Custom messages so an unanswered question shows consistent,
+     * app-styled copy instead of Laravel's default "The responses.14
+     * field is required." phrasing (which leaks the raw question id).
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'responses.required' => 'Please answer at least one question before submitting.',
+            'responses.*.required' => 'Please select an answer for this question.',
+            'privacy_consent.required' => 'Please check the privacy consent box to continue.',
+            'privacy_consent.accepted' => 'Please check the privacy consent box to continue.',
+        ];
+    }
 }

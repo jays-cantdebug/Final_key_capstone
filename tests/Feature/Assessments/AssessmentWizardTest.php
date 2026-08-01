@@ -35,7 +35,9 @@ class AssessmentWizardTest extends TestCase
         $this->assertDatabaseCount('students', 0);
 
         $response = $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
-            'full_name' => 'Juan Dela Cruz',
+            'first_name' => 'Juan',
+            'middle_name' => 'Dela',
+            'last_name' => 'Cruz',
             'gender' => 'Male',
             'privacy_consent' => '1',
             ...$ids,
@@ -51,6 +53,38 @@ class AssessmentWizardTest extends TestCase
         $this->assertSame('Cruz', session('assessment_wizard.student_data.last_name'));
     }
 
+    public function test_middle_name_is_required(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $ids = $this->lookupIds();
+
+        $response = $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
+            'first_name' => 'Juan',
+            'last_name' => 'Cruz',
+            'gender' => 'Male',
+            'privacy_consent' => '1',
+            ...$ids,
+        ]);
+
+        $response->assertSessionHasErrors('middle_name');
+        $this->assertDatabaseCount('students', 0);
+    }
+
+    public function test_first_middle_and_last_name_are_required(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $ids = $this->lookupIds();
+
+        $response = $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
+            'gender' => 'Male',
+            'privacy_consent' => '1',
+            ...$ids,
+        ]);
+
+        $response->assertSessionHasErrors(['first_name', 'middle_name', 'last_name']);
+        $this->assertDatabaseCount('students', 0);
+    }
+
     public function test_abandoning_wizard_after_step_two_leaves_no_orphan_student(): void
     {
         $psychometrician = $this->psychometrician();
@@ -59,7 +93,9 @@ class AssessmentWizardTest extends TestCase
         $ids = $this->lookupIds();
 
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
-            'full_name' => 'Ana Lopez',
+            'first_name' => 'Ana',
+            'middle_name' => 'Reyes',
+            'last_name' => 'Lopez',
             'gender' => 'Female',
             'privacy_consent' => '1',
             ...$ids,
@@ -73,43 +109,6 @@ class AssessmentWizardTest extends TestCase
         $this->assertDatabaseCount('assessments', 0);
     }
 
-    /**
-     * @dataProvider fullNameSplits
-     */
-    public function test_full_name_splitting_edge_cases(string $fullName, ?string $first, ?string $middle, ?string $last, bool $shouldSucceed): void
-    {
-        $psychometrician = $this->psychometrician();
-        $ids = $this->lookupIds();
-
-        $response = $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
-            'full_name' => $fullName,
-            'gender' => 'Male',
-            'privacy_consent' => '1',
-            ...$ids,
-        ]);
-
-        if (! $shouldSucceed) {
-            $response->assertSessionHasErrors('full_name');
-            $this->assertDatabaseCount('students', 0);
-
-            return;
-        }
-
-        $this->assertSame($first, session('assessment_wizard.student_data.first_name'));
-        $this->assertSame($middle, session('assessment_wizard.student_data.middle_name'));
-        $this->assertSame($last, session('assessment_wizard.student_data.last_name'));
-    }
-
-    public static function fullNameSplits(): array
-    {
-        return [
-            'single word is rejected' => ['Juan', null, null, null, false],
-            'two words -> first/last, no middle' => ['Juan Cruz', 'Juan', null, 'Cruz', true],
-            'three words -> first/middle/last' => ['Juan Dela Cruz', 'Juan', 'Dela', 'Cruz', true],
-            'four+ words -> everything between joined as middle' => ['Juan Carlos Dela Cruz', 'Juan', 'Carlos Dela', 'Cruz', true],
-        ];
-    }
-
     public function test_questionnaire_step_requires_a_registered_student_first(): void
     {
         $psychometrician = $this->psychometrician();
@@ -120,6 +119,33 @@ class AssessmentWizardTest extends TestCase
         $response->assertSessionHasErrors('student');
     }
 
+    public function test_incomplete_questionnaire_submission_is_rejected_with_missing_question_errors(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $this->seedOfficialThresholds();
+        $version = $this->createActiveQuestionnaireVersion();
+        $ids = $this->lookupIds();
+
+        $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
+            'first_name' => 'Liza',
+            'middle_name' => 'Ramos',
+            'last_name' => 'Torres',
+            'gender' => 'Female',
+            'privacy_consent' => '1',
+            ...$ids,
+        ]);
+
+        $responses = $this->buildResponses($version, depressionRaw: 1, anxietyRaw: 1, stressRaw: 1);
+        $missingQuestion = $version->questions->first();
+        unset($responses[$missingQuestion->id]);
+
+        $response = $this->actingAs($psychometrician)
+            ->post(route('assessments.create.questionnaire.store'), ['responses' => $responses]);
+
+        $response->assertSessionHasErrors('responses.'.$missingQuestion->id);
+        $this->assertDatabaseCount('assessments', 0);
+    }
+
     public function test_full_wizard_flow_creates_a_scored_assessment(): void
     {
         $psychometrician = $this->psychometrician();
@@ -128,7 +154,9 @@ class AssessmentWizardTest extends TestCase
         $ids = $this->lookupIds();
 
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
-            'full_name' => 'Maria Santos',
+            'first_name' => 'Maria',
+            'middle_name' => 'Garcia',
+            'last_name' => 'Santos',
             'gender' => 'Female',
             'privacy_consent' => '1',
             ...$ids,
@@ -162,7 +190,9 @@ class AssessmentWizardTest extends TestCase
         $ids = $this->lookupIds();
 
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
-            'full_name' => 'Pedro Reyes',
+            'first_name' => 'Pedro',
+            'middle_name' => 'Villanueva',
+            'last_name' => 'Reyes',
             'gender' => 'Male',
             'privacy_consent' => '1',
             ...$ids,

@@ -1,11 +1,12 @@
-@props(['disabled' => false])
+@props(['disabled' => false, 'invalid' => false])
 
 <div class="relative" x-data="{ open: false }">
     <select
         @disabled($disabled)
         x-on:focus="open = true"
         x-on:blur="open = false"
-        {{ $attributes->merge(['class' => 'block w-full appearance-none bg-none rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary']) }}
+        @if ($invalid) data-field-invalid @endif
+        {{ $attributes->merge(['class' => $invalid ? 'block w-full appearance-none bg-none rounded-md border-red-500 shadow-sm focus:border-red-500 focus:ring-red-500' : 'block w-full appearance-none bg-none rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary']) }}
     >
         {{ $slot }}
     </select>

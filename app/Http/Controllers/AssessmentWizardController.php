@@ -97,7 +97,7 @@ class AssessmentWizardController extends Controller
      */
     public function confirmStudent(AssessmentStudentRequest $request): RedirectResponse
     {
-        $studentData = $request->safe()->except(['privacy_consent', 'full_name']);
+        $studentData = $request->safe()->except(['privacy_consent']);
         $studentData['privacy_consent_at'] = now();
 
         $request->session()->put(self::SESSION_KEY.'.student_data', $studentData);

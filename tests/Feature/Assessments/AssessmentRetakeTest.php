@@ -57,7 +57,9 @@ class AssessmentRetakeTest extends TestCase
         // Regular flow: Step 2 never asks for privacy_consent at all --
         // consent was already captured on Step 1's students row.
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
-            'full_name' => 'Ana Lopez',
+            'first_name' => 'Ana',
+            'middle_name' => 'Reyes',
+            'last_name' => 'Lopez',
             'gender' => 'Female',
             'privacy_consent' => '1',
             'course_id' => $student->course_id,

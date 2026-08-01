@@ -22,28 +22,31 @@
 
     @include('assessments.create._response-scale')
 
-    @if ($errors->any())
-        <x-alert type="error" class="mb-6">
-            Please answer all required questions before continuing.
-        </x-alert>
-    @endif
-
-    <form method="POST" action="{{ route('assessments.create.questionnaire.store') }}">
+    <form
+        method="POST"
+        action="{{ route('assessments.create.questionnaire.store') }}"
+        novalidate
+        x-init="$nextTick(() => { const first = $el.querySelector('[data-field-invalid]'); if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); first.focus(); } })"
+    >
         @csrf
 
         <div class="space-y-4">
             @foreach ($version->questions as $question)
-                <x-dass-response-options :question="$question" :selected="old('responses.' . $question->id, $existingResponses[$question->id] ?? null)" />
+                <x-dass-response-options
+                    :question="$question"
+                    :selected="old('responses.' . $question->id, $existingResponses[$question->id] ?? null)"
+                    :invalid="$errors->has('responses.' . $question->id)"
+                />
             @endforeach
         </div>
 
         @if ($isRetake)
-            <x-card class="mt-4">
+            <x-card class="relative mt-4" x-data="{ show: {{ $errors->has('privacy_consent') ? 'true' : 'false' }} }">
                 <label class="flex items-start gap-2">
-                    <x-checkbox name="privacy_consent" value="1" class="mt-1" required />
+                    <x-checkbox name="privacy_consent" value="1" class="mt-1" :invalid="$errors->has('privacy_consent')" @change="show = false" />
                     <span class="text-sm text-slate-700">{{ __('The student has acknowledged the data privacy consent notice for this assessment.') }}</span>
                 </label>
-                <x-input-error class="mt-2" :messages="$errors->get('privacy_consent')" />
+                <x-field-error-tooltip :message="$errors->first('privacy_consent')" />
             </x-card>
         @endif
 
