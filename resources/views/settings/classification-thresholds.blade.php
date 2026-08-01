@@ -101,7 +101,7 @@
             </x-table>
         </form>
 
-        <x-modal name="enable-override-mode" :show="false" maxWidth="lg">
+        <x-modal name="enable-override-mode" :show="false" maxWidth="lg" :closeable="false">
             <div class="p-6">
                 <h3 class="text-lg font-semibold text-body">Enable Override Mode?</h3>
                 <p class="mt-3 text-sm text-slate-600">

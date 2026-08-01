@@ -21,7 +21,7 @@
         }
     "
 >
-    <x-modal :name="$name" :show="false" maxWidth="md">
+    <x-modal :name="$name" :show="false" maxWidth="md" :closeable="false">
         <div class="p-6">
             <h3 class="text-lg font-semibold text-body" x-text="title"></h3>
             <p class="mt-3 text-sm text-slate-600" x-show="message" x-text="message"></p>
