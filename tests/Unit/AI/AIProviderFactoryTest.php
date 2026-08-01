@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit\AI;
 
-use App\AI\DTOs\AssessmentPayload;
-use App\AI\Exceptions\AIProviderNotImplementedException;
 use App\AI\Factories\AIProviderFactory;
 use App\AI\Providers\ClaudeAIProvider;
 use App\AI\Providers\RuleBasedDASSProvider;
@@ -39,17 +37,5 @@ class AIProviderFactoryTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         (new AIProviderFactory)->make();
-    }
-
-    public function test_claude_provider_scaffold_throws_not_implemented(): void
-    {
-        $this->expectException(AIProviderNotImplementedException::class);
-
-        (new ClaudeAIProvider)->classify(new AssessmentPayload(
-            assessmentId: 1,
-            depressionFinalScore: 0,
-            anxietyFinalScore: 0,
-            stressFinalScore: 0,
-        ));
     }
 }

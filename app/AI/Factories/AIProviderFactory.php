@@ -18,7 +18,7 @@ class AIProviderFactory
     {
         return match (config('ai.provider')) {
             'rule_based' => app(RuleBasedDASSProvider::class),
-            'claude' => new ClaudeAIProvider(),
+            'claude' => app(ClaudeAIProvider::class),
             default => throw new InvalidArgumentException(
                 sprintf('Unknown AI provider [%s] configured in config/ai.php.', config('ai.provider'))
             ),
