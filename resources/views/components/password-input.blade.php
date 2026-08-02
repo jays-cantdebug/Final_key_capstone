@@ -1,10 +1,11 @@
-@props(['disabled' => false])
+@props(['disabled' => false, 'invalid' => false])
 
 <div class="relative" x-data="{ show: false }">
     <input
         :type="show ? 'text' : 'password'"
         @disabled($disabled)
-        {{ $attributes->merge(['class' => 'block w-full rounded-md border-gray-300 pr-10 shadow-sm focus:border-primary focus:ring-primary']) }}
+        @if ($invalid) data-field-invalid @endif
+        {{ $attributes->merge(['class' => 'block w-full rounded-md pr-10 shadow-sm ' . ($invalid ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary')]) }}
     >
     <button
         type="button"

@@ -13,19 +13,37 @@
 
             <x-auth-session-status class="mt-4" :status="session('status')" />
 
-            <form method="POST" action="{{ route('login') }}" class="mt-8 space-y-6">
+            @php
+                $emailError = $errors->first('email');
+                $isAuthFailure = $emailError && (
+                    $emailError === trans('auth.failed')
+                    || str_starts_with($emailError, 'Too many login attempts')
+                );
+            @endphp
+
+            @if ($isAuthFailure)
+                <x-alert type="error" class="mt-4">{{ $emailError }}</x-alert>
+            @endif
+
+            <form
+                method="POST"
+                action="{{ route('login') }}"
+                class="mt-8 space-y-6"
+                novalidate
+                x-init="$nextTick(() => { const first = $el.querySelector('[data-field-invalid]'); if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); first.focus(); } })"
+            >
                 @csrf
 
-                <div>
+                <div class="relative" x-data="{ show: {{ ! $isAuthFailure && $errors->has('email') ? 'true' : 'false' }} }">
                     <x-input-label for="email" :value="__('Email Address')" />
-                    <x-text-input id="email" class="mt-1 block w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-                    <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                    <x-text-input id="email" class="mt-1 block w-full" type="email" name="email" :value="old('email')" :invalid="! $isAuthFailure && $errors->has('email')" autofocus autocomplete="username" @input="show = false" />
+                    <x-field-error-tooltip :message="$isAuthFailure ? null : $errors->first('email')" />
                 </div>
 
-                <div>
+                <div class="relative" x-data="{ show: {{ $errors->has('password') ? 'true' : 'false' }} }">
                     <x-input-label for="password" :value="__('Password')" />
-                    <x-password-input id="password" class="mt-1 block w-full" name="password" required autocomplete="current-password" />
-                    <x-input-error :messages="$errors->get('password')" class="mt-2" />
+                    <x-password-input id="password" class="mt-1 block w-full" name="password" :invalid="$errors->has('password')" autocomplete="current-password" @input="show = false" />
+                    <x-field-error-tooltip :message="$errors->first('password')" />
                 </div>
 
                 <div class="flex items-center justify-between gap-4">
