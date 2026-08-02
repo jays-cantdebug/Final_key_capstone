@@ -11,8 +11,9 @@ return [
     |
     | The AI provider currently resolved by AIProviderFactory. Supported:
     | "rule_based" (default — classifies each DASS-21 subscale against the
-    | official classification_thresholds table) and "claude" (scaffold
-    | only — throws AIProviderNotImplementedException until implemented).
+    | official classification_thresholds table) and "claude" (sends scores
+    | to the Claude Messages API, then cross-checks the reply against
+    | RuleBasedDASSProvider before trusting it — see ClaudeAIProvider).
     |
     */
 

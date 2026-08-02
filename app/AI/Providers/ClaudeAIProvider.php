@@ -94,7 +94,6 @@ class ClaudeAIProvider implements AIProviderInterface
             ->post((string) config('ai.providers.claude.api_url'), [
                 'model' => config('ai.providers.claude.model'),
                 'max_tokens' => 512,
-                'temperature' => 0,
                 'system' => $this->systemPrompt(),
                 'messages' => [
                     [
