@@ -91,7 +91,7 @@ class AssessmentRetakeTest extends TestCase
             ])
             ->assertRedirect(route('assessments.create.result'));
 
-        $this->actingAs($psychometrician)->post(route('assessments.create.submit'));
+        $this->actingAs($psychometrician)->reviewAndSaveAssessment();
 
         // Exactly one student the whole time -- the retake never created
         // a second one, unlike the regular flow which always would.
@@ -118,7 +118,7 @@ class AssessmentRetakeTest extends TestCase
                 'responses' => $responses,
                 'privacy_consent' => '1',
             ]);
-            $this->actingAs($psychometrician)->post(route('assessments.create.submit'));
+            $this->actingAs($psychometrician)->reviewAndSaveAssessment();
         }
 
         $this->assertDatabaseCount('students', 1);

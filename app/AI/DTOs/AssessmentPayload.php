@@ -11,14 +11,20 @@ namespace App\AI\DTOs;
  * This DTO carries only the data needed for classification — it performs
  * no computation itself and has no dependency on Eloquent, Controllers,
  * HTTP Requests, or Blade Views.
+ *
+ * `assessmentId` is nullable — classification now happens at Step 3
+ * review time, before an `Assessment` row exists (see
+ * `AssessmentService::reviewAssessment()`), so there is no real ID to
+ * carry yet. It is only ever used for log correlation in a provider's
+ * error/disagreement logging, never for classification logic itself.
  */
 final class AssessmentPayload
 {
     public function __construct(
-        public readonly int $assessmentId,
         public readonly int $depressionFinalScore,
         public readonly int $anxietyFinalScore,
         public readonly int $stressFinalScore,
+        public readonly ?int $assessmentId = null,
     ) {
     }
 }

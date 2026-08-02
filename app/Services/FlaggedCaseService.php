@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Assessment;
-use App\Models\ClassificationThreshold;
 use App\Models\Course;
 use App\Models\DassResult;
 use App\Models\FlaggedCase;
@@ -26,11 +25,6 @@ use Illuminate\Support\Facades\Notification;
  */
 class FlaggedCaseService
 {
-    private const SEVERE_LEVELS = [
-        ClassificationThreshold::SEVERITY_SEVERE,
-        ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE,
-    ];
-
     public function __construct(private readonly DatabaseManager $database)
     {
     }
@@ -71,7 +65,7 @@ class FlaggedCaseService
             $flaggedCases = Collection::make();
 
             foreach ($candidates as $candidate) {
-                if (! in_array($candidate['level'], self::SEVERE_LEVELS, true)) {
+                if (! in_array($candidate['level'], FlaggedCase::SEVERE_LEVELS, true)) {
                     continue;
                 }
 

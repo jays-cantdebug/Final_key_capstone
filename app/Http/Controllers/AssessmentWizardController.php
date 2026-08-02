@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AssessmentResponseFormRequest;
 use App\Http\Requests\AssessmentStudentRequest;
+use App\Http\Requests\PredictionFeedbackFormRequest;
 use App\Models\Student;
 use App\Services\AssessmentService;
 use Illuminate\Contracts\View\View;
@@ -15,11 +16,16 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * Drives the 3-step New Assessment workflow (Student -> Questionnaire ->
- * Result). Wizard state (the intake data and in-progress responses) is
- * held in the session between steps; nothing is persisted to the
- * students/assessments/dass_responses/dass_results tables until the
- * final Submit & Calculate Score action, so abandoning the wizard at any
- * point leaves no trace in the database.
+ * Review & Save). Wizard state (the intake data, in-progress responses,
+ * and — once Step 3 is reached — the cached AI review) is held in the
+ * session between steps; nothing is persisted to the
+ * students/assessments/dass_responses/dass_results/prediction_feedback/
+ * flagged_cases tables until the Psychometrician confirms or corrects
+ * the AI's classification on Step 3 and clicks the final Confirm & Save
+ * / Correct & Save action, so abandoning the wizard at any point —
+ * including after seeing the AI's proposed classification — leaves no
+ * trace in the database, and a Guidance Counselor is never notified
+ * about a classification that hasn't been reviewed yet.
  */
 class AssessmentWizardController extends Controller
 {
@@ -78,6 +84,7 @@ class AssessmentWizardController extends Controller
         ]);
         session()->forget(self::SESSION_KEY.'.responses');
         session()->forget(self::SESSION_KEY.'.privacy_consent_at');
+        session()->forget(self::SESSION_KEY.'.review');
 
         return redirect()->route('assessments.create.questionnaire');
     }
@@ -104,6 +111,7 @@ class AssessmentWizardController extends Controller
         $request->session()->forget(self::SESSION_KEY.'.responses');
         $request->session()->forget(self::SESSION_KEY.'.existing_student_id');
         $request->session()->forget(self::SESSION_KEY.'.privacy_consent_at');
+        $request->session()->forget(self::SESSION_KEY.'.review');
 
         return redirect()->route('assessments.create.questionnaire');
     }
@@ -154,6 +162,7 @@ class AssessmentWizardController extends Controller
         }
 
         $request->session()->put(self::SESSION_KEY.'.responses', $request->validated('responses'));
+        $request->session()->forget(self::SESSION_KEY.'.review');
 
         if ($request->session()->has(self::SESSION_KEY.'.existing_student_id')) {
             $request->session()->put(self::SESSION_KEY.'.privacy_consent_at', now());
@@ -163,7 +172,14 @@ class AssessmentWizardController extends Controller
     }
 
     /**
-     * STEP 3 (GET): Review the pending assessment before final submission.
+     * STEP 3 (GET): Review the AI's proposed classification before
+     * anything is saved. Scores and classification are computed once and
+     * cached in session (`.review`) rather than recomputed on every
+     * visit — this means the AI provider (billed, for the Claude
+     * provider) is only ever invoked once per set of responses, and that
+     * what the Psychometrician actually reviews here is exactly what
+     * `submit()` persists, unaffected by anything that changes between
+     * viewing this page and clicking Confirm/Correct & Save.
      */
     public function showResultStep(Request $request): View|RedirectResponse
     {
@@ -177,25 +193,45 @@ class AssessmentWizardController extends Controller
 
         $version = $this->assessmentService->activeQuestionnaireVersion();
 
+        if ($version === null) {
+            return redirect()->route('assessments.create')
+                ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
+        }
+
+        $review = $request->session()->get(self::SESSION_KEY.'.review');
+
+        if ($review === null) {
+            $review = $this->assessmentService->reviewAssessment($version, $responses);
+            $request->session()->put(self::SESSION_KEY.'.review', $review);
+        }
+
         return view('assessments.create.result', [
             'student' => new Student($studentData),
             'version' => $version,
-            'responseCount' => count($responses),
-            'questionCount' => $version?->questions->count() ?? 0,
+            'review' => $review,
+            'responses' => $responses,
             'existingStudentId' => $request->session()->get(self::SESSION_KEY.'.existing_student_id'),
         ]);
     }
 
     /**
-     * STEP 3 (POST): Compute and persist the assessment, then redirect to
-     * the final read-only result page.
+     * STEP 3 (POST): Confirm & Save / Correct & Save. This is the only
+     * action in the whole wizard that writes to the database — it
+     * validates the Confirm/Correct decision (the same
+     * `PredictionFeedbackFormRequest` shape the standalone post-save
+     * Feedback Loop uses), then persists the student, assessment,
+     * responses, the AI's raw classification exactly as reviewed, the
+     * review decision itself, and — evaluated against the *reviewed*
+     * severity, never the AI's raw output — any differentiated flagged
+     * cases and Guidance Counselor notifications, all in one transaction.
      */
-    public function submit(Request $request): RedirectResponse
+    public function submit(PredictionFeedbackFormRequest $request): RedirectResponse
     {
         $studentData = $request->session()->get(self::SESSION_KEY.'.student_data');
         $responses = $request->session()->get(self::SESSION_KEY.'.responses');
+        $review = $request->session()->get(self::SESSION_KEY.'.review');
 
-        if ($studentData === null || $responses === null) {
+        if ($studentData === null || $responses === null || $review === null) {
             return redirect()->route('assessments.create')
                 ->withErrors(['student' => 'Please complete the previous steps before submitting.']);
         }
@@ -211,11 +247,20 @@ class AssessmentWizardController extends Controller
         $existingStudent = $existingStudentId !== null ? Student::findOrFail($existingStudentId) : null;
         $privacyConsentAt = $request->session()->get(self::SESSION_KEY.'.privacy_consent_at');
 
-        $assessment = $this->assessmentService->submit($studentData, $version, $request->user(), $responses, $existingStudent, $privacyConsentAt);
+        $assessment = $this->assessmentService->save(
+            $studentData,
+            $version,
+            $request->user(),
+            $responses,
+            $review,
+            $request->validated(),
+            $existingStudent,
+            $privacyConsentAt,
+        );
 
         $request->session()->forget(self::SESSION_KEY);
 
         return redirect()->route('assessments.show', $assessment)
-            ->with('status', 'Assessment submitted and scored successfully.');
+            ->with('status', 'Assessment reviewed and saved successfully.');
     }
 }

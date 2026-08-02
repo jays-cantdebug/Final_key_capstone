@@ -99,4 +99,33 @@ trait InteractsWithDomainData
 
         return $responses;
     }
+
+    /**
+     * Drive Step 3 of the New Assessment wizard now that it requires a
+     * mandatory pre-save review: GET the review page (computes and caches
+     * the AI's classification in session, exactly as a real visit would)
+     * then POST the Confirm & Save / Correct & Save decision that is now
+     * the only action in the wizard that actually persists anything.
+     *
+     * Call this after staging student data and responses via the Step 1 /
+     * Step 2 wizard routes (or the "Take Again" retake route) in the same
+     * test — the caller must already be `actingAs` the right user, since
+     * this only issues the two Step 3 requests.
+     *
+     * Defaults to a plain Confirm with no corrections. Pass `$feedback`
+     * to override — e.g. `['is_confirmed' => '0', 'corrected_depression_level' => 'Normal']`
+     * to exercise a correction that crosses (or doesn't cross) the
+     * flagging threshold.
+     *
+     * @param array<string, mixed> $feedback
+     */
+    protected function reviewAndSaveAssessment(array $feedback = []): \Illuminate\Testing\TestResponse
+    {
+        $this->get(route('assessments.create.result'));
+
+        return $this->post(route('assessments.create.submit'), [
+            'is_confirmed' => '1',
+            ...$feedback,
+        ]);
+    }
 }

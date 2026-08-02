@@ -6,7 +6,6 @@
     ];
 
     $feedback = $assessment->predictionFeedback;
-    $isPsychometrician = auth()->user()->hasRole('psychometrician');
 @endphp
 
 <x-app-layout>
@@ -46,7 +45,7 @@
         </div>
     @endif
 
-    <div @class(['grid gap-6', 'lg:grid-cols-[1.4fr_1fr]' => $isPsychometrician])>
+    <div @class(['grid gap-6', 'lg:grid-cols-[1.4fr_1fr]' => $feedback])>
         <div class="min-w-0 space-y-6">
             <x-card>
                 <h3 class="text-lg font-semibold text-body">Student Information</h3>
@@ -101,94 +100,15 @@
 
         </div>
 
-        @if ($isPsychometrician)
+        @if ($feedback)
         <div class="min-w-0 space-y-6">
             <x-card>
-                <h3 class="text-lg font-semibold text-body">Correct Prediction</h3>
-                <p class="mt-1 text-xs text-slate-500">Confirm the AI's classification as accurate, or correct it. This does not change the scores or flags already recorded above.</p>
+                <h3 class="text-lg font-semibold text-body">Prediction Feedback</h3>
+                <p class="mt-1 text-xs text-slate-500">The Psychometrician's review of this assessment's AI classification, recorded before saving. This does not change the scores or flags recorded above.</p>
 
-                @if ($feedback)
-                    <div class="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
-                        <p class="font-semibold text-body">
-                            {{ $feedback->is_confirmed ? 'Confirmed' : 'Corrected' }} by {{ $feedback->psychometrician->name }}
-                        </p>
-                        @if (! $feedback->is_confirmed)
-                            <ul class="mt-2 space-y-1 text-slate-600">
-                                @if ($feedback->corrected_depression_level)
-                                    <li>Depression &rarr; {{ $feedback->corrected_depression_level }}</li>
-                                @endif
-                                @if ($feedback->corrected_anxiety_level)
-                                    <li>Anxiety &rarr; {{ $feedback->corrected_anxiety_level }}</li>
-                                @endif
-                                @if ($feedback->corrected_stress_level)
-                                    <li>Stress &rarr; {{ $feedback->corrected_stress_level }}</li>
-                                @endif
-                            </ul>
-                        @endif
-                        @if ($feedback->notes)
-                            <p class="mt-2 italic text-slate-600">"{{ $feedback->notes }}"</p>
-                        @endif
-                    </div>
-                @endif
-
-                <form method="POST" action="{{ route('assessments.feedback.store', $assessment) }}" class="mt-4 space-y-4">
-                    @csrf
-
-                    @php
-                        $severityOptions = ['Normal', 'Mild', 'Moderate', 'Severe', 'Extremely Severe'];
-                    @endphp
-
-                    <div class="space-y-3">
-                        <div>
-                            <x-input-label for="corrected_depression_level" :value="__('Depression')" />
-                            <x-select id="corrected_depression_level" name="corrected_depression_level" class="mt-1 block w-full text-sm">
-                                <option value="">Unchanged</option>
-                                @foreach ($severityOptions as $level)
-                                    <option value="{{ $level }}" @selected(old('corrected_depression_level', $feedback?->corrected_depression_level) === $level)>{{ $level }}</option>
-                                @endforeach
-                            </x-select>
-                        </div>
-                        <div>
-                            <x-input-label for="corrected_anxiety_level" :value="__('Anxiety')" />
-                            <x-select id="corrected_anxiety_level" name="corrected_anxiety_level" class="mt-1 block w-full text-sm">
-                                <option value="">Unchanged</option>
-                                @foreach ($severityOptions as $level)
-                                    <option value="{{ $level }}" @selected(old('corrected_anxiety_level', $feedback?->corrected_anxiety_level) === $level)>{{ $level }}</option>
-                                @endforeach
-                            </x-select>
-                        </div>
-                        <div>
-                            <x-input-label for="corrected_stress_level" :value="__('Stress')" />
-                            <x-select id="corrected_stress_level" name="corrected_stress_level" class="mt-1 block w-full text-sm">
-                                <option value="">Unchanged</option>
-                                @foreach ($severityOptions as $level)
-                                    <option value="{{ $level }}" @selected(old('corrected_stress_level', $feedback?->corrected_stress_level) === $level)>{{ $level }}</option>
-                                @endforeach
-                            </x-select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <x-input-label for="notes" :value="__('Notes (optional)')" />
-                        <x-textarea id="notes" name="notes" rows="3" class="mt-1 block w-full text-sm">{{ old('notes', $feedback?->notes) }}</x-textarea>
-                    </div>
-
-                    <x-input-error :messages="$errors->get('corrected_depression_level')" class="mt-2" />
-                    <x-input-error :messages="$errors->get('corrected_anxiety_level')" class="mt-2" />
-                    <x-input-error :messages="$errors->get('corrected_stress_level')" class="mt-2" />
-
-                    <div class="flex flex-wrap gap-3">
-                        <button type="submit" name="is_confirmed" value="1" class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark">
-                            Confirm
-                        </button>
-                        <button type="submit" name="is_confirmed" value="0" class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
-                            Correct
-                        </button>
-                        <a href="{{ route('assessments.show', $assessment) }}" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-50">
-                            Cancel
-                        </a>
-                    </div>
-                </form>
+                <div class="mt-4">
+                    @include('assessments._prediction-feedback-summary', ['feedback' => $feedback])
+                </div>
             </x-card>
         </div>
         @endif

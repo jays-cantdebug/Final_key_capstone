@@ -146,6 +146,40 @@ class AssessmentWizardTest extends TestCase
         $this->assertDatabaseCount('assessments', 0);
     }
 
+    public function test_review_step_computes_but_does_not_persist_anything(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $this->seedOfficialThresholds();
+        $version = $this->createActiveQuestionnaireVersion();
+        $ids = $this->lookupIds();
+
+        $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
+            'first_name' => 'Maria',
+            'middle_name' => 'Garcia',
+            'last_name' => 'Santos',
+            'gender' => 'Female',
+            'privacy_consent' => '1',
+            ...$ids,
+        ]);
+
+        $responses = $this->buildResponses($version, depressionRaw: 4, anxietyRaw: 3, stressRaw: 5);
+        $this->actingAs($psychometrician)->post(route('assessments.create.questionnaire.store'), ['responses' => $responses]);
+
+        $response = $this->actingAs($psychometrician)->get(route('assessments.create.result'));
+
+        $response->assertOk();
+        $response->assertViewHas('review', fn (array $review): bool => $review['scores']['depression_final_score'] === 8
+            && $review['scores']['anxiety_final_score'] === 6
+            && $review['scores']['stress_final_score'] === 10);
+
+        // Visiting the review page computes and caches the AI's
+        // classification but must not write anything to the database --
+        // review is required, but reviewing is not the same as saving.
+        $this->assertDatabaseCount('students', 0);
+        $this->assertDatabaseCount('assessments', 0);
+        $this->assertDatabaseCount('dass_results', 0);
+    }
+
     public function test_full_wizard_flow_creates_a_scored_assessment(): void
     {
         $psychometrician = $this->psychometrician();
@@ -168,7 +202,7 @@ class AssessmentWizardTest extends TestCase
             ->post(route('assessments.create.questionnaire.store'), ['responses' => $responses])
             ->assertRedirect(route('assessments.create.result'));
 
-        $submitResponse = $this->actingAs($psychometrician)->post(route('assessments.create.submit'));
+        $submitResponse = $this->actingAs($psychometrician)->reviewAndSaveAssessment();
 
         $this->assertDatabaseCount('assessments', 1);
         $this->assertDatabaseCount('dass_results', 1);
@@ -179,9 +213,17 @@ class AssessmentWizardTest extends TestCase
         $this->assertSame(8, $assessment->result->depression_final_score);
         $this->assertSame(6, $assessment->result->anxiety_final_score);
         $this->assertSame(10, $assessment->result->stress_final_score);
+
+        // Confirming (the default decision `reviewAndSaveAssessment()`
+        // submits) is itself a mandatory review decision -- it always
+        // creates the prediction_feedback row, not just on request.
+        $this->assertDatabaseHas('prediction_feedback', [
+            'assessment_id' => $assessment->id,
+            'is_confirmed' => 1,
+        ]);
     }
 
-    public function test_submit_evaluates_flagging_end_to_end_for_a_severe_case(): void
+    public function test_confirming_persists_the_ai_classification_and_flags_off_it(): void
     {
         $psychometrician = $this->psychometrician();
         $this->guidanceCounselor();
@@ -201,17 +243,141 @@ class AssessmentWizardTest extends TestCase
         // Stress raw 14 -> final 28, Severe (26-33 band).
         $responses = $this->buildResponses($version, depressionRaw: 0, anxietyRaw: 0, stressRaw: 14);
         $this->actingAs($psychometrician)->post(route('assessments.create.questionnaire.store'), ['responses' => $responses]);
-        $this->actingAs($psychometrician)->post(route('assessments.create.submit'));
 
-        $this->assertDatabaseHas('flagged_cases', ['flag_type' => FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT]);
+        $this->actingAs($psychometrician)->reviewAndSaveAssessment();
+
+        $this->assertDatabaseHas('dass_results', ['stress_level' => 'Severe']);
+        $this->assertDatabaseHas('flagged_cases', ['flag_type' => FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT, 'triggering_subscale' => FlaggedCase::SUBSCALE_STRESS]);
         $this->assertDatabaseCount('system_notifications', 1);
+    }
+
+    public function test_correcting_down_across_the_flagging_threshold_creates_no_flag_or_notification(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $this->guidanceCounselor();
+        $this->seedOfficialThresholds();
+        $version = $this->createActiveQuestionnaireVersion();
+        $ids = $this->lookupIds();
+
+        $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
+            'first_name' => 'Carla',
+            'middle_name' => 'Bautista',
+            'last_name' => 'Mendoza',
+            'gender' => 'Female',
+            'privacy_consent' => '1',
+            ...$ids,
+        ]);
+
+        // Depression raw 14 -> final 28, Extremely Severe (28-42 band) --
+        // would trigger an awareness_notification flag if left as-is.
+        $responses = $this->buildResponses($version, depressionRaw: 14, anxietyRaw: 0, stressRaw: 0);
+        $this->actingAs($psychometrician)->post(route('assessments.create.questionnaire.store'), ['responses' => $responses]);
+
+        $this->actingAs($psychometrician)->reviewAndSaveAssessment([
+            'is_confirmed' => '0',
+            'corrected_depression_level' => 'Normal',
+        ]);
+
+        $assessment = Assessment::first();
+
+        // The AI's raw classification is still preserved for the audit
+        // trail -- correcting it does not rewrite what the AI actually said.
+        $this->assertSame('Extremely Severe', $assessment->result->depression_level);
+
+        // But flagging and notification are evaluated against the
+        // reviewed, corrected severity -- which never crossed the
+        // threshold, so neither should exist.
+        $this->assertDatabaseCount('flagged_cases', 0);
+        $this->assertDatabaseCount('system_notifications', 0);
+
+        $this->assertDatabaseHas('prediction_feedback', [
+            'assessment_id' => $assessment->id,
+            'is_confirmed' => 0,
+            'corrected_depression_level' => 'Normal',
+        ]);
+    }
+
+    public function test_correcting_up_across_the_flagging_threshold_creates_a_flag_and_notification(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $this->guidanceCounselor();
+        $this->seedOfficialThresholds();
+        $version = $this->createActiveQuestionnaireVersion();
+        $ids = $this->lookupIds();
+
+        $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
+            'first_name' => 'Dario',
+            'middle_name' => 'Salonga',
+            'last_name' => 'Ilagan',
+            'gender' => 'Male',
+            'privacy_consent' => '1',
+            ...$ids,
+        ]);
+
+        // Depression raw 0 -> final 0, Normal -- the AI sees nothing
+        // flag-worthy here.
+        $responses = $this->buildResponses($version, depressionRaw: 0, anxietyRaw: 0, stressRaw: 0);
+        $this->actingAs($psychometrician)->post(route('assessments.create.questionnaire.store'), ['responses' => $responses]);
+
+        $this->actingAs($psychometrician)->reviewAndSaveAssessment([
+            'is_confirmed' => '0',
+            'corrected_depression_level' => 'Extremely Severe',
+        ]);
+
+        $assessment = Assessment::first();
+
+        // Raw AI output preserved, exactly as the "correct down" case.
+        $this->assertSame('Normal', $assessment->result->depression_level);
+
+        // A human-initiated upward correction is just as valid an input
+        // to flagging as the AI's own output -- it must not be silently
+        // ignored just because the AI never flagged it.
+        $this->assertDatabaseHas('flagged_cases', [
+            'assessment_id' => $assessment->id,
+            'flag_type' => FlaggedCase::FLAG_TYPE_AWARENESS_NOTIFICATION,
+            'triggering_subscale' => FlaggedCase::SUBSCALE_DEPRESSION,
+        ]);
+        $this->assertDatabaseCount('system_notifications', 1);
+    }
+
+    public function test_final_save_validation_failure_persists_nothing(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $this->seedOfficialThresholds();
+        $version = $this->createActiveQuestionnaireVersion();
+        $ids = $this->lookupIds();
+
+        $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
+            'first_name' => 'Elena',
+            'middle_name' => 'Cruz',
+            'last_name' => 'Padilla',
+            'gender' => 'Female',
+            'privacy_consent' => '1',
+            ...$ids,
+        ]);
+
+        $responses = $this->buildResponses($version, depressionRaw: 1, anxietyRaw: 1, stressRaw: 1);
+        $this->actingAs($psychometrician)->post(route('assessments.create.questionnaire.store'), ['responses' => $responses]);
+        $this->actingAs($psychometrician)->get(route('assessments.create.result'));
+
+        // Neither Confirm nor Correct was actually chosen.
+        $response = $this->actingAs($psychometrician)->post(route('assessments.create.submit'), [
+            'corrected_depression_level' => 'not-a-real-severity-level',
+        ]);
+
+        $response->assertSessionHasErrors(['is_confirmed', 'corrected_depression_level']);
+        $this->assertDatabaseCount('students', 0);
+        $this->assertDatabaseCount('assessments', 0);
+        $this->assertDatabaseCount('dass_results', 0);
     }
 
     public function test_submitting_without_completing_step_one_is_rejected(): void
     {
         $psychometrician = $this->psychometrician();
 
-        $response = $this->actingAs($psychometrician)->post(route('assessments.create.submit'));
+        $response = $this->actingAs($psychometrician)->post(route('assessments.create.submit'), [
+            'is_confirmed' => '1',
+        ]);
 
         $response->assertRedirect(route('assessments.create'));
         $this->assertDatabaseCount('assessments', 0);

@@ -11,7 +11,6 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DassQuestionController;
 use App\Http\Controllers\FlaggedCaseController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\PredictionFeedbackController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionnaireController;
 use App\Http\Controllers\QuestionnaireVersionController;
@@ -106,8 +105,6 @@ Route::middleware('auth')->group(function (): void {
                 Route::get('/result', [AssessmentWizardController::class, 'showResultStep'])->name('result');
                 Route::post('/submit', [AssessmentWizardController::class, 'submit'])->name('submit');
             });
-
-        Route::post('/assessments/{assessment}/feedback', [PredictionFeedbackController::class, 'store'])->name('assessments.feedback.store');
     });
 
     Route::get('/assessments', [AssessmentHistoryController::class, 'index'])

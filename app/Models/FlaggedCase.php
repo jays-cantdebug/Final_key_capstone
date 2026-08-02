@@ -27,6 +27,16 @@ class FlaggedCase extends Model
     public const SUBSCALE_STRESS = 'stress';
 
     /**
+     * Severity levels that meet or exceed the differentiated-flagging
+     * threshold — the same list `FlaggedCaseService::evaluateAndFlag()`
+     * checks a subscale against before creating a row here.
+     */
+    public const SEVERE_LEVELS = [
+        ClassificationThreshold::SEVERITY_SEVERE,
+        ClassificationThreshold::SEVERITY_EXTREMELY_SEVERE,
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
