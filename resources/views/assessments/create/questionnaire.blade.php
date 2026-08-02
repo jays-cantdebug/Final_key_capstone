@@ -33,8 +33,8 @@
         */
         .loading-badge-wrap {
             position: relative;
-            width: 64px;
-            height: 64px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -51,8 +51,8 @@
         }
         .loading-badge {
             position: relative;
-            width: 56px;
-            height: 56px;
+            width: 36px;
+            height: 36px;
             border-radius: 9999px;
             background: linear-gradient(150deg, #EAF3EC 0%, #D9EBDE 100%);
             display: flex;
@@ -79,7 +79,7 @@
         .loading-dot:nth-child(3) { animation-delay: 0.4s; }
         .loading-shimmer-track {
             position: relative;
-            height: 4px;
+            height: 5px;
             border-radius: 9999px;
             background: #EAF3EC;
             overflow: hidden;
@@ -132,6 +132,7 @@
         novalidate
         x-data="{ submitting: false }"
         x-on:submit="submitting = true"
+        x-effect="document.body.classList.toggle('overflow-y-hidden', submitting)"
         x-init="$nextTick(() => { const first = $el.querySelector('[data-field-invalid]'); if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); first.focus(); } })"
     >
         @csrf
@@ -141,63 +142,65 @@
             x-transition:enter="ease-out duration-200"
             x-transition:enter-start="opacity-0"
             x-transition:enter-end="opacity-100"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-body/45 backdrop-blur-sm"
+            class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/35 px-4 py-8 backdrop-blur-sm"
             style="display: none;"
         >
-            <div class="w-full max-w-xs rounded-[20px] bg-white px-8 pb-7 pt-9 text-center shadow-[0_24px_48px_-16px_rgba(31,107,58,0.28),0_8px_20px_-8px_rgba(44,44,42,0.18)]">
-                <div class="loading-badge-wrap mx-auto mb-5">
+            <div class="w-full max-w-sm rounded-[20px] bg-white px-10 pb-4 pt-5 text-center shadow-[0_24px_48px_-16px_rgba(31,107,58,0.28),0_8px_20px_-8px_rgba(44,44,42,0.18)]">
+                <div class="loading-badge-wrap mx-auto mb-2">
                     <span class="loading-halo"></span>
                     <span class="loading-halo loading-halo--delay"></span>
                     <div class="loading-badge">
-                        <svg class="h-[26px] w-[26px]" viewBox="0 0 24 24" aria-hidden="true">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
                             <polyline class="loading-pulse-line" points="1,13 7,13 9,7 13,19 15,13 23,13" />
                         </svg>
                     </div>
                 </div>
-                <p class="text-base font-semibold tracking-tight text-body">
+                <p class="text-lg font-semibold tracking-tight text-body">
                     Analyzing responses<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span>
                 </p>
-                <p class="mt-1.5 text-sm leading-relaxed text-slate-500">This may take a few seconds while the AI classifies the results.</p>
-                <div class="loading-shimmer-track mt-5">
+                <p class="mt-1 text-sm leading-relaxed text-slate-500">This may take a few seconds while the AI classifies the results.</p>
+                <div class="loading-shimmer-track mt-2">
                     <div class="loading-shimmer-fill"></div>
                 </div>
             </div>
         </div>
 
-        <div class="space-y-4">
-            @foreach ($version->questions as $question)
-                <x-dass-response-options
-                    :question="$question"
-                    :selected="old('responses.' . $question->id, $existingResponses[$question->id] ?? null)"
-                    :invalid="$errors->has('responses.' . $question->id)"
-                />
-            @endforeach
-        </div>
-
-        @if ($isRetake)
-            <div class="relative mt-4" x-data="{ show: {{ $errors->has('privacy_consent') ? 'true' : 'false' }} }">
-                <label class="flex items-start gap-2">
-                    <x-checkbox name="privacy_consent" value="1" class="mt-1" :invalid="$errors->has('privacy_consent')" @change="show = false" />
-                    <span class="text-sm text-slate-700">{{ __('The student has acknowledged the data privacy consent notice for this assessment.') }}</span>
-                </label>
-                <x-field-error-tooltip :message="$errors->first('privacy_consent')" />
+        <div x-bind:inert="submitting">
+            <div class="space-y-4">
+                @foreach ($version->questions as $question)
+                    <x-dass-response-options
+                        :question="$question"
+                        :selected="old('responses.' . $question->id, $existingResponses[$question->id] ?? null)"
+                        :invalid="$errors->has('responses.' . $question->id)"
+                    />
+                @endforeach
             </div>
-        @endif
 
-        <div class="mt-6 flex items-center gap-3">
-            <x-primary-button x-bind:disabled="submitting">
-                <span x-show="!submitting">{{ __('Next: Review & Submit') }}</span>
-                <span x-show="submitting" class="inline-flex items-center gap-2" style="display: none;">
-                    <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    {{ __('Analyzing…') }}
-                </span>
-            </x-primary-button>
-            <x-secondary-button :href="$isRetake ? route('students.show', $existingStudentId) : route('assessments.create')">
-                {{ __('Back') }}
-            </x-secondary-button>
+            @if ($isRetake)
+                <div class="relative mt-4" x-data="{ show: {{ $errors->has('privacy_consent') ? 'true' : 'false' }} }">
+                    <label class="flex items-start gap-2">
+                        <x-checkbox name="privacy_consent" value="1" class="mt-1" :invalid="$errors->has('privacy_consent')" @change="show = false" />
+                        <span class="text-sm text-slate-700">{{ __('The student has acknowledged the data privacy consent notice for this assessment.') }}</span>
+                    </label>
+                    <x-field-error-tooltip :message="$errors->first('privacy_consent')" />
+                </div>
+            @endif
+
+            <div class="mt-6 flex items-center gap-3">
+                <x-primary-button x-bind:disabled="submitting">
+                    <span x-show="!submitting">{{ __('Next: Review & Submit') }}</span>
+                    <span x-show="submitting" class="inline-flex items-center gap-2" style="display: none;">
+                        <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        {{ __('Analyzing…') }}
+                    </span>
+                </x-primary-button>
+                <x-secondary-button :href="$isRetake ? route('students.show', $existingStudentId) : route('assessments.create')">
+                    {{ __('Back') }}
+                </x-secondary-button>
+            </div>
         </div>
     </form>
 </x-app-layout>
