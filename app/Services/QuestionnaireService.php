@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Exceptions\LookupRecordInUseException;
 use App\Models\Questionnaire;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\DatabaseManager;
@@ -46,5 +47,24 @@ class QuestionnaireService
 
             return $questionnaire->refresh();
         });
+    }
+
+    /**
+     * Archive (soft-delete) a questionnaire.
+     *
+     * @throws LookupRecordInUseException if any of its versions has been
+     *                                     used by an assessment.
+     */
+    public function delete(Questionnaire $questionnaire): void
+    {
+        $hasAssessments = $questionnaire->versions()->whereHas('assessments')->exists();
+
+        if ($hasAssessments) {
+            throw new LookupRecordInUseException(
+                'Cannot delete a questionnaire with a version that has been used by an assessment.'
+            );
+        }
+
+        $this->database->transaction(static fn (): bool => (bool) $questionnaire->delete());
     }
 }

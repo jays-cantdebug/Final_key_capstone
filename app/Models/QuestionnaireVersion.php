@@ -67,6 +67,14 @@ class QuestionnaireVersion extends Model
     }
 
     /**
+     * Get the assessments submitted against this version.
+     */
+    public function assessments(): HasMany
+    {
+        return $this->hasMany(Assessment::class);
+    }
+
+    /**
      * Determine whether this version may still be edited (questions added/edited/removed).
      */
     public function isEditable(): bool

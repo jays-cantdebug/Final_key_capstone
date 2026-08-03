@@ -15,6 +15,10 @@
         <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>
     @endif
 
+    @if ($errors->any())
+        <x-alert type="error" class="mb-6">{{ $errors->first() }}</x-alert>
+    @endif
+
     <x-table>
         <x-slot:header>
             <p class="text-sm text-slate-600">Manage assessment questionnaire templates and their released versions.</p>
@@ -36,9 +40,18 @@
                     <x-badge :color="$questionnaire->status === 'Active' ? 'green' : 'slate'">{{ $questionnaire->status }}</x-badge>
                 </x-table.td>
                 <x-table.td align="right">
-                    <div class="inline-flex flex-wrap justify-end gap-2">
+                    <div class="inline-flex flex-nowrap justify-end gap-2">
                         <a href="{{ route('questionnaires.show', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
                         <a href="{{ route('questionnaires.edit', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                        <form id="delete-questionnaire-form-{{ $questionnaire->id }}" method="POST" action="{{ route('questionnaires.destroy', $questionnaire) }}" class="hidden">
+                            @csrf
+                            @method('DELETE')
+                        </form>
+                        <button
+                            type="button"
+                            @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Delete this questionnaire?', message: 'This is blocked if any of its versions have been used by an assessment.', confirmLabel: 'Delete', formId: 'delete-questionnaire-form-{{ $questionnaire->id }}' })"
+                            class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50"
+                        >Delete</button>
                     </div>
                 </x-table.td>
             </tr>
@@ -50,4 +63,6 @@
             {{ $questionnaires->links() }}
         </x-slot:footer>
     </x-table>
+
+    <x-confirm-modal />
 </x-app-layout>

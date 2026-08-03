@@ -48,8 +48,13 @@ class LoginRequest extends FormRequest
         ], $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
+            // Always attached to `password`, never `email` — whether the
+            // email doesn't exist or the password is simply wrong, the
+            // login page must show the exact same tooltip in the exact
+            // same place, or an attacker could tell the two cases apart
+            // and enumerate valid staff accounts.
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'password' => trans('auth.failed'),
             ]);
         }
 

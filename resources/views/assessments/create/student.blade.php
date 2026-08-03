@@ -8,8 +8,6 @@
 
     @include('assessments.create._steps', ['currentStep' => 1])
 
-    @include('assessments.create._response-scale')
-
     <x-card>
         <p class="text-sm text-slate-600">Every assessment begins with the student's information for this encounter.</p>
 

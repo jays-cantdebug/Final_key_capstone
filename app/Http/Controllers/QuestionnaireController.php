@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\LookupRecordInUseException;
 use App\Http\Requests\QuestionnaireFormRequest;
 use App\Models\Questionnaire;
 use App\Services\QuestionnaireService;
@@ -64,5 +65,16 @@ class QuestionnaireController extends Controller
 
         return redirect()->route('questionnaires.show', $questionnaire)
             ->with('status', 'Questionnaire updated successfully.');
+    }
+
+    public function destroy(Questionnaire $questionnaire): RedirectResponse
+    {
+        try {
+            $this->questionnaireService->delete($questionnaire);
+        } catch (LookupRecordInUseException $exception) {
+            return back()->withErrors(['questionnaire' => $exception->getMessage()]);
+        }
+
+        return redirect()->route('questionnaires.index')->with('status', 'Questionnaire archived successfully.');
     }
 }

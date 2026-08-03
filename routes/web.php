@@ -48,7 +48,7 @@ Route::middleware('auth')->group(function (): void {
     Route::middleware('role:psychometrician')->group(function (): void {
         Route::resource('students', StudentController::class)->except(['create', 'store']);
 
-        Route::resource('questionnaires', QuestionnaireController::class)->except(['destroy']);
+        Route::resource('questionnaires', QuestionnaireController::class);
 
         Route::prefix('questionnaires/{questionnaire}/versions')
             ->name('questionnaires.versions.')

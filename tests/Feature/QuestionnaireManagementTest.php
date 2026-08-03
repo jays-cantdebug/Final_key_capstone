@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Assessment;
 use App\Models\DassQuestion;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireVersion;
@@ -117,5 +118,30 @@ class QuestionnaireManagementTest extends TestCase
         $counselor = $this->guidanceCounselor();
 
         $this->actingAs($counselor)->get(route('questionnaires.index'))->assertForbidden();
+    }
+
+    public function test_a_questionnaire_with_no_assessments_can_be_archived(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $questionnaire = Questionnaire::factory()->create();
+        QuestionnaireVersion::factory()->create(['questionnaire_id' => $questionnaire->id]);
+
+        $response = $this->actingAs($psychometrician)->delete(route('questionnaires.destroy', $questionnaire));
+
+        $response->assertRedirect(route('questionnaires.index'));
+        $this->assertSoftDeleted('questionnaires', ['id' => $questionnaire->id]);
+    }
+
+    public function test_a_questionnaire_with_a_version_used_by_an_assessment_cannot_be_archived(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $questionnaire = Questionnaire::factory()->create();
+        $version = QuestionnaireVersion::factory()->create(['questionnaire_id' => $questionnaire->id]);
+        Assessment::factory()->create(['questionnaire_version_id' => $version->id]);
+
+        $response = $this->actingAs($psychometrician)->delete(route('questionnaires.destroy', $questionnaire));
+
+        $response->assertSessionHasErrors('questionnaire');
+        $this->assertDatabaseHas('questionnaires', ['id' => $questionnaire->id, 'deleted_at' => null]);
     }
 }

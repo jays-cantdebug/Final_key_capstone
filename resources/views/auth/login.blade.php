@@ -15,13 +15,10 @@
 
             @php
                 $emailError = $errors->first('email');
-                $isAuthFailure = $emailError && (
-                    $emailError === trans('auth.failed')
-                    || str_starts_with($emailError, 'Too many login attempts')
-                );
+                $isLockout = $emailError && str_starts_with($emailError, 'Too many login attempts');
             @endphp
 
-            @if ($isAuthFailure)
+            @if ($isLockout)
                 <x-alert type="error" class="mt-4">{{ $emailError }}</x-alert>
             @endif
 
@@ -34,10 +31,10 @@
             >
                 @csrf
 
-                <div class="relative" x-data="{ show: {{ ! $isAuthFailure && $errors->has('email') ? 'true' : 'false' }} }">
+                <div class="relative" x-data="{ show: {{ ! $isLockout && $errors->has('email') ? 'true' : 'false' }} }">
                     <x-input-label for="email" :value="__('Email Address')" />
-                    <x-text-input id="email" class="mt-1 block w-full" type="email" name="email" :value="old('email')" :invalid="! $isAuthFailure && $errors->has('email')" autofocus autocomplete="username" @input="show = false" />
-                    <x-field-error-tooltip :message="$isAuthFailure ? null : $errors->first('email')" />
+                    <x-text-input id="email" class="mt-1 block w-full" type="email" name="email" :value="old('email')" :invalid="! $isLockout && $errors->has('email')" autofocus autocomplete="username" @input="show = false" />
+                    <x-field-error-tooltip :message="$isLockout ? null : $emailError" />
                 </div>
 
                 <div class="relative" x-data="{ show: {{ $errors->has('password') ? 'true' : 'false' }} }">

@@ -45,7 +45,11 @@ class RoleGatingTest extends TestCase
             'password' => 'password',
         ]);
 
-        $response->assertSessionHasErrors('email');
+        // Attached to `password`, not `email` — an inactive account must
+        // fail identically to a wrong password, or the login page would
+        // leak which accounts exist (and are merely deactivated) to an
+        // unauthenticated attacker.
+        $response->assertSessionHasErrors('password');
         $this->assertGuest();
     }
 
