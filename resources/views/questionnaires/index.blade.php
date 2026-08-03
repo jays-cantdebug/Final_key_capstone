@@ -19,7 +19,20 @@
         <x-alert type="error" class="mb-6">{{ $errors->first() }}</x-alert>
     @endif
 
-    <x-table>
+    <style>
+        /* Scoped to Questionnaire Management only: keep this table from needing
+           horizontal scroll inside its card, matching the Settings > Records fix. */
+        .questionnaires-table td,
+        .questionnaires-table th {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        .questionnaires-table td {
+            white-space: normal;
+        }
+    </style>
+
+    <x-table class="questionnaires-table">
         <x-slot:header>
             <p class="text-sm text-slate-600">Manage assessment questionnaire templates and their released versions.</p>
         </x-slot:header>
@@ -40,7 +53,7 @@
                     <x-badge :color="$questionnaire->status === 'Active' ? 'green' : 'slate'">{{ $questionnaire->status }}</x-badge>
                 </x-table.td>
                 <x-table.td align="right">
-                    <div class="inline-flex flex-nowrap justify-end gap-2">
+                    <div class="inline-flex flex-wrap justify-end gap-2">
                         <a href="{{ route('questionnaires.show', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
                         <a href="{{ route('questionnaires.edit', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
                         <form id="delete-questionnaire-form-{{ $questionnaire->id }}" method="POST" action="{{ route('questionnaires.destroy', $questionnaire) }}" class="hidden">
