@@ -57,7 +57,16 @@
             <div class="mt-6 flex h-40 gap-3">
                 @foreach ($flaggedVolumeChart as $point)
                     <div class="flex flex-1 flex-col items-center justify-end gap-2">
-                        <div class="w-full rounded-t-lg {{ $volumeBarShades[$loop->index] ?? 'bg-primary-dark' }}" style="height: {{ max(4, ($point['count'] / $maxFlaggedVolume) * 100) }}%"></div>
+                        <div
+                            class="relative w-full rounded-t-lg {{ $volumeBarShades[$loop->index] ?? 'bg-primary-dark' }}"
+                            style="height: {{ max(4, ($point['count'] / $maxFlaggedVolume) * 100) }}%"
+                            x-data="{ show: false, x: 0, y: 0 }"
+                            @mouseenter="show = true"
+                            @mouseleave="show = false"
+                            @mousemove="x = $event.clientX; y = $event.clientY"
+                        >
+                            <x-bar-tooltip :message="$point['count'] . ' flagged ' . Str::plural('assessment', $point['count'])" />
+                        </div>
                         <p class="text-xs font-medium text-slate-500">{{ $point['label'] }}</p>
                     </div>
                 @endforeach
