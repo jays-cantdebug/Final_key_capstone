@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -23,6 +24,18 @@ class AssessmentStudentRequest extends FormRequest
     }
 
     /**
+     * Normalize the middle initial to uppercase before it's validated, so
+     * "p." is accepted and staged as "P." rather than rejected outright —
+     * the format is what matters, not the case the Psychometrician typed.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('middle_name')) {
+            $this->merge(['middle_name' => Str::upper((string) $this->input('middle_name'))]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, array<int, mixed>>
@@ -31,7 +44,9 @@ class AssessmentStudentRequest extends FormRequest
     {
         return [
             'first_name' => ['required', 'string', 'max:100'],
-            'middle_name' => ['required', 'string', 'max:100'],
+            // A middle initial only (e.g. "P."), not a full middle name —
+            // normalized to uppercase in prepareForValidation() above.
+            'middle_name' => ['required', 'string', 'regex:/^[A-Z]\.$/'],
             'last_name' => ['required', 'string', 'max:100'],
             'gender' => ['required', Rule::in(['Male', 'Female', 'Prefer not to say'])],
             'course_id' => ['required', 'integer', 'exists:courses,id'],
@@ -53,6 +68,7 @@ class AssessmentStudentRequest extends FormRequest
         return [
             'first_name.required' => 'Please fill out the First Name field.',
             'middle_name.required' => 'Please fill out the Middle Name field.',
+            'middle_name.regex' => "Middle Name must be a single letter followed by a period, e.g., 'P.'",
             'last_name.required' => 'Please fill out the Last Name field.',
             'gender.required' => 'Please select a Gender.',
             'course_id.required' => 'Please select a Course.',

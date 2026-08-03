@@ -36,7 +36,7 @@ class AssessmentWizardTest extends TestCase
 
         $response = $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
             'first_name' => 'Juan',
-            'middle_name' => 'Dela',
+            'middle_name' => 'D.',
             'last_name' => 'Cruz',
             'gender' => 'Male',
             'privacy_consent' => '1',
@@ -49,7 +49,7 @@ class AssessmentWizardTest extends TestCase
         // abandoning the wizard here leaves no orphan student row.
         $this->assertDatabaseCount('students', 0);
         $this->assertSame('Juan', session('assessment_wizard.student_data.first_name'));
-        $this->assertSame('Dela', session('assessment_wizard.student_data.middle_name'));
+        $this->assertSame('D.', session('assessment_wizard.student_data.middle_name'));
         $this->assertSame('Cruz', session('assessment_wizard.student_data.last_name'));
     }
 
@@ -68,6 +68,47 @@ class AssessmentWizardTest extends TestCase
 
         $response->assertSessionHasErrors('middle_name');
         $this->assertDatabaseCount('students', 0);
+    }
+
+    public function test_middle_name_must_be_a_single_letter_and_period(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $ids = $this->lookupIds();
+
+        $response = $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
+            'first_name' => 'Juan',
+            'middle_name' => 'Dela',
+            'last_name' => 'Cruz',
+            'gender' => 'Male',
+            'privacy_consent' => '1',
+            ...$ids,
+        ]);
+
+        $response->assertSessionHasErrors('middle_name');
+        $this->assertDatabaseCount('students', 0);
+    }
+
+    /**
+     * Regression: the field accepts either case on input, but always
+     * normalizes to uppercase before it's staged in session — "p." and
+     * "P." must be treated as the same valid value, not two different ones.
+     */
+    public function test_lowercase_middle_initial_is_normalized_to_uppercase(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $ids = $this->lookupIds();
+
+        $response = $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
+            'first_name' => 'Juan',
+            'middle_name' => 'd.',
+            'last_name' => 'Cruz',
+            'gender' => 'Male',
+            'privacy_consent' => '1',
+            ...$ids,
+        ]);
+
+        $response->assertRedirect(route('assessments.create.questionnaire'));
+        $this->assertSame('D.', session('assessment_wizard.student_data.middle_name'));
     }
 
     public function test_first_middle_and_last_name_are_required(): void
@@ -94,7 +135,7 @@ class AssessmentWizardTest extends TestCase
 
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
             'first_name' => 'Ana',
-            'middle_name' => 'Reyes',
+            'middle_name' => 'R.',
             'last_name' => 'Lopez',
             'gender' => 'Female',
             'privacy_consent' => '1',
@@ -128,7 +169,7 @@ class AssessmentWizardTest extends TestCase
 
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
             'first_name' => 'Liza',
-            'middle_name' => 'Ramos',
+            'middle_name' => 'R.',
             'last_name' => 'Torres',
             'gender' => 'Female',
             'privacy_consent' => '1',
@@ -155,7 +196,7 @@ class AssessmentWizardTest extends TestCase
 
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
             'first_name' => 'Maria',
-            'middle_name' => 'Garcia',
+            'middle_name' => 'G.',
             'last_name' => 'Santos',
             'gender' => 'Female',
             'privacy_consent' => '1',
@@ -189,7 +230,7 @@ class AssessmentWizardTest extends TestCase
 
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
             'first_name' => 'Maria',
-            'middle_name' => 'Garcia',
+            'middle_name' => 'G.',
             'last_name' => 'Santos',
             'gender' => 'Female',
             'privacy_consent' => '1',
@@ -233,7 +274,7 @@ class AssessmentWizardTest extends TestCase
 
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
             'first_name' => 'Pedro',
-            'middle_name' => 'Villanueva',
+            'middle_name' => 'V.',
             'last_name' => 'Reyes',
             'gender' => 'Male',
             'privacy_consent' => '1',
@@ -261,7 +302,7 @@ class AssessmentWizardTest extends TestCase
 
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
             'first_name' => 'Carla',
-            'middle_name' => 'Bautista',
+            'middle_name' => 'B.',
             'last_name' => 'Mendoza',
             'gender' => 'Female',
             'privacy_consent' => '1',
@@ -307,7 +348,7 @@ class AssessmentWizardTest extends TestCase
 
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
             'first_name' => 'Dario',
-            'middle_name' => 'Salonga',
+            'middle_name' => 'S.',
             'last_name' => 'Ilagan',
             'gender' => 'Male',
             'privacy_consent' => '1',
@@ -349,7 +390,7 @@ class AssessmentWizardTest extends TestCase
 
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
             'first_name' => 'Elena',
-            'middle_name' => 'Cruz',
+            'middle_name' => 'C.',
             'last_name' => 'Padilla',
             'gender' => 'Female',
             'privacy_consent' => '1',

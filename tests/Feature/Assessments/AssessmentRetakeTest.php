@@ -58,7 +58,7 @@ class AssessmentRetakeTest extends TestCase
         // consent was already captured on Step 1's students row.
         $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
             'first_name' => 'Ana',
-            'middle_name' => 'Reyes',
+            'middle_name' => 'R.',
             'last_name' => 'Lopez',
             'gender' => 'Female',
             'privacy_consent' => '1',
