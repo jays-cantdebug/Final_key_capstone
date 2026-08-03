@@ -2,7 +2,7 @@
     <div class="flex h-full flex-col gap-y-6 overflow-y-auto bg-primary px-3 pb-4 pt-6 text-white shadow-2xl shadow-emerald-950/25 lg:px-6">
         <div class="flex items-center justify-center gap-3 lg:justify-start">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
-                <x-application-logo class="h-11 w-11 flex-shrink-0 text-white" />
+                <x-application-logo class="h-12 w-12 flex-shrink-0 text-white lg:h-20 lg:w-20" />
                 <div class="hidden lg:block">
                     <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
                     <p class="text-sm font-semibold">Assessment Portal</p>
@@ -33,7 +33,7 @@
         <div class="flex h-full flex-col gap-y-6 overflow-y-auto bg-primary px-6 pb-4 pt-6 text-white shadow-2xl shadow-emerald-950/25">
             <div class="flex items-center gap-3">
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
-                    <x-application-logo class="h-11 w-11 text-white" />
+                    <x-application-logo class="h-16 w-16 text-white" />
                     <div>
                         <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
                         <p class="text-sm font-semibold">Assessment Portal</p>

@@ -1,6 +1,7 @@
 <x-login-layout>
     <div class="grid items-center gap-10 lg:grid-cols-2">
         <div class="text-center lg:text-left">
+            <x-application-logo class="mb-6 inline-block h-40 w-40" />
             <h1 class="text-3xl font-bold uppercase leading-tight tracking-wide text-white sm:text-4xl lg:text-5xl">
                 Web-Based Student Depression, Anxiety and Stress Assessment
             </h1>
