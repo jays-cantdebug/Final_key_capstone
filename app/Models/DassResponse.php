@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Casts\EncryptedInteger;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,12 +27,20 @@ class DassResponse extends Model
     /**
      * Get the attributes that should be cast.
      *
+     * `answer_value` is encrypted at rest (AES-256, via `EncryptedInteger`,
+     * a thin wrapper around Laravel's `Crypt` facade that decrypts back to
+     * an `int` rather than the string Laravel's built-in `encrypted` cast
+     * would produce — this codebase's `declare(strict_types=1)`
+     * convention needs the original type preserved) — it's the raw
+     * DASS-21 answer to an individual question, the most granular piece
+     * of clinical data in the system.
+     *
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
-            'answer_value' => 'integer',
+            'answer_value' => EncryptedInteger::class,
         ];
     }
 

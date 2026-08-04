@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Casts\EncryptedInteger;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,17 +36,29 @@ class DassResult extends Model
     /**
      * Get the attributes that should be cast.
      *
+     * The six raw/final subscale scores are encrypted at rest (AES-256,
+     * via `EncryptedInteger`, a thin wrapper around Laravel's `Crypt`
+     * facade that decrypts back to an `int` rather than the string
+     * Laravel's built-in `encrypted` cast would produce — this codebase's
+     * `declare(strict_types=1)` convention, and tests that `assertSame()`
+     * an exact int score, need the original type preserved) — they're
+     * DASS-21 clinical output, not filtered/sorted/aggregated at the SQL
+     * level anywhere in the app (severity *labels*, not these scores,
+     * drive Dashboard SQL filters, so those stay unencrypted — see
+     * `depression_level` etc. below, intentionally absent from this cast
+     * list).
+     *
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
-            'depression_raw_score' => 'integer',
-            'anxiety_raw_score' => 'integer',
-            'stress_raw_score' => 'integer',
-            'depression_final_score' => 'integer',
-            'anxiety_final_score' => 'integer',
-            'stress_final_score' => 'integer',
+            'depression_raw_score' => EncryptedInteger::class,
+            'anxiety_raw_score' => EncryptedInteger::class,
+            'stress_raw_score' => EncryptedInteger::class,
+            'depression_final_score' => EncryptedInteger::class,
+            'anxiety_final_score' => EncryptedInteger::class,
+            'stress_final_score' => EncryptedInteger::class,
             'used_non_official_thresholds' => 'boolean',
         ];
     }

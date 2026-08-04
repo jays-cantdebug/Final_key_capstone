@@ -28,8 +28,9 @@ This document explains what the system does, how each part works, and — just a
 18. [Classification Thresholds & Settings](#classification-thresholds--settings)
 19. [User Management](#user-management)
 20. [Audit Logs](#audit-logs)
-21. [Search & Filter System — How It Works Everywhere](#search--filter-system--how-it-works-everywhere)
-22. [Closing Summary](#closing-summary)
+21. [Data Encryption & Privacy (RA 10173)](#data-encryption--privacy-ra-10173)
+22. [Search & Filter System — How It Works Everywhere](#search--filter-system--how-it-works-everywhere)
+23. [Closing Summary](#closing-summary)
 
 ---
 
@@ -498,6 +499,42 @@ A permanent, read-only (Psychometrician-only) trail of significant actions acros
 **How it writes itself automatically:** rather than every single Controller action having to remember to manually write a log entry (an easy thing to forget, and inconsistent if some developers remember and others don't), a single shared "Observer" is attached to every model that needs auditing. It listens for the model's own create/update/delete database events and writes the log entry itself, automatically, every time — this guarantees consistent coverage across the whole system rather than depending on every feature remembering to log itself individually.
 
 Filterable by module, action, and a date range (see below for exactly how that filtering works).
+
+---
+
+## Data Encryption & Privacy (RA 10173)
+
+Because NORMI handles student mental health data — sensitive personal information under the Philippine Data Privacy Act (RA 10173) — the most clinically sensitive columns are encrypted at the application level, in addition to the role-based access controls described throughout this document.
+
+### What is encrypted at rest
+
+Using Laravel's built-in `encrypted` Eloquent cast (AES-256-CBC, authenticated with an HMAC so tampering is detectable), the following columns are encrypted transparently — the model API is unchanged; Eloquent decrypts on read and encrypts on write automatically:
+
+| Table | Column(s) | Why this one |
+|---|---|---|
+| `dass_responses` | `answer_value` | The raw answer to an individual DASS-21 question — the most granular clinical data point in the system. |
+| `dass_results` | `depression_raw_score`, `anxiety_raw_score`, `stress_raw_score`, `depression_final_score`, `anxiety_final_score`, `stress_final_score` | The computed DASS-21 subscale scores. |
+| `counseling_sessions` | `session_notes` | Free-text clinical notes from a counseling session. |
+
+### What is intentionally left unencrypted, and why
+
+Student names, gender, and DASS-21 severity *labels* (e.g. "Severe," "Extremely Severe" — as distinct from the numeric scores above, which are encrypted) are **not** encrypted at the column level. This isn't an oversight — the app's search, filtering, and Dashboard features depend on the database being able to compare these values directly:
+
+- Name search (Students, Assessment History, Flagged Cases, Counseling Sessions, Reports — see the Search & Filter section below) does a "contains anywhere" SQL match against `first_name`/`last_name`/`middle_name`. Laravel's `encrypted` cast produces different ciphertext every time the same value is encrypted (a fresh random IV each time, which is what makes it cryptographically strong), so an encrypted column can never be matched with SQL `LIKE` — only after the whole table is decrypted in PHP first, which would require rewriting every search feature in the system and giving up server-side pagination for these lists.
+- The Psychometrician Dashboard's stat cards and severity filter run SQL-level `WHERE ... IN (...)` queries directly against the severity-level columns to count/filter assessments — the same encryption limitation applies.
+- The Assessment Summary Report's gender filter does a direct SQL equality match against `gender`.
+
+Encrypting these fields would require a substantial rewrite (either dropping partial-name search in favor of exact-match lookups, or moving all of the above filtering into PHP after fetching every row) — judged not worth the risk for this project at this time.
+
+### Recommended complementary control: encryption at rest
+
+For the fields above that stay in plain text at the column level (and as defense-in-depth for everything else), the recommended complementary control is **database-level encryption at rest** — e.g. MySQL/MariaDB Transparent Data Encryption (TDE), or simply hosting the database on an encrypted disk/volume. This protects the entire database file (every table, every column, including the ones above) from anyone who gains access to the raw database files or a backup, without requiring any application code changes and without breaking any search/filter/dashboard functionality, since decryption happens transparently at the storage layer rather than per-column. Applying this is an infrastructure/deployment decision (it depends on the hosting environment), not something the application code enforces — but it's the natural complement to the column-level encryption already in place, and worth documenting as part of the system's overall RA 10173 data-protection posture.
+
+### A few implementation notes
+
+- Because AES ciphertext runs several times longer than the plain value it replaces, the encrypted columns above were widened to `TEXT` (they held `INTEGER`/`TINYINT` values before).
+- Encryption and decryption both depend on the app's `APP_KEY`. If that key is ever lost, every encrypted value becomes permanently unrecoverable — `APP_KEY` must be backed up securely and never committed to version control.
+- A one-time backfill command (`php artisan security:encrypt-sensitive-data`) encrypts any rows that were written before this feature was added; it's idempotent (safe to re-run) and writes directly via the query builder rather than through Eloquent, specifically so it doesn't flood the Audit Logs with thousands of "Update" entries for what is a one-off maintenance operation.
 
 ---
 

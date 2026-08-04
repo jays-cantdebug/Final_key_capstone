@@ -45,12 +45,17 @@ class CounselingSession extends Model
     /**
      * Get the attributes that should be cast.
      *
+     * `session_notes` is encrypted at rest (AES-256, via Laravel's
+     * `encrypted` cast) — free-text clinical notes, never searched or
+     * filtered by content (only the related student's name is searched).
+     *
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
             'session_datetime' => 'datetime',
+            'session_notes' => 'encrypted',
             'follow_up_required' => 'boolean',
             'follow_up_date' => 'date',
             'deleted_at' => 'datetime',
