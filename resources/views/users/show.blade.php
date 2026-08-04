@@ -36,7 +36,17 @@
                 </x-badge>
             </div>
 
-            <div class="mt-6">
+            <div class="mt-6 flex flex-wrap gap-2">
+                @can('forceLogout', $user)
+                    <form method="POST" action="{{ route('users.force-logout', $user) }}">
+                        @csrf
+                        @method('PATCH')
+                        <button type="submit" class="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                            Force logout (end active sessions)
+                        </button>
+                    </form>
+                @endcan
+
                 @if ($user->is_active)
                     @can('deactivate', $user)
                         <form method="POST" action="{{ route('users.deactivate', $user) }}">

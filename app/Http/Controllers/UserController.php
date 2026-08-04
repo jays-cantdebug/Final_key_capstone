@@ -101,6 +101,15 @@ class UserController extends Controller
         return back()->with('status', 'User account deactivated successfully.');
     }
 
+    public function forceLogout(User $user): RedirectResponse
+    {
+        Gate::authorize('forceLogout', $user);
+
+        $this->userService->forceLogout($user);
+
+        return back()->with('status', 'All active sessions for this account have been ended.');
+    }
+
     public function resetPassword(ResetUserPasswordRequest $request, User $user): RedirectResponse
     {
         Gate::authorize('resetPassword', $user);

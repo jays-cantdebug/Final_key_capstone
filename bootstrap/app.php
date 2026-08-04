@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\EnsureSingleActiveSession;
 use App\Http\Middleware\EnsureUserHasRole;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '127.0.0.1');
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
+            'single-session' => EnsureSingleActiveSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

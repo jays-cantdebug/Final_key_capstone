@@ -100,6 +100,14 @@ class RoleGatingTest extends TestCase
         $this->assertTrue($onlyActivePsychometrician->fresh()->is_active);
     }
 
+    public function test_guidance_counselor_cannot_force_logout_a_user(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $target = $this->psychometrician();
+
+        $this->actingAs($counselor)->patch(route('users.force-logout', $target))->assertForbidden();
+    }
+
     public function test_a_psychometrician_can_be_deactivated_when_another_remains_active(): void
     {
         $toDeactivate = $this->psychometrician();

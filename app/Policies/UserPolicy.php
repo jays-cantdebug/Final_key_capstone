@@ -63,6 +63,17 @@ class UserPolicy
     }
 
     /**
+     * Determine whether the user can end the given user account's active
+     * sessions. Unlike deactivate(), this has no Account Recovery Safety
+     * Net restriction — it's just a session reset, not a lockout, so it's
+     * always fully recoverable by logging back in.
+     */
+    public function forceLogout(User $user, User $target): bool
+    {
+        return $user->hasRole('psychometrician');
+    }
+
+    /**
      * Determine whether the user can deactivate the given user account.
      *
      * Enforces the Account Recovery Safety Net: a user cannot deactivate

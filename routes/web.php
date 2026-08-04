@@ -34,7 +34,7 @@ Route::get('/', function () {
         : redirect()->route('login');
 })->name('home');
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'single-session'])->group(function (): void {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/psychometrician/dashboard', [DashboardController::class, 'psychometrician'])
@@ -77,6 +77,7 @@ Route::middleware('auth')->group(function (): void {
         Route::patch('/users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
         Route::patch('/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
         Route::patch('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
+        Route::patch('/users/{user}/force-logout', [UserController::class, 'forceLogout'])->name('users.force-logout');
 
         Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');

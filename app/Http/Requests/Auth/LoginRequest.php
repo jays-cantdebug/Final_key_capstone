@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
+use App\Services\Auth\ActiveSessionGuard;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -35,17 +37,35 @@ class LoginRequest extends FormRequest
     /**
      * Attempt to authenticate the request's credentials.
      *
+     * Credentials are validated *without* logging in first (`Auth::validate()`,
+     * not `Auth::attempt()`), so a correct-password-but-already-logged-in-
+     * elsewhere attempt can be rejected before any session is ever
+     * established for it — `Auth::attempt()` logs the user in as a side
+     * effect of returning `true`, which would be too late to cleanly
+     * undo. `is_active` stays folded into the same credentials array
+     * Auth::validate() checks, so a deactivated account still fails at
+     * this exact point with the exact same generic message as a wrong
+     * password — that anti-enumeration property is unchanged.
+     *
+     * The single-active-session check only runs *after* credentials are
+     * confirmed correct, so the distinct "already logged in elsewhere"
+     * message is only ever shown to someone who has already proven they
+     * know the account's password — it can't be used to probe whether an
+     * email/password pair is valid.
+     *
      * @throws ValidationException
      */
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt([
+        $credentials = [
             'email' => $this->string('email')->toString(),
             'password' => $this->string('password')->toString(),
             'is_active' => true,
-        ], $this->boolean('remember'))) {
+        ];
+
+        if (! Auth::validate($credentials)) {
             RateLimiter::hit($this->throttleKey());
 
             // Always attached to `password`, never `email` — whether the
@@ -57,6 +77,20 @@ class LoginRequest extends FormRequest
                 'password' => trans('auth.failed'),
             ]);
         }
+
+        /** @var User $user */
+        $user = User::query()->where('email', $credentials['email'])->firstOrFail();
+
+        if (app(ActiveSessionGuard::class)->hasActiveSession($user)) {
+            // Not a credential-guessing attempt — the password was correct
+            // — so this deliberately does not count against the rate
+            // limiter the way a wrong password does.
+            throw ValidationException::withMessages([
+                'password' => 'This account is already logged in elsewhere. Please log out from the other device first.',
+            ]);
+        }
+
+        Auth::login($user, $this->boolean('remember'));
 
         RateLimiter::clear($this->throttleKey());
     }

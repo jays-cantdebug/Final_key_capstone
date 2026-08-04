@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Exceptions\UserManagementGuardException;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\Auth\ActiveSessionGuard;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Hash;
@@ -18,8 +19,10 @@ use Illuminate\Support\Facades\Hash;
  */
 class UserManagementService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
+    public function __construct(
+        private readonly DatabaseManager $database,
+        private readonly ActiveSessionGuard $activeSessionGuard,
+    ) {
     }
 
     /**
@@ -93,6 +96,16 @@ class UserManagementService
 
             return $user->refresh();
         });
+    }
+
+    /**
+     * End every active session this user has, anywhere — the recovery
+     * path for single-session enforcement when a locked-out user can't
+     * wait for their prior session to expire on its own.
+     */
+    public function forceLogout(User $user): void
+    {
+        $this->activeSessionGuard->forceLogout($user);
     }
 
     public function resetPassword(User $user, string $password): User
