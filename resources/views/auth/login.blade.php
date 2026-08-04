@@ -1,9 +1,11 @@
 <x-login-layout>
-    <div class="grid items-center gap-10 lg:grid-cols-2">
+    <div class="grid items-center gap-10 lg:grid-cols-[1.4fr_1fr]">
         <div class="text-center lg:text-left">
             <x-application-logo class="mb-6 inline-block h-40 w-40" />
-            <h1 class="text-3xl font-bold uppercase leading-tight tracking-wide text-white sm:text-4xl lg:text-5xl">
-                Web-Based Student Depression, Anxiety and Stress Assessment
+            <h1 class="text-3xl font-bold uppercase leading-tight tracking-wide text-white sm:text-4xl lg:text-3xl xl:text-5xl">
+                <span class="block">Student</span>
+                <span class="block">Depression, Anxiety</span>
+                <span class="block">and Stress Assessment</span>
             </h1>
             <p class="mt-6 text-lg font-semibold text-white/90">{{ app(\App\Services\SystemSettingService::class)->schoolName() }}</p>
             <p class="mt-1 text-sm uppercase tracking-[0.3em] text-white/60">Well-being System</p>
