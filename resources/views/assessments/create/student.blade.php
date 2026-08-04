@@ -8,10 +8,6 @@
 
     @include('assessments.create._steps', ['currentStep' => 1])
 
-    @if ($errors->any())
-        <x-alert type="error" class="mb-6">{{ $errors->first() }}</x-alert>
-    @endif
-
     <x-card>
         <p class="text-sm text-slate-600">Every assessment begins with the student's information for this encounter.</p>
 
