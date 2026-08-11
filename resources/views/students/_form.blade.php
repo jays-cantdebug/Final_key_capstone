@@ -7,8 +7,8 @@
     @if ($student)
         <div>
             <x-input-label for="student_number" :value="__('Student Number')" />
-            <x-text-input id="student_number" type="text" class="mt-1 block w-full bg-slate-50" :value="$student->student_number" disabled />
-            <p class="mt-1 text-xs text-slate-500">System-generated — cannot be edited.</p>
+            <x-text-input id="student_number" type="text" class="mt-1 block w-full bg-slate-50 dark:bg-slate-800" :value="$student->student_number" disabled />
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">System-generated — cannot be edited.</p>
         </div>
     @endif
 

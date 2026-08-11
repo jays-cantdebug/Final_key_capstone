@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div>
             <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Settings</p>
-            <h2 class="text-2xl font-semibold text-body">System Settings</h2>
+            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">System Settings</h2>
         </div>
     </x-slot>
 
@@ -13,17 +13,17 @@
     @endif
 
     <x-card class="mb-6">
-        <h3 class="text-lg font-semibold text-body">Active Questionnaire</h3>
-        <p class="mt-1 text-sm text-slate-600">The active questionnaire version is managed in Questionnaire Management, not here, to avoid two conflicting sources of truth.</p>
+        <h3 class="text-lg font-semibold text-body dark:text-slate-100">Active Questionnaire</h3>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">The active questionnaire version is managed in Questionnaire Management, not here, to avoid two conflicting sources of truth.</p>
 
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-lg bg-slate-50 p-4">
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-lg bg-slate-50 dark:bg-slate-800 p-4">
             @if ($activeQuestionnaireVersion)
                 <div>
-                    <p class="text-sm font-medium text-body">{{ $activeQuestionnaireVersion->questionnaire->title }} v{{ $activeQuestionnaireVersion->version_number }}</p>
-                    <p class="text-xs text-slate-500">Effective {{ $activeQuestionnaireVersion->effective_date->format('M d, Y') }}</p>
+                    <p class="text-sm font-medium text-body dark:text-slate-100">{{ $activeQuestionnaireVersion->questionnaire->title }} v{{ $activeQuestionnaireVersion->version_number }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Effective {{ $activeQuestionnaireVersion->effective_date->format('M d, Y') }}</p>
                 </div>
             @else
-                <p class="text-sm text-slate-500">No questionnaire version is currently active.</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">No questionnaire version is currently active.</p>
             @endif
             <x-secondary-button :href="route('questionnaires.index')">
                 Manage in Questionnaire Management
@@ -56,14 +56,14 @@
                             <option value="{{ $availability }}" @selected(old('assessment_availability', $settings->get(\App\Models\SystemSetting::KEY_ASSESSMENT_AVAILABILITY)?->value) === $availability)>{{ $availability }}</option>
                         @endforeach
                     </x-select>
-                    <p class="mt-1 text-xs text-slate-500">Informational only in this phase &mdash; does not currently restrict the New Assessment workflow.</p>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Informational only in this phase &mdash; does not currently restrict the New Assessment workflow.</p>
                     <x-input-error class="mt-2" :messages="$errors->get('assessment_availability')" />
                 </div>
 
                 <div class="sm:col-span-2">
                     <x-input-label for="data_retention_period" :value="__('Data Retention Period')" />
                     <x-text-input id="data_retention_period" name="data_retention_period" type="text" class="mt-1 block w-full" :value="old('data_retention_period', $settings->get(\App\Models\SystemSetting::KEY_DATA_RETENTION_PERIOD)?->value)" required />
-                    <p class="mt-1 text-xs text-slate-500">Documented retention policy for RA 10173 compliance (informational only).</p>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Documented retention policy for RA 10173 compliance (informational only).</p>
                     <x-input-error class="mt-2" :messages="$errors->get('data_retention_period')" />
                 </div>
             </div>

@@ -45,7 +45,7 @@
         <label class="inline-flex items-center gap-2">
             <input type="hidden" name="is_required" value="0" />
             <x-checkbox name="is_required" value="1" :checked="$isRequiredChecked" />
-            <span class="text-sm text-slate-700">{{ __('This question is required') }}</span>
+            <span class="text-sm text-slate-700 dark:text-slate-300">{{ __('This question is required') }}</span>
         </label>
         <x-input-error class="mt-2" :messages="$errors->get('is_required')" />
     </div>

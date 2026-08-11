@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Questionnaire Management</p>
-                <h2 class="text-2xl font-semibold text-body">Questionnaires</h2>
+                <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Questionnaires</h2>
             </div>
             <x-primary-button :href="route('questionnaires.create')">
                 Add questionnaire
@@ -34,7 +34,7 @@
 
     <x-table class="questionnaires-table">
         <x-slot:header>
-            <p class="text-sm text-slate-600">Manage assessment questionnaire templates and their released versions.</p>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Manage assessment questionnaire templates and their released versions.</p>
         </x-slot:header>
         <x-slot:head>
             <x-table.th>Title</x-table.th>
@@ -46,7 +46,7 @@
 
         @forelse ($questionnaires as $questionnaire)
             <tr>
-                <x-table.td class="font-medium text-body">{{ $questionnaire->title }}</x-table.td>
+                <x-table.td class="font-medium text-body dark:text-slate-100">{{ $questionnaire->title }}</x-table.td>
                 <x-table.td>{{ \Illuminate\Support\Str::limit($questionnaire->description, 60) }}</x-table.td>
                 <x-table.td>{{ $questionnaire->versions_count }}</x-table.td>
                 <x-table.td>
@@ -54,8 +54,8 @@
                 </x-table.td>
                 <x-table.td align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
-                        <a href="{{ route('questionnaires.show', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
-                        <a href="{{ route('questionnaires.edit', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                        <a href="{{ route('questionnaires.show', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
+                        <a href="{{ route('questionnaires.edit', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">Edit</a>
                         <form id="delete-questionnaire-form-{{ $questionnaire->id }}" method="POST" action="{{ route('questionnaires.destroy', $questionnaire) }}" class="hidden">
                             @csrf
                             @method('DELETE')

@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div>
             <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Student Management</p>
-            <h2 class="text-2xl font-semibold text-body">Students</h2>
+            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Students</h2>
         </div>
     </x-slot>
 
@@ -13,7 +13,7 @@
     <x-table>
         <x-slot:header>
             <div class="flex w-full flex-wrap items-center justify-between gap-4">
-                <p class="text-sm text-slate-600">Every student record originates from New Assessment Step 1 — students cannot be registered here directly.</p>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Every student record originates from New Assessment Step 1 — students cannot be registered here directly.</p>
 
                 <form method="GET" action="{{ route('students.index') }}" class="flex flex-wrap items-end gap-2">
                     <div>
@@ -39,21 +39,21 @@
 
         @forelse ($students as $student)
             <tr>
-                <x-table.td class="font-medium text-body">{{ $student->student_number }}</x-table.td>
+                <x-table.td class="font-medium text-body dark:text-slate-100">{{ $student->student_number }}</x-table.td>
                 <x-table.td>
-                    <div class="font-medium text-body">{{ $student->full_name }}</div>
-                    <div class="text-xs text-slate-500">{{ $student->section?->section_name ?? 'No section' }}</div>
+                    <div class="font-medium text-body dark:text-slate-100">{{ $student->full_name }}</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">{{ $student->section?->section_name ?? 'No section' }}</div>
                 </x-table.td>
                 <x-table.td>
                     <div>{{ $student->course?->course_code ?? 'N/A' }}</div>
-                    <div class="text-xs text-slate-500">{{ $student->yearLevel?->label ?? 'N/A' }}</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">{{ $student->yearLevel?->label ?? 'N/A' }}</div>
                 </x-table.td>
                 <x-table.td>{{ $student->gender }}</x-table.td>
                 <x-table.td align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
-                        <a href="{{ route('students.show', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
-                        <a href="{{ route('assessments.create.retake', $student) }}" class="rounded-md border border-primary/30 px-3 py-1.5 font-medium text-primary transition hover:bg-tint">Take Again</a>
-                        <a href="{{ route('students.edit', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                        <a href="{{ route('students.show', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
+                        <a href="{{ route('assessments.create.retake', $student) }}" class="rounded-md border border-primary/30 px-3 py-1.5 font-medium text-primary transition hover:bg-tint dark:border-primary-soft/30 dark:text-primary-soft dark:hover:bg-primary-soft/15">Take Again</a>
+                        <a href="{{ route('students.edit', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">Edit</a>
                         <form id="delete-student-form-{{ $student->id }}" method="POST" action="{{ route('students.destroy', $student) }}" class="hidden">
                             @csrf
                             @method('DELETE')

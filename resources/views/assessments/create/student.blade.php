@@ -2,14 +2,14 @@
     <x-slot name="header">
         <div>
             <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">New Assessment</p>
-            <h2 class="text-2xl font-semibold text-body">Step 1: Student Information</h2>
+            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Step 1: Student Information</h2>
         </div>
     </x-slot>
 
     @include('assessments.create._steps', ['currentStep' => 1])
 
     <x-card>
-        <p class="text-sm text-slate-600">Every assessment begins with the student's information for this encounter.</p>
+        <p class="text-sm text-slate-600 dark:text-slate-400">Every assessment begins with the student's information for this encounter.</p>
 
         <form
             method="POST"
@@ -89,7 +89,7 @@
             <div class="relative mt-6" x-data="{ show: {{ $errors->has('privacy_consent') ? 'true' : 'false' }} }">
                 <label class="flex items-start gap-2">
                     <x-checkbox name="privacy_consent" value="1" class="mt-1" :invalid="$errors->has('privacy_consent')" @change="show = false" />
-                    <span class="text-sm text-slate-700">{{ __('The student has acknowledged the data privacy consent notice for this assessment.') }}</span>
+                    <span class="text-sm text-slate-700 dark:text-slate-300">{{ __('The student has acknowledged the data privacy consent notice for this assessment.') }}</span>
                 </label>
                 <x-field-error-tooltip :message="$errors->first('privacy_consent')" />
             </div>

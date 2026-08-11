@@ -5,13 +5,13 @@
         :type="show ? 'text' : 'password'"
         @disabled($disabled)
         @if ($invalid) data-field-invalid @endif
-        {{ $attributes->merge(['class' => 'block w-full rounded-md pr-10 shadow-sm ' . ($invalid ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary')]) }}
+        {{ $attributes->merge(['class' => 'block w-full rounded-md pr-10 shadow-sm dark:bg-slate-900 dark:text-slate-100 ' . ($invalid ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-400 dark:focus:border-red-400 dark:focus:ring-red-400' : 'border-gray-300 focus:border-primary focus:ring-primary dark:border-slate-600 dark:focus:border-primary-soft dark:focus:ring-primary-soft')]) }}
     >
     <button
         type="button"
         @click="show = ! show"
         tabindex="-1"
-        class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 transition hover:text-slate-600"
+        class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 transition hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
         :aria-label="show ? 'Hide password' : 'Show password'"
     >
         <svg x-show="! show" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

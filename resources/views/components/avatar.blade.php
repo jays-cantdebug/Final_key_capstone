@@ -17,7 +17,7 @@
     >
 @else
     <div
-        {{ $attributes->merge(['class' => "$sizeClasses rounded-full bg-primary/15 text-primary font-semibold flex items-center justify-center"]) }}
+        {{ $attributes->merge(['class' => "$sizeClasses rounded-full bg-primary/15 text-primary font-semibold flex items-center justify-center dark:bg-primary-soft/15 dark:text-primary-soft"]) }}
         aria-hidden="true"
     >
         {{ $user->initials() }}

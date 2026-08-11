@@ -23,7 +23,7 @@
                 <option value="{{ $status }}" @selected(old('status', $course?->status ?? 'Active') === $status)>{{ $status }}</option>
             @endforeach
         </x-select>
-        <p class="mt-1 text-xs text-slate-500">Only Active courses appear in the New Assessment / Student Information dropdowns.</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Only Active courses appear in the New Assessment / Student Information dropdowns.</p>
         <x-input-error class="mt-2" :messages="$errors->get('status')" />
     </div>
 </div>

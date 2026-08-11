@@ -12,15 +12,23 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
+        <script>
+            (function () {
+                // Light mode is the unconditional default; dark mode only
+                // activates once the user has explicitly toggled it.
+                document.documentElement.classList.toggle('dark', localStorage.getItem('theme') === 'dark');
+            })();
+        </script>
+
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="overflow-x-hidden font-sans antialiased text-body bg-[linear-gradient(180deg,_#FBFAF7_0%,_#F8F6F0_100%)]">
+    <body class="overflow-x-hidden font-sans antialiased text-body bg-[linear-gradient(180deg,_#FBFAF7_0%,_#F8F6F0_100%)] dark:bg-none dark:bg-slate-900 dark:text-slate-100">
         <div x-data="{ open: false }" class="min-h-screen">
             @include('layouts.navigation')
 
             <div class="md:pl-20 lg:pl-72">
                 @isset($header)
-                    <header class="border-b border-slate-200/80 bg-white/80 backdrop-blur">
+                    <header class="border-b border-slate-200/80 bg-white/80 backdrop-blur dark:border-slate-700/80 dark:bg-slate-800/80">
                         <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                             {{ $header }}
                         </div>

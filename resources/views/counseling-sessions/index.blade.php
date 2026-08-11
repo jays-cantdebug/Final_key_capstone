@@ -12,7 +12,7 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Counseling Sessions</p>
-                <h2 class="text-2xl font-semibold text-body">Sessions</h2>
+                <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Sessions</h2>
             </div>
             <div class="flex flex-wrap gap-2">
                 <x-secondary-button :href="route('reports.counseling.print', ['search' => $search])" target="_blank">
@@ -58,16 +58,16 @@
 
         @forelse ($sessions as $session)
             <tr>
-                <x-table.td class="font-medium text-body">{{ $session->student->full_name }}</x-table.td>
+                <x-table.td class="font-medium text-body dark:text-slate-100">{{ $session->student->full_name }}</x-table.td>
                 <x-table.td>{{ $session->counselor->name }}</x-table.td>
                 <x-table.td>{{ $session->session_datetime->format('M d, Y g:i A') }}</x-table.td>
                 <x-table.td><x-badge :color="$statusColors[$session->session_status] ?? 'slate'">{{ $session->session_status }}</x-badge></x-table.td>
                 <x-table.td>{{ $session->confidentiality_level }}</x-table.td>
                 <x-table.td align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
-                        <a href="{{ route('counseling-sessions.show', $session) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                        <a href="{{ route('counseling-sessions.show', $session) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                         @can('update', $session)
-                            <a href="{{ route('counseling-sessions.edit', $session) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                            <a href="{{ route('counseling-sessions.edit', $session) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">Edit</a>
                         @endcan
                         @can('delete', $session)
                             <form id="delete-session-form-{{ $session->id }}" method="POST" action="{{ route('counseling-sessions.destroy', $session) }}" class="hidden">

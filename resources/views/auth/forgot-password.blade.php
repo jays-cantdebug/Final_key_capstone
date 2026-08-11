@@ -2,10 +2,10 @@
     <div class="mx-auto w-full max-w-md">
         <x-card>
             <x-slot:header>
-                <h2 class="text-xl font-semibold text-body">Forgot your password?</h2>
+                <h2 class="text-xl font-semibold text-body dark:text-slate-100">Forgot your password?</h2>
             </x-slot:header>
 
-            <div class="mb-4 text-sm text-slate-600">
+            <div class="mb-4 text-sm text-slate-600 dark:text-slate-400">
                 {{ __('No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
             </div>
 

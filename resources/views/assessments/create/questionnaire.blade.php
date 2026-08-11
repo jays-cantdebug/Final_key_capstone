@@ -6,7 +6,7 @@
     <x-slot name="header">
         <div>
             <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">{{ $isRetake ? 'Take Again' : 'New Assessment' }} &mdash; {{ $student->full_name }}</p>
-            <h2 class="text-2xl font-semibold text-body">{{ $isRetake ? 'Retake: Questionnaire' : 'Step 2: Questionnaire' }}</h2>
+            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">{{ $isRetake ? 'Retake: Questionnaire' : 'Step 2: Questionnaire' }}</h2>
         </div>
     </x-slot>
 
@@ -94,6 +94,24 @@
             animation: loading-sweep 1.6s ease-in-out infinite;
         }
 
+        /* Dark-mode equivalents (softened primary-soft accent on slate panels). */
+        .dark .loading-halo {
+            background: radial-gradient(circle, rgba(78, 155, 113, 0.28) 0%, rgba(78, 155, 113, 0) 70%);
+        }
+        .dark .loading-badge {
+            background: linear-gradient(150deg, #1E293B 0%, #16302A 100%);
+            box-shadow: inset 0 0 0 1px rgba(78, 155, 113, 0.25);
+        }
+        .dark .loading-pulse-line {
+            stroke: #4E9B71;
+        }
+        .dark .loading-shimmer-track {
+            background: #334155;
+        }
+        .dark .loading-shimmer-fill {
+            background: linear-gradient(90deg, #334155, #4E9B71, #334155);
+        }
+
         @keyframes loading-breathe {
             0% { transform: scale(0.7); opacity: 0.9; }
             70% { transform: scale(1.55); opacity: 0; }
@@ -145,7 +163,7 @@
             class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/35 px-4 py-8 backdrop-blur-sm"
             style="display: none;"
         >
-            <div class="w-full max-w-sm rounded-[20px] bg-white px-10 pb-4 pt-5 text-center shadow-[0_24px_48px_-16px_rgba(31,107,58,0.28),0_8px_20px_-8px_rgba(44,44,42,0.18)]">
+            <div class="w-full max-w-sm rounded-[20px] bg-white dark:bg-slate-800 px-10 pb-4 pt-5 text-center shadow-[0_24px_48px_-16px_rgba(31,107,58,0.28),0_8px_20px_-8px_rgba(44,44,42,0.18)]">
                 <div class="loading-badge-wrap mx-auto mb-2">
                     <span class="loading-halo"></span>
                     <span class="loading-halo loading-halo--delay"></span>
@@ -155,10 +173,10 @@
                         </svg>
                     </div>
                 </div>
-                <p class="text-lg font-semibold tracking-tight text-body">
+                <p class="text-lg font-semibold tracking-tight text-body dark:text-slate-100">
                     Analyzing responses<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span>
                 </p>
-                <p class="mt-1 text-sm leading-relaxed text-slate-500">This may take a few seconds while the AI classifies the results.</p>
+                <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">This may take a few seconds while the AI classifies the results.</p>
                 <div class="loading-shimmer-track mt-2">
                     <div class="loading-shimmer-fill"></div>
                 </div>
@@ -180,7 +198,7 @@
                 <div class="relative mt-4" x-data="{ show: {{ $errors->has('privacy_consent') ? 'true' : 'false' }} }">
                     <label class="flex items-start gap-2">
                         <x-checkbox name="privacy_consent" value="1" class="mt-1" :invalid="$errors->has('privacy_consent')" @change="show = false" />
-                        <span class="text-sm text-slate-700">{{ __('The student has acknowledged the data privacy consent notice for this assessment.') }}</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-300">{{ __('The student has acknowledged the data privacy consent notice for this assessment.') }}</span>
                     </label>
                     <x-field-error-tooltip :message="$errors->first('privacy_consent')" />
                 </div>

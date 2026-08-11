@@ -2,7 +2,7 @@
     <div class="mx-auto w-full max-w-md">
         <x-card>
             <x-slot:header>
-                <h2 class="text-xl font-semibold text-body">Reset Password</h2>
+                <h2 class="text-xl font-semibold text-body dark:text-slate-100">Reset Password</h2>
             </x-slot:header>
 
             <form method="POST" action="{{ route('password.store') }}">

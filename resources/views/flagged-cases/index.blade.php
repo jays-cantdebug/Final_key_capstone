@@ -12,7 +12,7 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Flagged Students</p>
-                <h2 class="text-2xl font-semibold text-body">Student Flagged</h2>
+                <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Student Flagged</h2>
             </div>
             @if ($canGenerateReport)
                 <div class="flex flex-wrap gap-2">
@@ -31,7 +31,7 @@
         @foreach ($tabs as $key => $label)
             <a
                 href="{{ route('flagged-cases.index', array_merge(array_diff_key($filters, ['tab' => null]), ['tab' => $key])) }}"
-                class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === $key ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700' }}"
+                class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === $key ? 'border-primary text-primary dark:border-primary-soft dark:text-primary-soft' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200' }}"
             >
                 {{ $label }}
             </a>
@@ -98,9 +98,9 @@
                 $secondaryCount = $assessment->secondaryFlagCount();
             @endphp
             <tr>
-                <x-table.td class="!px-3 font-medium text-body">
+                <x-table.td class="!px-3 font-medium text-body dark:text-slate-100">
                     {{ $assessment->student->full_name }}
-                    <div class="text-xs font-normal text-slate-500">{{ $assessment->student->student_number }} &mdash; {{ $assessment->student->yearLevel?->label }} / {{ $assessment->student->section?->section_name }}</div>
+                    <div class="text-xs font-normal text-slate-500 dark:text-slate-400">{{ $assessment->student->student_number }} &mdash; {{ $assessment->student->yearLevel?->label }} / {{ $assessment->student->section?->section_name }}</div>
                 </x-table.td>
                 <x-table.td class="!px-3">{{ $assessment->student->course?->course_code }}</x-table.td>
                 <x-table.td class="!px-3"><x-severity-badge :level="$assessment->result?->stress_level" class="!px-2 !py-0.5" /></x-table.td>
@@ -115,7 +115,7 @@
                 </x-table.td>
                 <x-table.td class="!px-3">{{ $assessment->submitted_at->format('M d, Y') }}</x-table.td>
                 <x-table.td class="!px-3" align="right">
-                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                 </x-table.td>
             </tr>
         @empty

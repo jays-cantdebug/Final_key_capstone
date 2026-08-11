@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div>
             <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Notifications</p>
-            <h2 class="text-2xl font-semibold text-body">{{ $showArchived ? 'Archived Notifications' : 'Notifications' }}</h2>
+            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">{{ $showArchived ? 'Archived Notifications' : 'Notifications' }}</h2>
         </div>
     </x-slot>
 
@@ -12,9 +12,9 @@
 
     <div class="mb-4 text-sm">
         @if ($showArchived)
-            <a href="{{ route('notifications.index') }}" class="font-semibold text-primary hover:underline">&larr; Back to Notifications</a>
+            <a href="{{ route('notifications.index') }}" class="font-semibold text-primary hover:underline dark:text-primary-soft">&larr; Back to Notifications</a>
         @else
-            <a href="{{ route('notifications.index', ['archived' => 1]) }}" class="font-semibold text-primary hover:underline">View Archived</a>
+            <a href="{{ route('notifications.index', ['archived' => 1]) }}" class="font-semibold text-primary hover:underline dark:text-primary-soft">View Archived</a>
         @endif
     </div>
 
@@ -23,22 +23,22 @@
             @php
                 $student = $notification->assessment->student;
             @endphp
-            <div class="rounded-lg border {{ $notification->is_read ? 'border-slate-200 bg-white' : 'border-primary/30 bg-tint' }} p-6 shadow-sm">
+            <div class="rounded-lg border {{ $notification->is_read ? 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800' : 'border-primary/30 bg-tint dark:border-primary-soft/30 dark:bg-primary-soft/10' }} p-6 shadow-sm">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <div class="flex items-center gap-2">
                             @unless ($notification->is_read)
-                                <span class="h-2 w-2 rounded-full bg-primary"></span>
+                                <span class="h-2 w-2 rounded-full bg-primary dark:bg-primary-soft"></span>
                             @endunless
-                            <p class="text-sm font-semibold text-body">{{ $student->full_name }}</p>
+                            <p class="text-sm font-semibold text-body dark:text-slate-100">{{ $student->full_name }}</p>
                         </div>
-                        <p class="mt-1 text-xs text-slate-500">Student #: {{ $student->student_number }}</p>
-                        <p class="mt-1 text-xs text-slate-500">Assessment Date: {{ $notification->assessment->submitted_at->format('M d, Y g:i A') }}</p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Student #: {{ $student->student_number }}</p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Assessment Date: {{ $notification->assessment->submitted_at->format('M d, Y g:i A') }}</p>
                     </div>
                     <x-flag-badge :type="$notification->notification_type" />
                 </div>
 
-                <p class="mt-4 text-sm text-slate-600">{{ $notification->message }}</p>
+                <p class="mt-4 text-sm text-slate-600 dark:text-slate-400">{{ $notification->message }}</p>
 
                 <div class="mt-4 flex items-center gap-3">
                     <x-primary-button :href="route('notifications.view', $notification)">
@@ -81,7 +81,7 @@
                 </div>
             </div>
         @empty
-            <div class="rounded-lg border border-slate-200 bg-white p-12 text-center text-sm text-slate-500 shadow-sm">
+            <div class="rounded-lg border border-slate-200 bg-white dark:bg-slate-800 p-12 text-center text-sm text-slate-500 dark:text-slate-400 shadow-sm">
                 {{ $showArchived ? 'No archived notifications.' : 'No notifications yet.' }}
             </div>
         @endforelse

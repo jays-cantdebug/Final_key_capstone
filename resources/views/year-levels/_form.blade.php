@@ -14,7 +14,7 @@
     <div>
         <x-input-label for="display_order" :value="__('Display Order')" />
         <x-text-input id="display_order" name="display_order" type="number" min="1" class="mt-1 block w-full" :value="old('display_order', $yearLevel?->display_order ?? $suggestedDisplayOrder)" required />
-        <p class="mt-1 text-xs text-slate-500">Controls sort order in dropdowns; must be unique.</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Controls sort order in dropdowns; must be unique.</p>
         <x-input-error class="mt-2" :messages="$errors->get('display_order')" />
     </div>
 
@@ -25,7 +25,7 @@
                 <option value="{{ $status }}" @selected(old('status', $yearLevel?->status ?? 'Active') === $status)>{{ $status }}</option>
             @endforeach
         </x-select>
-        <p class="mt-1 text-xs text-slate-500">Only Active year levels appear in the New Assessment / Student Information dropdowns.</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Only Active year levels appear in the New Assessment / Student Information dropdowns.</p>
         <x-input-error class="mt-2" :messages="$errors->get('status')" />
     </div>
 </div>

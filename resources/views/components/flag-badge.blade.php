@@ -20,6 +20,6 @@ $title = $secondaryCount > 0 ? "Also has {$secondaryCount} additional flag(s)" :
         {{ $slot }}
     </x-badge>
     @if ($secondaryCount > 0)
-        <span class="text-[10px] font-medium text-slate-500">+{{ $secondaryCount }} Notification</span>
+        <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400">+{{ $secondaryCount }} Notification</span>
     @endif
 </div>

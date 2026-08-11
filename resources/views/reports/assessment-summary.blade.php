@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Reports</p>
-                <h2 class="text-2xl font-semibold text-body">Assessment Summary Report</h2>
+                <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Assessment Summary Report</h2>
             </div>
             <div class="flex flex-wrap gap-2">
                 <x-secondary-button :href="route('reports.assessment-summary.print', ['course_id' => $courseId, 'year_level_id' => $yearLevelId, 'gender' => $gender, 'date_from' => $dateFrom, 'date_to' => $dateTo])" target="_blank">
@@ -76,7 +76,7 @@
             'Stress' => $stressBySeverity,
         ] as $conditionLabel => $conditionCounts)
             <x-card>
-                <h3 class="text-lg font-semibold text-body">{{ $conditionLabel }}</h3>
+                <h3 class="text-lg font-semibold text-body dark:text-slate-100">{{ $conditionLabel }}</h3>
 
                 <x-severity-bar-chart :counts="$conditionCounts" class="mt-4" />
 
@@ -89,7 +89,7 @@
                     @foreach ($conditionCounts as $severity => $count)
                         <tr>
                             <x-table.td><x-severity-badge :level="$severity" /></x-table.td>
-                            <x-table.td class="font-medium text-body">{{ $count }}</x-table.td>
+                            <x-table.td class="font-medium text-body dark:text-slate-100">{{ $count }}</x-table.td>
                         </tr>
                     @endforeach
                 </x-table>

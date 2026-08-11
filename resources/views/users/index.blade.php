@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">User Management</p>
-                <h2 class="text-2xl font-semibold text-body">Users</h2>
+                <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Users</h2>
             </div>
             <x-primary-button :href="route('users.create')">
                 Add user
@@ -46,7 +46,7 @@
 
         @forelse ($users as $user)
             <tr>
-                <x-table.td class="font-medium text-body">{{ $user->name }}</x-table.td>
+                <x-table.td class="font-medium text-body dark:text-slate-100">{{ $user->name }}</x-table.td>
                 <x-table.td>{{ $user->email }}</x-table.td>
                 <x-table.td>{{ $user->role?->display_name }}</x-table.td>
                 <x-table.td>
@@ -56,8 +56,8 @@
                 </x-table.td>
                 <x-table.td align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
-                        <a href="{{ route('users.show', $user) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
-                        <a href="{{ route('users.edit', $user) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                        <a href="{{ route('users.show', $user) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
+                        <a href="{{ route('users.edit', $user) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">Edit</a>
                         @if ($user->is_active)
                             @can('deactivate', $user)
                                 <form id="deactivate-user-form-{{ $user->id }}" method="POST" action="{{ route('users.deactivate', $user) }}" class="hidden">
@@ -79,7 +79,7 @@
                                 <button
                                     type="button"
                                     @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Activate this user account?', message: 'They will regain the ability to log in.', confirmLabel: 'Activate', variant: 'primary', formId: 'activate-user-form-{{ $user->id }}' })"
-                                    class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50"
+                                    class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
                                 >Activate</button>
                             @endcan
                         @endif

@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div>
             <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Audit Logs</p>
-            <h2 class="text-2xl font-semibold text-body">Audit Logs</h2>
+            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Audit Logs</h2>
         </div>
     </x-slot>
 
@@ -61,10 +61,10 @@
                 <x-table.td>{{ $log->created_at->format('M d, Y g:i A') }}</x-table.td>
                 <x-table.td>{{ $log->user?->name ?? 'System' }}</x-table.td>
                 <x-table.td>{{ $log->module }}</x-table.td>
-                <x-table.td class="font-medium text-body">{{ $log->action }}</x-table.td>
+                <x-table.td class="font-medium text-body dark:text-slate-100">{{ $log->action }}</x-table.td>
                 <x-table.td>{{ $log->record_id ?? '—' }}</x-table.td>
                 <x-table.td align="right">
-                    <a href="{{ route('audit-logs.show', $log) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                    <a href="{{ route('audit-logs.show', $log) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                 </x-table.td>
             </tr>
         @empty

@@ -51,7 +51,7 @@
                 <option value="{{ $level }}" @selected(old('confidentiality_level', $session?->confidentiality_level ?? 'Standard') === $level)>{{ $level }}</option>
             @endforeach
         </x-select>
-        <p class="mt-1 text-xs text-slate-500">Restricted notes are visible only to you.</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Restricted notes are visible only to you.</p>
         <x-input-error class="mt-2" :messages="$errors->get('confidentiality_level')" />
     </div>
 
@@ -59,7 +59,7 @@
         <label class="inline-flex items-center gap-2">
             <input type="hidden" name="follow_up_required" value="0" />
             <x-checkbox name="follow_up_required" value="1" x-model="followUpRequired" />
-            <span class="text-sm text-slate-700">{{ __('Follow-up required') }}</span>
+            <span class="text-sm text-slate-700 dark:text-slate-300">{{ __('Follow-up required') }}</span>
         </label>
         <x-input-error class="mt-2" :messages="$errors->get('follow_up_required')" />
 

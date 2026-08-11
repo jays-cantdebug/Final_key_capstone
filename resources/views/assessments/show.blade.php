@@ -13,7 +13,7 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Assessment Result</p>
-                <h2 class="text-2xl font-semibold text-body">{{ $assessment->student->full_name }}</h2>
+                <h2 class="text-2xl font-semibold text-body dark:text-slate-100">{{ $assessment->student->full_name }}</h2>
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 @if ($backToCounselingSession)
@@ -48,45 +48,45 @@
     <div @class(['grid gap-6', 'lg:grid-cols-[1.4fr_1fr]' => $feedback])>
         <div class="min-w-0 space-y-6">
             <x-card>
-                <h3 class="text-lg font-semibold text-body">Student Information</h3>
+                <h3 class="text-lg font-semibold text-body dark:text-slate-100">Student Information</h3>
                 <dl class="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Student Number</dt>
-                        <dd class="mt-1 text-sm font-medium text-body">{{ $assessment->student->student_number }}</dd>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Student Number</dt>
+                        <dd class="mt-1 text-sm font-medium text-body dark:text-slate-100">{{ $assessment->student->student_number }}</dd>
                     </div>
                     <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Gender</dt>
-                        <dd class="mt-1 text-sm font-medium text-body">{{ $assessment->student->gender }}</dd>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Gender</dt>
+                        <dd class="mt-1 text-sm font-medium text-body dark:text-slate-100">{{ $assessment->student->gender }}</dd>
                     </div>
                     <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Course</dt>
-                        <dd class="mt-1 text-sm font-medium text-body">{{ $assessment->student->course?->course_code }}</dd>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Course</dt>
+                        <dd class="mt-1 text-sm font-medium text-body dark:text-slate-100">{{ $assessment->student->course?->course_code }}</dd>
                     </div>
                     <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Year Level / Section</dt>
-                        <dd class="mt-1 text-sm font-medium text-body">{{ $assessment->student->yearLevel?->label }} &mdash; {{ $assessment->student->section?->section_name }}</dd>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Year Level / Section</dt>
+                        <dd class="mt-1 text-sm font-medium text-body dark:text-slate-100">{{ $assessment->student->yearLevel?->label }} &mdash; {{ $assessment->student->section?->section_name }}</dd>
                     </div>
                     <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Assessment Date</dt>
-                        <dd class="mt-1 text-sm font-medium text-body">{{ $assessment->submitted_at->format('M d, Y g:i A') }}</dd>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Assessment Date</dt>
+                        <dd class="mt-1 text-sm font-medium text-body dark:text-slate-100">{{ $assessment->submitted_at->format('M d, Y g:i A') }}</dd>
                     </div>
                     <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Questionnaire Version</dt>
-                        <dd class="mt-1 text-sm font-medium text-body">{{ $assessment->questionnaireVersion->questionnaire->title }} v{{ $assessment->questionnaireVersion->version_number }}</dd>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Questionnaire Version</dt>
+                        <dd class="mt-1 text-sm font-medium text-body dark:text-slate-100">{{ $assessment->questionnaireVersion->questionnaire->title }} v{{ $assessment->questionnaireVersion->version_number }}</dd>
                     </div>
                 </dl>
             </x-card>
 
             <x-card>
                 <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-body">DASS-21 Scores</h3>
-                    <p class="text-xs text-slate-500">Classified by: {{ $assessment->result->ai_provider }}</p>
+                    <h3 class="text-lg font-semibold text-body dark:text-slate-100">DASS-21 Scores</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Classified by: {{ $assessment->result->ai_provider }}</p>
                 </div>
                 <div class="mt-4 grid gap-4 sm:grid-cols-3">
                     @foreach ($subscales as $subscale)
-                        <div class="rounded-lg bg-slate-50 p-4">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ $subscale['label'] }}</p>
-                            <p class="mt-2 text-2xl font-semibold text-body">{{ $subscale['score'] }}</p>
+                        <div class="rounded-lg bg-slate-50 dark:bg-slate-800 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{{ $subscale['label'] }}</p>
+                            <p class="mt-2 text-2xl font-semibold text-body dark:text-slate-100">{{ $subscale['score'] }}</p>
                             <x-severity-badge :level="$subscale['level']" class="mt-2" />
                         </div>
                     @endforeach
@@ -103,8 +103,8 @@
         @if ($feedback)
         <div class="min-w-0 space-y-6">
             <x-card>
-                <h3 class="text-lg font-semibold text-body">Prediction Feedback</h3>
-                <p class="mt-1 text-xs text-slate-500">The Psychometrician's review of this assessment's AI classification, recorded before saving. This does not change the scores or flags recorded above.</p>
+                <h3 class="text-lg font-semibold text-body dark:text-slate-100">Prediction Feedback</h3>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">The Psychometrician's review of this assessment's AI classification, recorded before saving. This does not change the scores or flags recorded above.</p>
 
                 <div class="mt-4">
                     @include('assessments._prediction-feedback-summary', ['feedback' => $feedback])
@@ -116,7 +116,7 @@
 
     <x-table class="mt-6">
         <x-slot:header>
-            <h3 class="text-lg font-semibold text-body">Student Responses</h3>
+            <h3 class="text-lg font-semibold text-body dark:text-slate-100">Student Responses</h3>
         </x-slot:header>
         <x-slot:head>
             <x-table.th>#</x-table.th>
@@ -130,7 +130,7 @@
                 <x-table.td>{{ $response->question->item_number }}</x-table.td>
                 <x-table.td class="!whitespace-normal">{{ $response->question->question_text }}</x-table.td>
                 <x-table.td>{{ $response->question->subscale }}</x-table.td>
-                <x-table.td class="font-semibold text-body">{{ $response->answer_value }}</x-table.td>
+                <x-table.td class="font-semibold text-body dark:text-slate-100">{{ $response->answer_value }}</x-table.td>
             </tr>
         @endforeach
     </x-table>

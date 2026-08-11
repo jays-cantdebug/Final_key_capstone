@@ -11,7 +11,7 @@
     @foreach ($tabs as $key => $tab)
         <a
             href="{{ $tab['route'] }}"
-            class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $active === $key ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700' }}"
+            class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $active === $key ? 'border-primary text-primary dark:border-primary-soft dark:text-primary-soft' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200' }}"
         >
             {{ $tab['label'] }}
         </a>

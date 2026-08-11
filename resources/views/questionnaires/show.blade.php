@@ -11,7 +11,7 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Questionnaire Management</p>
-                <h2 class="text-2xl font-semibold text-body">{{ $questionnaire->title }}</h2>
+                <h2 class="text-2xl font-semibold text-body dark:text-slate-100">{{ $questionnaire->title }}</h2>
             </div>
             <div class="flex flex-wrap gap-2">
                 <x-primary-button :href="route('questionnaires.edit', $questionnaire)">
@@ -34,10 +34,10 @@
 
     <x-card class="mb-6">
         <div class="flex items-start justify-between gap-4">
-            <p class="text-sm text-slate-500">{{ $questionnaire->description }}</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ $questionnaire->description }}</p>
             <div class="text-right">
                 <x-badge :color="$questionnaire->status === 'Active' ? 'green' : 'slate'">{{ $questionnaire->status }}</x-badge>
-                <p class="mt-1 max-w-[14rem] text-[11px] leading-snug text-slate-500">Template status &mdash; controls whether this questionnaire can be selected at all.</p>
+                <p class="mt-1 max-w-[14rem] text-[11px] leading-snug text-slate-500 dark:text-slate-400">Template status &mdash; controls whether this questionnaire can be selected at all.</p>
             </div>
         </div>
     </x-card>
@@ -45,8 +45,8 @@
     <x-table>
         <x-slot:header>
             <div>
-                <h3 class="text-lg font-semibold text-body">Questionnaire Versions</h3>
-                <p class="mt-1 text-xs text-slate-500">Version status &mdash; controls which version is currently used for new assessments. Independent from the template status above.</p>
+                <h3 class="text-lg font-semibold text-body dark:text-slate-100">Questionnaire Versions</h3>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Version status &mdash; controls which version is currently used for new assessments. Independent from the template status above.</p>
             </div>
             <x-primary-button :href="route('questionnaires.versions.create', $questionnaire)">
                 Create version
@@ -62,21 +62,21 @@
 
         @forelse ($versions as $version)
             <tr>
-                <x-table.td class="font-medium text-body">v{{ $version->version_number }}</x-table.td>
+                <x-table.td class="font-medium text-body dark:text-slate-100">v{{ $version->version_number }}</x-table.td>
                 <x-table.td>{{ $version->effective_date->format('M d, Y') }}</x-table.td>
                 <x-table.td>{{ $version->questions_count }}</x-table.td>
                 <x-table.td><x-badge :color="$versionStatusColors[$version->status] ?? 'slate'">{{ $version->status }}</x-badge></x-table.td>
                 <x-table.td align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
-                        <a href="{{ route('questionnaires.versions.show', [$questionnaire, $version]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                        <a href="{{ route('questionnaires.versions.show', [$questionnaire, $version]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
 
                         @if ($version->isEditable())
-                            <a href="{{ route('questionnaires.versions.edit', [$questionnaire, $version]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">Edit</a>
+                            <a href="{{ route('questionnaires.versions.edit', [$questionnaire, $version]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">Edit</a>
 
                             <form method="POST" action="{{ route('questionnaires.versions.activate', [$questionnaire, $version]) }}">
                                 @csrf
                                 @method('PATCH')
-                                <button type="submit" class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50">Activate</button>
+                                <button type="submit" class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40">Activate</button>
                             </form>
 
                             <form id="delete-version-form-{{ $version->id }}" method="POST" action="{{ route('questionnaires.versions.destroy', [$questionnaire, $version]) }}" class="hidden">
@@ -98,7 +98,7 @@
                             <form method="POST" action="{{ route('questionnaires.versions.activate', [$questionnaire, $version]) }}">
                                 @csrf
                                 @method('PATCH')
-                                <button type="submit" class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50">Activate</button>
+                                <button type="submit" class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40">Activate</button>
                             </form>
                         @endif
                     </div>

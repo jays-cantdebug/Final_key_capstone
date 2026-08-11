@@ -2,7 +2,14 @@
     $periodLabels = ['today' => 'Today', 'week' => 'This Week', 'month' => 'This Month', 'all' => 'All Time'];
 
     $maxVolume = max(1, collect($volumeChart)->max('count'));
-    $volumeBarShades = ['bg-primary/35', 'bg-primary/50', 'bg-primary/65', 'bg-primary/80', 'bg-primary', 'bg-primary-dark'];
+    $volumeBarShades = [
+        'bg-primary/35 dark:bg-primary-soft/35',
+        'bg-primary/50 dark:bg-primary-soft/50',
+        'bg-primary/65 dark:bg-primary-soft/65',
+        'bg-primary/80 dark:bg-primary-soft/80',
+        'bg-primary dark:bg-primary-soft',
+        'bg-primary-dark dark:bg-primary-soft',
+    ];
     $hasSeverityData = array_sum($severityChart) > 0;
     $totalSeverity = max(1, array_sum($severityChart));
 
@@ -38,7 +45,7 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Psychometrician</p>
-                <h2 class="text-2xl font-semibold text-body">Dashboard</h2>
+                <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Dashboard</h2>
             </div>
 
             <div class="flex items-center gap-4 sm:gap-8">
@@ -46,7 +53,7 @@
                     @foreach (array_filter(['course_id' => $filters['course_id'] ?? null, 'year_level_id' => $filters['year_level_id'] ?? null, 'severity_subscale' => $filters['severity_subscale'] ?? null]) as $key => $value)
                         <input type="hidden" name="{{ $key }}" value="{{ $value }}" />
                     @endforeach
-                    <x-select name="period" onchange="this.form.submit()" class="!w-auto rounded-lg text-sm font-semibold text-slate-700">
+                    <x-select name="period" onchange="this.form.submit()" class="!w-auto rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-300">
                         @foreach ($periodLabels as $value => $label)
                             <option value="{{ $value }}" @selected($period === $value)>{{ $label }}</option>
                         @endforeach
@@ -54,10 +61,10 @@
                 </form>
 
                 <a href="{{ route('profile.edit') }}" class="flex items-center gap-2" title="{{ __('Edit Profile') }}">
-                    <x-avatar :user="auth()->user()" size="sm" />
+                    <x-avatar :user="auth()->user()" size="md" />
                     <span class="flex flex-col gap-[3px]">
-                        <span class="block text-sm font-semibold text-body">{{ auth()->user()->name }}</span>
-                        <span class="block text-xs text-slate-500">{{ auth()->user()->role?->display_name ?? 'Unassigned Role' }}</span>
+                        <span class="block text-sm font-semibold text-body dark:text-slate-100">{{ auth()->user()->name }}</span>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">{{ auth()->user()->role?->display_name ?? 'Unassigned Role' }}</span>
                     </span>
                 </a>
             </div>
@@ -86,9 +93,9 @@
                 </x-slot:icon>
                 <x-slot:trend>
                     @if ($card['trend'] === null)
-                        <span class="text-slate-400">No prior-period data</span>
+                        <span class="text-slate-400 dark:text-slate-500">No prior-period data</span>
                     @else
-                        <span class="{{ $card['trend'] >= 0 ? 'text-emerald-600' : 'text-rose-600' }}">
+                        <span class="{{ $card['trend'] >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
                             {{ $card['trend'] >= 0 ? '▲' : '▼' }} {{ abs($card['trend']) }}% vs last {{ $period === 'all' ? 'period' : $period }}
                         </span>
                     @endif
@@ -99,13 +106,13 @@
 
     <div class="mt-6 grid gap-6 lg:grid-cols-2">
         <x-card>
-            <h3 class="text-lg font-semibold text-body">Assessment Volume</h3>
-            <p class="text-xs text-slate-500">Assessments submitted per month, last 6 months</p>
+            <h3 class="text-lg font-semibold text-body dark:text-slate-100">Assessment Volume</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Assessments submitted per month, last 6 months</p>
             <div class="mt-6 flex h-40 gap-3">
                 @foreach ($volumeChart as $point)
                     <div class="flex flex-1 flex-col items-center justify-end gap-2">
                         <div
-                            class="relative w-full rounded-t-lg {{ $volumeBarShades[$loop->index] ?? 'bg-primary-dark' }}"
+                            class="relative w-full rounded-t-lg {{ $volumeBarShades[$loop->index] ?? 'bg-primary-dark dark:bg-primary-soft' }}"
                             style="height: {{ max(4, ($point['count'] / $maxVolume) * 100) }}%"
                             x-data="{ show: false, x: 0, y: 0 }"
                             @mouseenter="show = true"
@@ -114,37 +121,51 @@
                         >
                             <x-bar-tooltip :message="$point['count'] . ' ' . Str::plural('assessment', $point['count'])" />
                         </div>
-                        <p class="text-xs font-medium text-slate-500">{{ $point['label'] }}</p>
+                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ $point['label'] }}</p>
                     </div>
                 @endforeach
             </div>
         </x-card>
 
-        <x-card>
-            <h3 class="text-lg font-semibold text-body">Severity Distribution</h3>
-            <p class="text-xs text-slate-500">Highest severity tier across all 3 subscales, {{ $periodLabels[$period] }}</p>
-            <div class="mt-6 flex items-center gap-6">
-                @if ($hasSeverityData)
-                    <div class="h-48 w-48 shrink-0 rounded-full" style="background: {{ $conicGradient }}"></div>
-                    <ul class="space-y-2 text-sm">
-                        @foreach ($severityChart as $level => $count)
-                            <li class="flex items-center gap-2">
-                                <span class="h-2.5 w-2.5 rounded-full" style="background: {{ $severityChartColors[$level] }}"></span>
-                                <span class="text-slate-600">{{ $level }}</span>
-                                <span class="font-semibold text-body">{{ $count }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
-                @else
-                    <div class="h-48 w-48 shrink-0 rounded-full bg-slate-100"></div>
-                    <p class="text-sm text-slate-500">No assessments for the selected filters.</p>
-                @endif
+        <x-card class="grid" :padded="false">
+            <div class="flex h-full w-full flex-col p-6">
+                <h3 class="text-lg font-semibold text-body dark:text-slate-100">Severity Distribution</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Highest severity tier across all 3 subscales, {{ $periodLabels[$period] }}</p>
+                <div class="mt-6 flex flex-1 items-center justify-center">
+                    @if ($hasSeverityData)
+                        <div
+                            class="h-48 w-48 shrink-0 rounded-full"
+                            style="background: {{ $conicGradient }}"
+                            x-data="{ show: false, x: 0, y: 0 }"
+                            @mouseenter="show = true"
+                            @mouseleave="show = false"
+                            @mousemove="x = $event.clientX; y = $event.clientY"
+                        >
+                            <x-bar-tooltip>
+                                <ul class="space-y-1.5">
+                                    @foreach ($severityChart as $level => $count)
+                                        <li class="flex items-center gap-2">
+                                            <span class="h-2 w-2 flex-shrink-0 rounded-full" style="background: {{ $severityChartColors[$level] }}"></span>
+                                            <span>{{ $level }}:</span>
+                                            <span class="font-semibold">{{ $count }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </x-bar-tooltip>
+                        </div>
+                    @else
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="h-48 w-48 shrink-0 rounded-full bg-slate-100"></div>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">No assessments for the selected filters.</p>
+                        </div>
+                    @endif
+                </div>
             </div>
         </x-card>
     </div>
 
     <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
-        <h3 class="text-lg font-semibold text-body">All Assessments</h3>
+        <h3 class="text-lg font-semibold text-body dark:text-slate-100">All Assessments</h3>
         <form method="GET" action="{{ route('psychometrician.dashboard') }}" class="flex flex-wrap items-end gap-3">
             <input type="hidden" name="period" value="{{ $period }}" />
             @if ($filters['severity_subscale'] ?? null)
@@ -163,7 +184,7 @@
                 @endforeach
             </x-select>
             @if (($filters['course_id'] ?? null) || ($filters['year_level_id'] ?? null) || ($filters['severity_subscale'] ?? null))
-                <a href="{{ route('psychometrician.dashboard', ['period' => $period]) }}" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50">
+                <a href="{{ route('psychometrician.dashboard', ['period' => $period]) }}" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">
                     Clear
                 </a>
             @endif
@@ -202,9 +223,9 @@
                 $secondaryCount = $assessment->secondaryFlagCount();
             @endphp
             <tr>
-                <x-table.td class="font-medium text-body">
+                <x-table.td class="font-medium text-body dark:text-slate-100">
                     {{ $assessment->student->full_name }}
-                    <div class="text-xs font-normal text-slate-500">{{ $assessment->student->student_number }} &mdash; {{ $assessment->student->yearLevel?->label }} / {{ $assessment->student->section?->section_name }}</div>
+                    <div class="text-xs font-normal text-slate-500 dark:text-slate-400">{{ $assessment->student->student_number }} &mdash; {{ $assessment->student->yearLevel?->label }} / {{ $assessment->student->section?->section_name }}</div>
                 </x-table.td>
                 <x-table.td>{{ $assessment->student->course?->course_code }}</x-table.td>
                 <x-table.td><x-severity-badge :level="$assessment->result?->stress_level" /></x-table.td>
@@ -214,12 +235,12 @@
                     @if ($priorityFlag)
                         <x-flag-badge :type="$priorityFlag->flag_type" :secondary-count="$secondaryCount" />
                     @else
-                        <span class="text-slate-400">&mdash;</span>
+                        <span class="text-slate-400 dark:text-slate-500">&mdash;</span>
                     @endif
                 </x-table.td>
                 <x-table.td>{{ $assessment->submitted_at->format('M d, Y') }}</x-table.td>
                 <x-table.td align="right">
-                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                 </x-table.td>
             </tr>
         @empty

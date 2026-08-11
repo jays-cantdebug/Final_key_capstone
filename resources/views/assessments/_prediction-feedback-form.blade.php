@@ -45,14 +45,14 @@
     <x-input-error :messages="$errors->get('corrected_stress_level')" class="mt-2" />
 
     <div class="flex flex-wrap gap-3">
-        <button type="submit" name="is_confirmed" value="1" class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark">
+        <button type="submit" name="is_confirmed" value="1" class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark dark:bg-primary-soft dark:hover:bg-primary-soft/90">
             {{ $confirmLabel ?? 'Confirm' }}
         </button>
-        <button type="submit" name="is_confirmed" value="0" class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+        <button type="submit" name="is_confirmed" value="0" class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-700">
             {{ $correctLabel ?? 'Correct' }}
         </button>
         @isset($cancelHref)
-            <a href="{{ $cancelHref }}" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-50">
+            <a href="{{ $cancelHref }}" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold text-slate-500 dark:text-slate-400 transition hover:bg-slate-50 dark:hover:bg-slate-700">
                 {{ $cancelLabel ?? 'Cancel' }}
             </a>
         @endisset

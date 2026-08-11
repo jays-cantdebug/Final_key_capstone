@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Assessment History</p>
-                <h2 class="text-2xl font-semibold text-body">Assessments</h2>
+                <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Assessments</h2>
             </div>
             @if ($studentNumber)
                 <div class="flex flex-wrap gap-2">
@@ -44,7 +44,7 @@
 
         @forelse ($assessments as $assessment)
             <tr>
-                <x-table.td class="font-medium text-body">{{ $assessment->student->full_name }}</x-table.td>
+                <x-table.td class="font-medium text-body dark:text-slate-100">{{ $assessment->student->full_name }}</x-table.td>
                 <x-table.td>{{ $assessment->student->student_number }}</x-table.td>
                 <x-table.td>
                     {{ $assessment->student->course?->course_code }} &mdash;
@@ -54,7 +54,7 @@
                 <x-table.td>{{ $assessment->submitted_at->format('M d, Y g:i A') }}</x-table.td>
                 <x-table.td><x-severity-badge :level="$assessment->result?->highestSeverityLevel()" /></x-table.td>
                 <x-table.td align="right">
-                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50">View</a>
+                    <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                 </x-table.td>
             </tr>
         @empty
