@@ -1,8 +1,11 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-2xl font-semibold text-body">
-            {{ __('Profile') }}
-        </h2>
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">{{ auth()->user()->role?->display_name ?? 'Account' }}</p>
+            <h2 class="text-2xl font-semibold text-body">
+                {{ __('Profile') }}
+            </h2>
+        </div>
     </x-slot>
 
     @if (session('status'))

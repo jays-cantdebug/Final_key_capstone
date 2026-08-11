@@ -24,6 +24,7 @@ class User extends Authenticatable
         'email',
         'password',
         'is_active',
+        'avatar_path',
     ];
 
     /**
@@ -65,5 +66,17 @@ class User extends Authenticatable
         $roleNames = is_array($roles) ? $roles : [$roles];
 
         return $this->role?->name !== null && in_array($this->role->name, $roleNames, true);
+    }
+
+    /**
+     * Compute display initials (up to two letters) from the user's name.
+     */
+    public function initials(): string
+    {
+        $words = array_filter(preg_split('/\s+/', trim($this->name)));
+
+        $letters = array_map(fn (string $word) => mb_strtoupper(mb_substr($word, 0, 1)), $words);
+
+        return implode('', array_slice($letters, 0, 2)) ?: '?';
     }
 }

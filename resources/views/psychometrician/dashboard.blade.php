@@ -41,16 +41,26 @@
                 <h2 class="text-2xl font-semibold text-body">Dashboard</h2>
             </div>
 
-            <form method="GET" action="{{ route('psychometrician.dashboard') }}">
-                @foreach (array_filter(['course_id' => $filters['course_id'] ?? null, 'year_level_id' => $filters['year_level_id'] ?? null, 'severity_subscale' => $filters['severity_subscale'] ?? null]) as $key => $value)
-                    <input type="hidden" name="{{ $key }}" value="{{ $value }}" />
-                @endforeach
-                <x-select name="period" onchange="this.form.submit()" class="!w-auto rounded-lg text-sm font-semibold text-slate-700">
-                    @foreach ($periodLabels as $value => $label)
-                        <option value="{{ $value }}" @selected($period === $value)>{{ $label }}</option>
+            <div class="flex items-center gap-4 sm:gap-8">
+                <form method="GET" action="{{ route('psychometrician.dashboard') }}">
+                    @foreach (array_filter(['course_id' => $filters['course_id'] ?? null, 'year_level_id' => $filters['year_level_id'] ?? null, 'severity_subscale' => $filters['severity_subscale'] ?? null]) as $key => $value)
+                        <input type="hidden" name="{{ $key }}" value="{{ $value }}" />
                     @endforeach
-                </x-select>
-            </form>
+                    <x-select name="period" onchange="this.form.submit()" class="!w-auto rounded-lg text-sm font-semibold text-slate-700">
+                        @foreach ($periodLabels as $value => $label)
+                            <option value="{{ $value }}" @selected($period === $value)>{{ $label }}</option>
+                        @endforeach
+                    </x-select>
+                </form>
+
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2" title="{{ __('Edit Profile') }}">
+                    <x-avatar :user="auth()->user()" size="sm" />
+                    <span class="flex flex-col gap-[3px]">
+                        <span class="block text-sm font-semibold text-body">{{ auth()->user()->name }}</span>
+                        <span class="block text-xs text-slate-500">{{ auth()->user()->role?->display_name ?? 'Unassigned Role' }}</span>
+                    </span>
+                </a>
+            </div>
         </div>
     </x-slot>
 

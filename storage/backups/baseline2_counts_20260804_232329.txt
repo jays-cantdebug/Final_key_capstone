@@ -1,0 +1,17 @@
+users: 2
+students: 4
+assessments: 5
+dass_responses: 105
+dass_results: 5
+flagged_cases: 1
+system_notifications: 1
+counseling_sessions: 1
+prediction_feedback: 5
+audit_logs: 1363
+questionnaires: 5
+questionnaire_versions: 7
+dass_questions: 28
+courses: 10
+year_levels: 9
+sections: 8
+sessions: 26
