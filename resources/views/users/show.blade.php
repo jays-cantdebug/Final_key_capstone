@@ -21,7 +21,7 @@
     @endif
 
     @if ($errors->any())
-        <x-alert type="error" class="mb-6">{{ $errors->first() }}</x-alert>
+        <x-toast type="error">{{ $errors->first() }}</x-toast>
     @endif
 
     <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">

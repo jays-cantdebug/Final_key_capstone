@@ -11,6 +11,10 @@
         </div>
     </x-slot>
 
+    @error('version')
+        <x-alert type="error" class="mb-6">{{ $message }}</x-alert>
+    @enderror
+
     <x-card>
         <form method="POST" action="{{ route('questionnaires.versions.questions.store', [$questionnaire, $version]) }}">
             @csrf

@@ -8,6 +8,10 @@
 
     @include('assessments.create._steps', ['currentStep' => 1])
 
+    @error('student')
+        <x-toast type="error">{{ $message }}</x-toast>
+    @enderror
+
     <x-card>
         <p class="text-sm text-slate-600 dark:text-slate-400">Every assessment begins with the student's information for this encounter.</p>
 

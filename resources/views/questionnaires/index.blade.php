@@ -16,7 +16,7 @@
     @endif
 
     @if ($errors->any())
-        <x-alert type="error" class="mb-6">{{ $errors->first() }}</x-alert>
+        <x-toast type="error">{{ $errors->first() }}</x-toast>
     @endif
 
     <style>

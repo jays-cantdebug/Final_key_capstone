@@ -37,7 +37,7 @@
     @endif
 
     @error('version')
-        <x-alert type="error" class="mb-6">{{ $message }}</x-alert>
+        <x-toast type="error">{{ $message }}</x-toast>
     @enderror
 
     <x-card class="mb-6">
@@ -75,13 +75,17 @@
                         </button>
                     </form>
                 @elseif ($version->status === 'Active')
-                    <form method="POST" action="{{ route('questionnaires.versions.archive', [$questionnaire, $version]) }}">
+                    <form id="archive-version-form" method="POST" action="{{ route('questionnaires.versions.archive', [$questionnaire, $version]) }}" class="hidden">
                         @csrf
                         @method('PATCH')
-                        <button type="submit" class="inline-flex items-center justify-center rounded-md border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-50">
-                            Archive version
-                        </button>
                     </form>
+                    <button
+                        type="button"
+                        @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Archive this version?', message: 'Its questions will no longer be available for new assessments. You can reactivate it later if needed.', confirmLabel: 'Archive', formId: 'archive-version-form' })"
+                        class="inline-flex items-center justify-center rounded-md border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-50"
+                    >
+                        Archive version
+                    </button>
                 @else
                     <form method="POST" action="{{ route('questionnaires.versions.activate', [$questionnaire, $version]) }}">
                         @csrf
