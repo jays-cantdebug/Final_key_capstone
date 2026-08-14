@@ -14,7 +14,9 @@
         <div class="mx-auto w-full max-w-md rounded-lg bg-white p-8 shadow-2xl">
             <h2 class="text-center text-2xl font-bold uppercase tracking-wide text-body">Login</h2>
 
-            <x-auth-session-status class="mt-4" :status="session('status')" />
+            @if (session('status'))
+                <x-toast type="success">{{ session('status') }}</x-toast>
+            @endif
 
             @php
                 $emailError = $errors->first('email');

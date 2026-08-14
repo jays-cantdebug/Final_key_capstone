@@ -9,7 +9,7 @@
     @include('settings._tabs', ['active' => 'thresholds'])
 
     @if (session('status'))
-        <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>
+        <x-toast type="success">{{ session('status') }}</x-toast>
     @endif
 
     @if ($errors->any())

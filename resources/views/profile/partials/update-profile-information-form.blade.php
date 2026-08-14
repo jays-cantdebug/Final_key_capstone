@@ -17,16 +17,18 @@
             <x-input-label :value="__('Profile Photo')" />
             <div class="mt-2 rounded-lg bg-slate-50 dark:bg-slate-800 p-4">
                 <div class="flex items-center gap-5">
-                    <template x-if="preview">
-                        <img :src="preview" alt="{{ $user->name }}" class="h-20 w-20 rounded-full object-cover">
-                    </template>
-                    <template x-if="!preview">
-                        <x-avatar :user="$user" size="xl" />
-                    </template>
+                    <div class="relative inline-block h-20 w-20 flex-shrink-0">
+                        <template x-if="preview">
+                            <img :src="preview" alt="{{ $user->name }}" class="h-20 w-20 rounded-full object-cover">
+                        </template>
+                        <template x-if="!preview">
+                            <x-avatar :user="$user" size="xl" />
+                        </template>
 
-                    <div class="flex flex-wrap items-center gap-3">
-                        <label class="inline-flex w-fit cursor-pointer items-center rounded-md border border-slate-300 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-700">
-                            <span>{{ __('Choose Photo') }}</span>
+                        <label class="absolute bottom-0 right-0 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-primary text-white ring-2 ring-white shadow-sm transition hover:bg-primary-dark dark:ring-slate-800" aria-label="{{ __('Change profile photo') }}">
+                            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path d="M6.5 3.5A1.5 1.5 0 0 1 7.87 2.5h4.26a1.5 1.5 0 0 1 1.37 1l.3.9h1.7A2.5 2.5 0 0 1 18 6.9v7.1a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 2 14V6.9a2.5 2.5 0 0 1 2.5-2.5h1.7l.3-.9Zm3.5 3a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm0 1.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z" />
+                            </svg>
                             <input
                                 type="file"
                                 name="avatar"
@@ -35,7 +37,9 @@
                                 @change="preview = $event.target.files.length ? URL.createObjectURL($event.target.files[0]) : null"
                             >
                         </label>
+                    </div>
 
+                    <div class="flex flex-wrap items-center gap-3">
                         @if ($user->avatar_path)
                             <input type="hidden" name="remove_avatar" :value="removeAvatar ? 1 : 0">
                             <button
