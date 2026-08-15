@@ -1,9 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Reports</p>
-            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Reports</h2>
-        </div>
+        <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Reports</h2>
     </x-slot>
 
     <div class="grid gap-6 sm:grid-cols-2">

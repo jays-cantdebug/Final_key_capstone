@@ -43,10 +43,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Psychometrician</p>
-                <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Dashboard</h2>
-            </div>
+            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Dashboard</h2>
 
             <div class="flex items-center gap-4 sm:gap-8">
                 <form method="GET" action="{{ route('psychometrician.dashboard') }}">

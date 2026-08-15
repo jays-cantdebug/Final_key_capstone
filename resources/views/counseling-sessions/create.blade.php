@@ -1,9 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[#A36C14]">Counseling Sessions</p>
-            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Schedule Session</h2>
-        </div>
+        <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Schedule Session</h2>
     </x-slot>
 
     @if ($errors->any() && ! $foundStudent)
