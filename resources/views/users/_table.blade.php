@@ -1,0 +1,67 @@
+<x-table>
+    <x-slot:header>
+        <form method="GET" action="{{ route('users.index') }}" class="flex flex-wrap items-end gap-2">
+            <div>
+                <x-input-label for="search" :value="__('Search')" />
+                <x-text-input id="search" name="search" type="text" class="mt-1 w-72" value="{{ $search }}" placeholder="Search by name or email" />
+            </div>
+        </form>
+    </x-slot:header>
+    <x-slot:head>
+        <x-table.th>Name</x-table.th>
+        <x-table.th>Email</x-table.th>
+        <x-table.th>Role</x-table.th>
+        <x-table.th>Status</x-table.th>
+        <x-table.th align="right">Actions</x-table.th>
+    </x-slot:head>
+
+    @forelse ($users as $user)
+        <tr>
+            <x-table.td class="font-medium text-body dark:text-slate-100">{{ $user->name }}</x-table.td>
+            <x-table.td>{{ $user->email }}</x-table.td>
+            <x-table.td>{{ $user->role?->display_name }}</x-table.td>
+            <x-table.td>
+                <x-badge :color="$user->is_active ? 'green' : 'slate'">
+                    {{ $user->is_active ? 'Active' : 'Inactive' }}
+                </x-badge>
+            </x-table.td>
+            <x-table.td align="right">
+                <div class="inline-flex flex-wrap justify-end gap-2">
+                    <a href="{{ route('users.show', $user) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
+                    <a href="{{ route('users.edit', $user) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">Edit</a>
+                    @if ($user->is_active)
+                        @can('deactivate', $user)
+                            <form id="deactivate-user-form-{{ $user->id }}" method="POST" action="{{ route('users.deactivate', $user) }}" class="hidden">
+                                @csrf
+                                @method('PATCH')
+                            </form>
+                            <button
+                                type="button"
+                                @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Deactivate this user account?', message: 'They will immediately be unable to log in until reactivated.', confirmLabel: 'Deactivate', formId: 'deactivate-user-form-{{ $user->id }}' })"
+                                class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50"
+                            >Deactivate</button>
+                        @endcan
+                    @else
+                        @can('activate', $user)
+                            <form id="activate-user-form-{{ $user->id }}" method="POST" action="{{ route('users.activate', $user) }}" class="hidden">
+                                @csrf
+                                @method('PATCH')
+                            </form>
+                            <button
+                                type="button"
+                                @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Activate this user account?', message: 'They will regain the ability to log in.', confirmLabel: 'Activate', variant: 'primary', formId: 'activate-user-form-{{ $user->id }}' })"
+                                class="rounded-md border border-emerald-200 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                            >Activate</button>
+                        @endcan
+                    @endif
+                </div>
+            </x-table.td>
+        </tr>
+    @empty
+        <x-table.empty :colspan="5">No users found.</x-table.empty>
+    @endforelse
+
+    <x-slot:footer>
+        {{ $users->links() }}
+    </x-slot:footer>
+</x-table>

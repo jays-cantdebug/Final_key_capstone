@@ -105,6 +105,36 @@ class StudentManagementTest extends TestCase
         $response->assertDontSee('Someone Else');
     }
 
+    public function test_student_list_normal_request_returns_the_full_page(): void
+    {
+        $psychometrician = $this->psychometrician();
+
+        $response = $this->actingAs($psychometrician)->get(route('students.index'));
+
+        $response->assertOk();
+        $response->assertViewIs('students.index');
+    }
+
+    public function test_student_list_live_search_request_returns_only_the_table_partial(): void
+    {
+        $psychometrician = $this->psychometrician();
+        Student::factory()->create(['first_name' => 'Unique', 'last_name' => 'Findme']);
+        Student::factory()->create(['first_name' => 'Someone', 'last_name' => 'Else']);
+
+        $response = $this->actingAs($psychometrician)
+            ->get(route('students.index', ['search' => 'Findme']), ['X-Live-Search' => 'true']);
+
+        $response->assertOk();
+        $response->assertViewIs('students._table');
+        $response->assertSee('Unique');
+        $response->assertDontSee('Someone Else');
+
+        // The partial must not carry the surrounding page chrome — only a
+        // live-search fetch (not a normal page load) should ever receive
+        // this trimmed-down response.
+        $response->assertDontSee('Student Management');
+    }
+
     public function test_student_profile_shows_their_assessment_history_with_no_search_field(): void
     {
         $psychometrician = $this->psychometrician();

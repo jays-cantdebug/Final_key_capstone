@@ -24,9 +24,18 @@ class AssessmentHistoryController extends Controller
     {
         $search = $request->validated('search');
         $studentNumber = $request->validated('student_number');
+        $assessments = $this->historyService->paginate($search, $studentNumber);
+
+        if ($request->header('X-Live-Search') === 'true') {
+            return view('assessments._table', [
+                'assessments' => $assessments,
+                'search' => $search,
+                'studentNumber' => $studentNumber,
+            ]);
+        }
 
         return view('assessments.index', [
-            'assessments' => $this->historyService->paginate($search, $studentNumber),
+            'assessments' => $assessments,
             'search' => $search,
             'studentNumber' => $studentNumber,
         ]);

@@ -26,9 +26,17 @@ class StudentController extends Controller
         Gate::authorize('viewAny', Student::class);
 
         $search = $request->get('search');
+        $students = $this->studentService->paginate($search);
+
+        if ($request->header('X-Live-Search') === 'true') {
+            return view('students._table', [
+                'students' => $students,
+                'search' => $search,
+            ]);
+        }
 
         return view('students.index', [
-            'students' => $this->studentService->paginate($search),
+            'students' => $students,
             'search' => $search,
         ]);
     }

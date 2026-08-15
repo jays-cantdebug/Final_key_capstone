@@ -27,9 +27,17 @@ class UserController extends Controller
         Gate::authorize('viewAny', User::class);
 
         $search = $request->get('search');
+        $users = $this->userService->paginate($search);
+
+        if ($request->header('X-Live-Search') === 'true') {
+            return view('users._table', [
+                'users' => $users,
+                'search' => $search,
+            ]);
+        }
 
         return view('users.index', [
-            'users' => $this->userService->paginate($search),
+            'users' => $users,
             'search' => $search,
         ]);
     }

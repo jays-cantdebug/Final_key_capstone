@@ -23,9 +23,17 @@ class CounselingSessionController extends Controller
         Gate::authorize('viewAny', CounselingSession::class);
 
         $search = $request->get('search');
+        $sessions = $this->sessionService->paginate($search);
+
+        if ($request->header('X-Live-Search') === 'true') {
+            return view('counseling-sessions._table', [
+                'sessions' => $sessions,
+                'search' => $search,
+            ]);
+        }
 
         return view('counseling-sessions.index', [
-            'sessions' => $this->sessionService->paginate($search),
+            'sessions' => $sessions,
             'search' => $search,
         ]);
     }
@@ -47,13 +55,19 @@ class CounselingSessionController extends Controller
             }
         }
 
-        return view('counseling-sessions.create', [
+        $data = [
             'foundStudent' => $foundStudent,
             'matches' => $foundStudent ? collect() : $matches,
             'search' => $request->get('search'),
             'searched' => $request->filled('search') || $request->filled('student_id'),
             'assessments' => $foundStudent ? $this->sessionService->assessmentsForStudent($foundStudent) : collect(),
-        ]);
+        ];
+
+        if ($request->header('X-Live-Search') === 'true') {
+            return view('counseling-sessions._search-results', $data);
+        }
+
+        return view('counseling-sessions.create', $data);
     }
 
     public function store(CounselingSessionFormRequest $request): RedirectResponse

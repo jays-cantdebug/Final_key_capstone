@@ -81,6 +81,60 @@ class CounselingSessionTest extends TestCase
         $response->assertViewHas('foundStudent', null);
     }
 
+    public function test_session_list_normal_request_returns_the_full_page(): void
+    {
+        $counselor = $this->guidanceCounselor();
+
+        $response = $this->actingAs($counselor)->get(route('counseling-sessions.index'));
+
+        $response->assertOk();
+        $response->assertViewIs('counseling-sessions.index');
+    }
+
+    public function test_session_list_live_search_request_returns_only_the_table_partial(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $findMe = Student::factory()->create(['first_name' => 'Unique', 'last_name' => 'Findme']);
+        $someoneElse = Student::factory()->create(['first_name' => 'Someone', 'last_name' => 'Else']);
+        CounselingSession::factory()->create(['student_id' => $findMe->id, 'counselor_id' => $counselor->id]);
+        CounselingSession::factory()->create(['student_id' => $someoneElse->id, 'counselor_id' => $counselor->id]);
+
+        $response = $this->actingAs($counselor)
+            ->get(route('counseling-sessions.index', ['search' => 'Findme']), ['X-Live-Search' => 'true']);
+
+        $response->assertOk();
+        $response->assertViewIs('counseling-sessions._table');
+        $response->assertSee('Unique');
+        $response->assertDontSee('Someone');
+        $response->assertDontSee('Counseling Sessions');
+    }
+
+    public function test_student_picker_normal_request_returns_the_full_page(): void
+    {
+        $counselor = $this->guidanceCounselor();
+
+        $response = $this->actingAs($counselor)->get(route('counseling-sessions.create'));
+
+        $response->assertOk();
+        $response->assertViewIs('counseling-sessions.create');
+    }
+
+    public function test_student_picker_live_search_request_returns_only_the_results_partial(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        Student::factory()->create(['first_name' => 'John', 'last_name' => 'Smith']);
+        Student::factory()->create(['first_name' => 'John', 'last_name' => 'Smithson']);
+
+        $response = $this->actingAs($counselor)
+            ->get(route('counseling-sessions.create', ['search' => 'John']), ['X-Live-Search' => 'true']);
+
+        $response->assertOk();
+        $response->assertViewIs('counseling-sessions._search-results');
+        $response->assertSee('Smith');
+        $response->assertSee('Smithson');
+        $response->assertDontSee('Schedule Session');
+    }
+
     public function test_restricted_session_cannot_be_edited_by_a_different_counselor(): void
     {
         $creator = $this->guidanceCounselor();
