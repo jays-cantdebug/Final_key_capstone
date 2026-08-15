@@ -8,10 +8,10 @@
 
     <x-table>
         <x-slot:header>
-            <form method="GET" action="{{ route('audit-logs.index') }}" class="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                    <x-input-label for="module" :value="__('Module')" />
-                    <x-select id="module" name="module" class="mt-1 block w-full">
+            <form method="GET" action="{{ route('audit-logs.index') }}" class="flex flex-wrap items-end gap-3">
+                <div class="w-36">
+                    <x-input-label for="module" :value="__('Module')" class="!text-xs" />
+                    <x-select id="module" name="module" class="mt-1 block w-full !py-1.5 text-sm">
                         <option value="">All modules</option>
                         @foreach ($modules as $module)
                             <option value="{{ $module }}" @selected(($filters['module'] ?? '') === $module)>{{ $module }}</option>
@@ -19,9 +19,9 @@
                     </x-select>
                 </div>
 
-                <div>
-                    <x-input-label for="action" :value="__('Action')" />
-                    <x-select id="action" name="action" class="mt-1 block w-full">
+                <div class="w-36">
+                    <x-input-label for="action" :value="__('Action')" class="!text-xs" />
+                    <x-select id="action" name="action" class="mt-1 block w-full !py-1.5 text-sm">
                         <option value="">All actions</option>
                         @foreach ($actions as $action)
                             <option value="{{ $action }}" @selected(($filters['action'] ?? '') === $action)>{{ $action }}</option>
@@ -29,19 +29,19 @@
                     </x-select>
                 </div>
 
-                <div>
-                    <x-input-label for="date_from" :value="__('Date From')" />
-                    <x-text-input id="date_from" name="date_from" type="date" class="mt-1 block w-full" value="{{ $filters['date_from'] ?? '' }}" />
+                <div class="w-36">
+                    <x-input-label for="date_from" :value="__('Date From')" class="!text-xs" />
+                    <x-text-input id="date_from" name="date_from" type="date" class="mt-1 block w-full !py-1.5 text-sm" value="{{ $filters['date_from'] ?? '' }}" />
                 </div>
 
-                <div>
-                    <x-input-label for="date_to" :value="__('Date To')" />
-                    <x-text-input id="date_to" name="date_to" type="date" class="mt-1 block w-full" value="{{ $filters['date_to'] ?? '' }}" />
+                <div class="w-36">
+                    <x-input-label for="date_to" :value="__('Date To')" class="!text-xs" />
+                    <x-text-input id="date_to" name="date_to" type="date" class="mt-1 block w-full !py-1.5 text-sm" value="{{ $filters['date_to'] ?? '' }}" />
                 </div>
 
-                <div class="flex items-end gap-3 lg:col-span-4">
-                    <x-secondary-button type="submit">{{ __('Filter') }}</x-secondary-button>
-                    <x-secondary-button :href="route('audit-logs.index')">
+                <div class="flex items-center gap-2">
+                    <x-secondary-button type="submit" class="!py-1.5 text-sm">{{ __('Filter') }}</x-secondary-button>
+                    <x-secondary-button :href="route('audit-logs.index')" class="!py-1.5 text-sm">
                         {{ __('Clear') }}
                     </x-secondary-button>
                 </div>
