@@ -5,28 +5,28 @@
 <form method="POST" action="{{ $action }}" class="space-y-4">
     @csrf
 
-    <div class="space-y-3">
-        <div>
-            <x-input-label for="corrected_depression_level" :value="__('Depression')" />
-            <x-select id="corrected_depression_level" name="corrected_depression_level" class="mt-1 block w-full text-sm">
+    <div class="grid gap-3 sm:grid-cols-3">
+        <div class="rounded-lg bg-slate-50 dark:bg-slate-800 p-4">
+            <x-input-label for="corrected_depression_level" class="!text-xs !font-semibold uppercase tracking-wider !text-slate-500 dark:!text-slate-400" :value="__('Depression')" />
+            <x-select id="corrected_depression_level" name="corrected_depression_level" class="mt-2 block w-full text-sm">
                 <option value="">Unchanged</option>
                 @foreach ($severityOptions as $level)
                     <option value="{{ $level }}" @selected(old('corrected_depression_level', $feedback?->corrected_depression_level) === $level)>{{ $level }}</option>
                 @endforeach
             </x-select>
         </div>
-        <div>
-            <x-input-label for="corrected_anxiety_level" :value="__('Anxiety')" />
-            <x-select id="corrected_anxiety_level" name="corrected_anxiety_level" class="mt-1 block w-full text-sm">
+        <div class="rounded-lg bg-slate-50 dark:bg-slate-800 p-4">
+            <x-input-label for="corrected_anxiety_level" class="!text-xs !font-semibold uppercase tracking-wider !text-slate-500 dark:!text-slate-400" :value="__('Anxiety')" />
+            <x-select id="corrected_anxiety_level" name="corrected_anxiety_level" class="mt-2 block w-full text-sm">
                 <option value="">Unchanged</option>
                 @foreach ($severityOptions as $level)
                     <option value="{{ $level }}" @selected(old('corrected_anxiety_level', $feedback?->corrected_anxiety_level) === $level)>{{ $level }}</option>
                 @endforeach
             </x-select>
         </div>
-        <div>
-            <x-input-label for="corrected_stress_level" :value="__('Stress')" />
-            <x-select id="corrected_stress_level" name="corrected_stress_level" class="mt-1 block w-full text-sm">
+        <div class="rounded-lg bg-slate-50 dark:bg-slate-800 p-4">
+            <x-input-label for="corrected_stress_level" class="!text-xs !font-semibold uppercase tracking-wider !text-slate-500 dark:!text-slate-400" :value="__('Stress')" />
+            <x-select id="corrected_stress_level" name="corrected_stress_level" class="mt-2 block w-full text-sm">
                 <option value="">Unchanged</option>
                 @foreach ($severityOptions as $level)
                     <option value="{{ $level }}" @selected(old('corrected_stress_level', $feedback?->corrected_stress_level) === $level)>{{ $level }}</option>
@@ -44,7 +44,7 @@
     <x-input-error :messages="$errors->get('corrected_anxiety_level')" class="mt-2" />
     <x-input-error :messages="$errors->get('corrected_stress_level')" class="mt-2" />
 
-    <div class="flex flex-wrap gap-3">
+    <div class="flex flex-wrap gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
         <button type="submit" name="is_confirmed" value="1" class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark dark:bg-primary-soft dark:hover:bg-primary-soft/90">
             {{ $confirmLabel ?? 'Confirm' }}
         </button>

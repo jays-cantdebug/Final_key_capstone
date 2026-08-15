@@ -99,7 +99,7 @@
             </div>
 
             <div class="mt-6 flex justify-center">
-                <x-primary-button>{{ __('Next: Questionnaire') }}</x-primary-button>
+                <x-primary-button>{{ __('Continue to Questionnaire') }}</x-primary-button>
             </div>
         </form>
     </x-card>
