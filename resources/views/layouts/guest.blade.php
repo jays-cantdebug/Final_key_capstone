@@ -1,3 +1,5 @@
+@props(['background' => 'bg-[radial-gradient(circle_at_top_left,_rgba(31,107,58,0.08),_transparent_40%),linear-gradient(180deg,_#FBFAF7_0%,_#F7F5EE_100%)] dark:bg-none dark:bg-slate-900'])
+
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
@@ -22,7 +24,7 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased text-body bg-[radial-gradient(circle_at_top_left,_rgba(31,107,58,0.08),_transparent_40%),linear-gradient(180deg,_#FBFAF7_0%,_#F7F5EE_100%)] dark:bg-none dark:bg-slate-900 dark:text-slate-100">
+    <body class="font-sans antialiased text-body {{ $background }} dark:text-slate-100">
         <div class="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
             <div class="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center">
                 <div class="w-full">
