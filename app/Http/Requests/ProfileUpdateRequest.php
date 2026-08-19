@@ -26,7 +26,7 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
-            'avatar' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
+            'avatar' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:8192'],
             'remove_avatar' => ['nullable', 'boolean'],
         ];
     }

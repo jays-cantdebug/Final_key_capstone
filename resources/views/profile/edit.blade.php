@@ -10,11 +10,11 @@
     @endif
 
     @if ($errors->any())
-        <x-alert type="error" class="mb-6">{{ $errors->first() }}</x-alert>
+        <x-toast type="error">{{ $errors->first() }}</x-toast>
     @endif
 
     @if ($errors->updatePassword->any())
-        <x-alert type="error" class="mb-6">{{ $errors->updatePassword->first() }}</x-alert>
+        <x-toast type="error">{{ $errors->updatePassword->first() }}</x-toast>
     @endif
 
     <div class="space-y-6">
