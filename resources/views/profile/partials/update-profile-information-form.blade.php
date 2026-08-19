@@ -22,7 +22,9 @@
                             <img :src="preview" alt="{{ $user->name }}" class="h-20 w-20 rounded-full object-cover">
                         </template>
                         <template x-if="!preview">
-                            <x-avatar :user="$user" size="xl" />
+                            <x-photo-lightbox :src="$user->avatar_path ? Storage::url($user->avatar_path) : null" :alt="$user->name">
+                                <x-avatar :user="$user" size="xl" />
+                            </x-photo-lightbox>
                         </template>
 
                         <label class="absolute bottom-0 right-0 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-primary text-white ring-2 ring-white shadow-sm transition hover:bg-primary-dark dark:ring-slate-800" aria-label="{{ __('Change profile photo') }}">
