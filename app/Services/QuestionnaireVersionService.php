@@ -20,9 +20,7 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class QuestionnaireVersionService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
-    }
+    public function __construct(private readonly DatabaseManager $database) {}
 
     /**
      * List all versions belonging to a questionnaire, most recent first.
@@ -38,7 +36,7 @@ class QuestionnaireVersionService
     /**
      * Create a new Draft version for the given questionnaire.
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function create(Questionnaire $questionnaire, array $data): QuestionnaireVersion
     {
@@ -53,7 +51,7 @@ class QuestionnaireVersionService
     /**
      * Update a Draft version's version number / effective date.
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      *
      * @throws QuestionnaireVersionLockedException if the version is not Draft.
      */

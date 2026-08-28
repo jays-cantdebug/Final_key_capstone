@@ -18,8 +18,7 @@ class StudentController extends Controller
     public function __construct(
         private readonly StudentService $studentService,
         private readonly AssessmentHistoryService $historyService,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {

@@ -18,9 +18,7 @@ use Illuminate\Http\RedirectResponse;
  */
 class CourseController extends Controller
 {
-    public function __construct(private readonly CourseService $courseService)
-    {
-    }
+    public function __construct(private readonly CourseService $courseService) {}
 
     public function create(): View
     {

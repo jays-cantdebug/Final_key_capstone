@@ -18,9 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class FlaggedStudentsReportController extends Controller
 {
-    public function __construct(private readonly ReportService $reportService)
-    {
-    }
+    public function __construct(private readonly ReportService $reportService) {}
 
     public function print(ReportFilterRequest $request): View
     {

@@ -25,6 +25,5 @@ final class AssessmentPayload
         public readonly int $anxietyFinalScore,
         public readonly int $stressFinalScore,
         public readonly ?int $assessmentId = null,
-    ) {
-    }
+    ) {}
 }

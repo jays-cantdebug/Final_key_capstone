@@ -19,8 +19,7 @@ class SettingsController extends Controller
         private readonly CourseService $courseService,
         private readonly YearLevelService $yearLevelService,
         private readonly SectionService $sectionService,
-    ) {
-    }
+    ) {}
 
     public function edit(): View
     {

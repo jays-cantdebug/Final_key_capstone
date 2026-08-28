@@ -18,9 +18,7 @@ use Illuminate\Http\RedirectResponse;
  */
 class SectionController extends Controller
 {
-    public function __construct(private readonly SectionService $sectionService)
-    {
-    }
+    public function __construct(private readonly SectionService $sectionService) {}
 
     public function create(): View
     {

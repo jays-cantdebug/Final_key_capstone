@@ -59,6 +59,6 @@ class ProfileTest extends TestCase
         $response
             ->assertSessionHasNoErrors()
             ->assertRedirect('/profile');
-            $this->assertSame($user->email, $user->refresh()->email);
+        $this->assertSame($user->email, $user->refresh()->email);
     }
 }

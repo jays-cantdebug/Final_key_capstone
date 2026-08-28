@@ -16,9 +16,7 @@ use Illuminate\Contracts\View\View;
  */
 class AssessmentHistoryController extends Controller
 {
-    public function __construct(private readonly AssessmentHistoryService $historyService)
-    {
-    }
+    public function __construct(private readonly AssessmentHistoryService $historyService) {}
 
     public function index(AssessmentHistoryRequest $request): View
     {

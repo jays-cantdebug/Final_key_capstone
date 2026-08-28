@@ -13,6 +13,4 @@ use Exception;
  * been used by an Assessment — per the business rule, deletion is
  * blocked in this case; deactivate instead where applicable.
  */
-class LookupRecordInUseException extends Exception
-{
-}
+class LookupRecordInUseException extends Exception {}

@@ -16,9 +16,7 @@ use Illuminate\Notifications\Notification;
  */
 class FlaggedAssessmentNotification extends Notification
 {
-    public function __construct(private readonly FlaggedCase $flaggedCase)
-    {
-    }
+    public function __construct(private readonly FlaggedCase $flaggedCase) {}
 
     /**
      * @return array<int, class-string>

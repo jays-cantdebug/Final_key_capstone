@@ -120,7 +120,7 @@ class DashboardService
      * intentionally stays table-only: it narrows to "which assessments
      * triggered this card," not "recompute the card itself by itself."
      *
-     * @param array<string, mixed> $filters period, course_id, year_level_id, severity_subscale
+     * @param  array<string, mixed>  $filters  period, course_id, year_level_id, severity_subscale
      * @return array{
      *     period: string,
      *     cards: array<string, array{label: string, count: int, trend: ?float}>,
@@ -199,7 +199,7 @@ class DashboardService
     }
 
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     private function applyStudentScopeFilters(Builder $query, array $filters): Builder
     {
@@ -275,7 +275,7 @@ class DashboardService
      * Zero-fills a "Y-m" => count tally into the last 6 months in
      * chronological order, for the volume-chart series.
      *
-     * @param \Illuminate\Support\Collection<string, int> $counts
+     * @param  \Illuminate\Support\Collection<string, int>  $counts
      * @return array<int, array{label: string, count: int}>
      */
     private function zeroFilledSixMonthSeries(\Illuminate\Support\Collection $counts): array
@@ -300,7 +300,7 @@ class DashboardService
      * Breakdown of assessments (within the current filter) by their
      * highest severity tier, ordered Normal -> Extremely Severe.
      *
-     * @param \Illuminate\Support\Collection<int, int> $assessmentIds
+     * @param  \Illuminate\Support\Collection<int, int>  $assessmentIds
      * @return array<string, int>
      */
     private function severityDistribution(\Illuminate\Support\Collection $assessmentIds): array
@@ -331,7 +331,7 @@ class DashboardService
      * (see `applyStudentScopeFilters()` in `psychometricianStats()`); this
      * only layers on the table-specific `severity_subscale` filter.
      *
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      * @return LengthAwarePaginator<int, Assessment>
      */
     private function allAssessmentsTable(Builder $query, array $filters): LengthAwarePaginator

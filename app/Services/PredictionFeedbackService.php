@@ -19,12 +19,10 @@ use Illuminate\Database\DatabaseManager;
  */
 class PredictionFeedbackService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
-    }
+    public function __construct(private readonly DatabaseManager $database) {}
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function submit(Assessment $assessment, User $psychometrician, array $data): PredictionFeedback
     {

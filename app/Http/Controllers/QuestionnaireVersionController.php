@@ -23,8 +23,7 @@ class QuestionnaireVersionController extends Controller
     public function __construct(
         private readonly QuestionnaireVersionService $versionService,
         private readonly DassQuestionService $questionService,
-    ) {
-    }
+    ) {}
 
     public function create(Questionnaire $questionnaire): View
     {

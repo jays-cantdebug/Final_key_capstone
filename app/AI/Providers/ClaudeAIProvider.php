@@ -39,9 +39,7 @@ class ClaudeAIProvider implements AIProviderInterface
 
     private const ANTHROPIC_VERSION = '2023-06-01';
 
-    public function __construct(private readonly RuleBasedDASSProvider $ruleBasedProvider)
-    {
-    }
+    public function __construct(private readonly RuleBasedDASSProvider $ruleBasedProvider) {}
 
     public function classify(AssessmentPayload $payload): AIClassificationResult
     {
@@ -185,7 +183,7 @@ class ClaudeAIProvider implements AIProviderInterface
 
     private function systemPrompt(): string
     {
-        return <<<PROMPT
+        return <<<'PROMPT'
             You are a strict classification lookup engine for a DASS-21 (Depression, Anxiety, Stress Scale) mental health assessment system.
 
             Your ONLY task is to classify three subscale scores (depression, anxiety, stress) into their official severity tier by looking up which range in the "official_thresholds" object of the user's message contains each score. A score belongs to a tier when it falls within that tier's inclusive [min, max] range; a null max means the range is unbounded upward.

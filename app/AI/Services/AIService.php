@@ -15,9 +15,7 @@ use App\AI\DTOs\AssessmentPayload;
  */
 class AIService
 {
-    public function __construct(private readonly AIProviderInterface $provider)
-    {
-    }
+    public function __construct(private readonly AIProviderInterface $provider) {}
 
     public function classify(AssessmentPayload $payload): AIClassificationResult
     {

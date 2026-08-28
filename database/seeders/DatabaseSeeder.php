@@ -2,9 +2,6 @@
 
 namespace Database\Seeders;
 
-use Database\Seeders\CourseSeeder;
-use Database\Seeders\YearLevelSeeder;
-use Database\Seeders\SectionSeeder;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 

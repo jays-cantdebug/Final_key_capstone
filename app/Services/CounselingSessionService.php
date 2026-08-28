@@ -19,9 +19,7 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class CounselingSessionService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
-    }
+    public function __construct(private readonly DatabaseManager $database) {}
 
     /**
      * @return Collection<int, Student>
@@ -78,7 +76,7 @@ class CounselingSessionService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function create(array $data, User $counselor): CounselingSession
     {
@@ -91,7 +89,7 @@ class CounselingSessionService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function update(CounselingSession $session, array $data): CounselingSession
     {

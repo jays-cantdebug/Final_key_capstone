@@ -18,9 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class AssessmentReportController extends Controller
 {
-    public function __construct(private readonly ReportService $reportService)
-    {
-    }
+    public function __construct(private readonly ReportService $reportService) {}
 
     public function print(Assessment $assessment): View
     {

@@ -29,9 +29,7 @@ use Illuminate\Support\Arr;
  */
 class AuditableObserver
 {
-    public function __construct(private readonly AuditLogService $auditLogService)
-    {
-    }
+    public function __construct(private readonly AuditLogService $auditLogService) {}
 
     public function created(Model $model): void
     {
@@ -159,8 +157,7 @@ class AuditableObserver
      * Strip sensitive fields before writing attribute snapshots to the
      * audit trail.
      *
-     * @param array<string, mixed> $attributes
-     *
+     * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>
      */
     private function sanitize(array $attributes): array

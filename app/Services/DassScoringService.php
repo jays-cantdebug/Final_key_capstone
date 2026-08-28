@@ -21,8 +21,7 @@ use RuntimeException;
 class DassScoringService
 {
     /**
-     * @param array<int, int> $responses Question ID => answer value (0-3).
-     *
+     * @param  array<int, int>  $responses  Question ID => answer value (0-3).
      * @return array{
      *     depression_raw_score: int, anxiety_raw_score: int, stress_raw_score: int,
      *     depression_final_score: int, anxiety_final_score: int, stress_final_score: int

@@ -11,6 +11,4 @@ use RuntimeException;
  * Recovery Safety Net (e.g. demoting the last remaining active
  * Psychometrician account away from that role).
  */
-class UserManagementGuardException extends RuntimeException
-{
-}
+class UserManagementGuardException extends RuntimeException {}

@@ -17,9 +17,7 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class SystemSettingService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
-    }
+    public function __construct(private readonly DatabaseManager $database) {}
 
     /**
      * @return Collection<int, SystemSetting>
@@ -45,7 +43,7 @@ class SystemSettingService
      * Eloquent model events entirely, which would make that requirement
      * unsatisfiable.
      *
-     * @param array<string, string> $values
+     * @param  array<string, string>  $values
      */
     public function update(array $values): void
     {

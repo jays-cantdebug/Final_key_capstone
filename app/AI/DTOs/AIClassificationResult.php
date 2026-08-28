@@ -15,6 +15,5 @@ final class AIClassificationResult
         public readonly string $anxietyLevel,
         public readonly string $stressLevel,
         public readonly string $provider,
-    ) {
-    }
+    ) {}
 }

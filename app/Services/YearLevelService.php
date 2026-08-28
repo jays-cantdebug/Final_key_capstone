@@ -14,9 +14,7 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class YearLevelService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
-    }
+    public function __construct(private readonly DatabaseManager $database) {}
 
     /**
      * @return Collection<int, YearLevel>
@@ -38,7 +36,7 @@ class YearLevelService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function create(array $data): YearLevel
     {
@@ -46,7 +44,7 @@ class YearLevelService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function update(YearLevel $yearLevel, array $data): YearLevel
     {
@@ -61,8 +59,8 @@ class YearLevelService
      * Archive (soft-delete) a year level.
      *
      * @throws LookupRecordInUseException if any student still references
-     *                                     this year level — deactivate
-     *                                     instead.
+     *                                    this year level — deactivate
+     *                                    instead.
      */
     public function delete(YearLevel $yearLevel): void
     {

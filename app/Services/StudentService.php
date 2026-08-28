@@ -15,8 +15,7 @@ class StudentService
 {
     public function __construct(
         private readonly DatabaseManager $database,
-    ) {
-    }
+    ) {}
 
     /**
      * Students are only ever created through New Assessment Step 1
@@ -41,7 +40,7 @@ class StudentService
     }
 
     /**
-    * @return array<string, array<int, mixed>>
+     * @return array<string, array<int, mixed>>
      */
     public function formData(): array
     {
@@ -53,7 +52,7 @@ class StudentService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function update(Student $student, array $data): Student
     {

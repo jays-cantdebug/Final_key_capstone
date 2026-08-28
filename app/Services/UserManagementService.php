@@ -22,8 +22,7 @@ class UserManagementService
     public function __construct(
         private readonly DatabaseManager $database,
         private readonly ActiveSessionGuard $activeSessionGuard,
-    ) {
-    }
+    ) {}
 
     /**
      * Paginate users, optionally searched by name or email.
@@ -44,7 +43,7 @@ class UserManagementService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function create(array $data): User
     {
@@ -60,10 +59,10 @@ class UserManagementService
     /**
      * Update a user's name, email, and role.
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      *
      * @throws UserManagementGuardException if this would demote the last
-     *                                       remaining active Psychometrician.
+     *                                      remaining active Psychometrician.
      */
     public function update(User $user, array $data): User
     {

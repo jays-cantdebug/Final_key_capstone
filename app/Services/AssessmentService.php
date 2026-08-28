@@ -37,8 +37,7 @@ class AssessmentService
         private readonly PredictionFeedbackService $predictionFeedbackService,
         private readonly StudentNumberGeneratorService $studentNumberGenerator,
         private readonly ClassificationThresholdService $thresholdService,
-    ) {
-    }
+    ) {}
 
     /**
      * @return Collection<int, Course>
@@ -69,7 +68,7 @@ class AssessmentService
      * (captured at the moment consent was given in Step 1 of the wizard,
      * not whenever the wizard eventually finishes).
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function registerStudent(array $data): Student
     {
@@ -101,8 +100,7 @@ class AssessmentService
      * exactly what gets saved, regardless of anything that changes
      * between review and save (e.g. an admin overriding thresholds).
      *
-     * @param array<int, int> $responses Question ID => answer value (0-3).
-     *
+     * @param  array<int, int>  $responses  Question ID => answer value (0-3).
      * @return array{
      *     scores: array{depression_raw_score: int, anxiety_raw_score: int, stress_raw_score: int, depression_final_score: int, anxiety_final_score: int, stress_final_score: int},
      *     depression_level: string, anxiety_level: string, stress_level: string,
@@ -163,10 +161,10 @@ class AssessmentService
      * `$privacyConsentAt` is likewise retake-only — the regular flow's
      * consent is captured on the `students` row at Step 1, not here.
      *
-     * @param array<string, mixed> $studentData
-     * @param array<int, int> $responses Question ID => answer value (0-3).
-     * @param array<string, mixed> $review The cached return value of `reviewAssessment()`.
-     * @param array<string, mixed> $feedbackData Validated `PredictionFeedbackFormRequest` data.
+     * @param  array<string, mixed>  $studentData
+     * @param  array<int, int>  $responses  Question ID => answer value (0-3).
+     * @param  array<string, mixed>  $review  The cached return value of `reviewAssessment()`.
+     * @param  array<string, mixed>  $feedbackData  Validated `PredictionFeedbackFormRequest` data.
      */
     public function save(
         array $studentData,

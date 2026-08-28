@@ -19,9 +19,7 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class DassQuestionService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
-    }
+    public function __construct(private readonly DatabaseManager $database) {}
 
     /**
      * List all questions for a version, ordered for questionnaire display.
@@ -32,7 +30,7 @@ class DassQuestionService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      *
      * @throws QuestionnaireVersionLockedException if the parent version is not Draft.
      */
@@ -44,7 +42,7 @@ class DassQuestionService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      *
      * @throws QuestionnaireVersionLockedException if the parent version is not Draft.
      */

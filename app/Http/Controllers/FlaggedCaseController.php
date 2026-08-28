@@ -15,9 +15,7 @@ use Illuminate\Contracts\View\View;
  */
 class FlaggedCaseController extends Controller
 {
-    public function __construct(private readonly FlaggedCaseService $flaggedCaseService)
-    {
-    }
+    public function __construct(private readonly FlaggedCaseService $flaggedCaseService) {}
 
     public function index(FlaggedCaseFilterRequest $request): View
     {
@@ -44,7 +42,7 @@ class FlaggedCaseController extends Controller
      * equivalent — the report only ever lists flagged_cases rows — so
      * callers must gate the report links on `canGenerateReport` for that tab.
      *
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
     private function reportFiltersForTab(array $filters, string $activeTab): array

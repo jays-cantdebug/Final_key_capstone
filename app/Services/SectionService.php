@@ -14,9 +14,7 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class SectionService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
-    }
+    public function __construct(private readonly DatabaseManager $database) {}
 
     /**
      * @return Collection<int, Section>
@@ -27,7 +25,7 @@ class SectionService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function create(array $data): Section
     {
@@ -35,7 +33,7 @@ class SectionService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function update(Section $section, array $data): Section
     {
@@ -50,8 +48,8 @@ class SectionService
      * Archive (soft-delete) a section.
      *
      * @throws LookupRecordInUseException if any student still references
-     *                                     this section — deactivate
-     *                                     instead.
+     *                                    this section — deactivate
+     *                                    instead.
      */
     public function delete(Section $section): void
     {

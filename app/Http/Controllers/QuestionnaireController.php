@@ -21,8 +21,7 @@ class QuestionnaireController extends Controller
     public function __construct(
         private readonly QuestionnaireService $questionnaireService,
         private readonly QuestionnaireVersionService $versionService,
-    ) {
-    }
+    ) {}
 
     public function index(): View
     {

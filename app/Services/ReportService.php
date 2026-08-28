@@ -51,7 +51,7 @@ class ReportService
             : null;
 
         if ($student === null) {
-            return ['student' => null, 'assessments' => new Collection()];
+            return ['student' => null, 'assessments' => new Collection];
         }
 
         $assessments = Assessment::query()
@@ -70,7 +70,7 @@ class ReportService
      * (mirrors Flagged Cases' own filter set from Module 8), optionally
      * narrowed to one flag type (`FlaggedCase::FLAG_TYPE_*`).
      *
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      * @return Collection<int, FlaggedCase>
      */
     public function flaggedCasesForReport(array $filters): Collection
@@ -124,7 +124,7 @@ class ReportService
      * name filter. Session note redaction (Module 9's confidentiality
      * rule) is applied in the view, not here.
      *
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      * @return Collection<int, CounselingSession>
      */
     public function counselingSessionsForReport(array $filters): Collection
@@ -156,7 +156,7 @@ class ReportService
      * assessments (not every student in the system), so all four totals
      * describe the same filtered scope.
      *
-     * @param array{course_id?: ?int, year_level_id?: ?int, gender?: ?string, date_from?: ?string, date_to?: ?string} $filters
+     * @param  array{course_id?: ?int, year_level_id?: ?int, gender?: ?string, date_from?: ?string, date_to?: ?string}  $filters
      * @return array{
      *     totalStudents: int,
      *     totalAssessments: int,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\View\Composers;
 
+use App\Models\User;
 use App\Services\SystemNotificationService;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
@@ -16,13 +17,11 @@ use Illuminate\View\View;
  */
 class NotificationBadgeComposer
 {
-    public function __construct(private readonly SystemNotificationService $notificationService)
-    {
-    }
+    public function __construct(private readonly SystemNotificationService $notificationService) {}
 
     public function compose(View $view): void
     {
-        /** @var (Authenticatable&\App\Models\User)|null $user */
+        /** @var (Authenticatable&User)|null $user */
         $user = Auth::user();
 
         $view->with(

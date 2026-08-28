@@ -14,9 +14,7 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class CourseService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
-    }
+    public function __construct(private readonly DatabaseManager $database) {}
 
     /**
      * @return Collection<int, Course>
@@ -27,7 +25,7 @@ class CourseService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function create(array $data): Course
     {
@@ -35,7 +33,7 @@ class CourseService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function update(Course $course, array $data): Course
     {
@@ -50,7 +48,7 @@ class CourseService
      * Archive (soft-delete) a course.
      *
      * @throws LookupRecordInUseException if any student still references
-     *                                     this course — deactivate instead.
+     *                                    this course — deactivate instead.
      */
     public function delete(Course $course): void
     {

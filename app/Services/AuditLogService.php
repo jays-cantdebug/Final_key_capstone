@@ -16,15 +16,13 @@ use Illuminate\Support\Facades\Auth;
  */
 class AuditLogService
 {
-    public function __construct(private readonly Request $request)
-    {
-    }
+    public function __construct(private readonly Request $request) {}
 
     /**
      * Record an audit log entry.
      *
-     * @param array<string, mixed>|null $oldValues
-     * @param array<string, mixed>|null $newValues
+     * @param  array<string, mixed>|null  $oldValues
+     * @param  array<string, mixed>|null  $newValues
      */
     public function record(
         string $module,
@@ -49,7 +47,7 @@ class AuditLogService
     /**
      * Paginate audit logs, most recent first, with optional filters.
      *
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     public function paginate(array $filters, int $perPage = 15): LengthAwarePaginator
     {

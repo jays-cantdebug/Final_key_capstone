@@ -8,6 +8,7 @@ use App\Models\ClassificationThreshold;
 use App\Models\DassQuestion;
 use App\Models\QuestionnaireVersion;
 use App\Models\User;
+use Illuminate\Testing\TestResponse;
 
 /**
  * Shared fixtures for domain tests: acting-as helpers for both roles, the
@@ -117,9 +118,9 @@ trait InteractsWithDomainData
      * to exercise a correction that crosses (or doesn't cross) the
      * flagging threshold.
      *
-     * @param array<string, mixed> $feedback
+     * @param  array<string, mixed>  $feedback
      */
-    protected function reviewAndSaveAssessment(array $feedback = []): \Illuminate\Testing\TestResponse
+    protected function reviewAndSaveAssessment(array $feedback = []): TestResponse
     {
         $this->get(route('assessments.create.result'));
 

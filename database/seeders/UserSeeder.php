@@ -14,8 +14,8 @@ class UserSeeder extends Seeder
 {
     /**
      * @throws RuntimeException if ADMIN_DEFAULT_PASSWORD is not set — there
-     * is no hardcoded fallback, weak or otherwise, for the default Super
-     * Admin Psychometrician account's password.
+     *                          is no hardcoded fallback, weak or otherwise, for the default Super
+     *                          Admin Psychometrician account's password.
      */
     public function run(): void
     {

@@ -14,6 +14,4 @@ use RuntimeException;
  * is prohibited by design; Archived versions are protected because they
  * must remain available, unmodified, for historical assessments.
  */
-class QuestionnaireVersionLockedException extends RuntimeException
-{
-}
+class QuestionnaireVersionLockedException extends RuntimeException {}

@@ -23,9 +23,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class EnsureSingleActiveSession
 {
-    public function __construct(private readonly ActiveSessionGuard $activeSessionGuard)
-    {
-    }
+    public function __construct(private readonly ActiveSessionGuard $activeSessionGuard) {}
 
     public function handle(Request $request, Closure $next): Response
     {

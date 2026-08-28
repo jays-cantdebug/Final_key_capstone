@@ -58,7 +58,7 @@ class EncryptSensitiveDataCommand extends Command
     }
 
     /**
-     * @param array<int, string> $columns
+     * @param  array<int, string>  $columns
      */
     private function encryptTable(string $table, array $columns, bool $dryRun): void
     {

@@ -9,14 +9,14 @@ use App\Models\YearLevel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Student>
+ * @extends Factory<Student>
  */
 class StudentFactory extends Factory
 {
     /**
      * The model the factory corresponds to.
      *
-     * @var class-string<\App\Models\Student>
+     * @var class-string<Student>
      */
     protected $model = Student::class;
 

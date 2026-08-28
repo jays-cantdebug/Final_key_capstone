@@ -19,9 +19,7 @@ use Illuminate\Auth\Events\Lockout;
  */
 class LogLoginLockout
 {
-    public function __construct(private readonly AuditLogService $auditLogService)
-    {
-    }
+    public function __construct(private readonly AuditLogService $auditLogService) {}
 
     public function handle(Lockout $event): void
     {

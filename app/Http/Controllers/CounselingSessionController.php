@@ -14,9 +14,7 @@ use Illuminate\Support\Facades\Gate;
 
 class CounselingSessionController extends Controller
 {
-    public function __construct(private readonly CounselingSessionService $sessionService)
-    {
-    }
+    public function __construct(private readonly CounselingSessionService $sessionService) {}
 
     public function index(Request $request): View
     {

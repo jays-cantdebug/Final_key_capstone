@@ -18,9 +18,7 @@ use Illuminate\Support\Facades\Gate;
 
 class UserController extends Controller
 {
-    public function __construct(private readonly UserManagementService $userService)
-    {
-    }
+    public function __construct(private readonly UserManagementService $userService) {}
 
     public function index(Request $request): View
     {

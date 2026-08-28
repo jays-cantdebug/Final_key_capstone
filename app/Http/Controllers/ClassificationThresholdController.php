@@ -16,9 +16,7 @@ use Illuminate\Http\RedirectResponse;
  */
 class ClassificationThresholdController extends Controller
 {
-    public function __construct(private readonly ClassificationThresholdService $thresholdService)
-    {
-    }
+    public function __construct(private readonly ClassificationThresholdService $thresholdService) {}
 
     public function index(): View
     {

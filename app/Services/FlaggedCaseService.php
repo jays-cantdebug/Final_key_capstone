@@ -25,9 +25,7 @@ use Illuminate\Support\Facades\Notification;
  */
 class FlaggedCaseService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
-    }
+    public function __construct(private readonly DatabaseManager $database) {}
 
     /**
      * Evaluate each subscale independently and create a Flagged Case for
@@ -112,7 +110,7 @@ class FlaggedCaseService
      * `flaggedCases` is eager-loaded so `Assessment::priorityFlag()`/
      * `secondaryFlagCount()` never issue an extra query per row.
      *
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     public function paginate(array $filters, int $perPage = 10): LengthAwarePaginator
     {

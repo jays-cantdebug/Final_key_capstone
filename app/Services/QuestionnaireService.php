@@ -14,9 +14,7 @@ use Illuminate\Database\DatabaseManager;
  */
 class QuestionnaireService
 {
-    public function __construct(private readonly DatabaseManager $database)
-    {
-    }
+    public function __construct(private readonly DatabaseManager $database) {}
 
     /**
      * Paginate questionnaires with their version counts loaded.
@@ -30,7 +28,7 @@ class QuestionnaireService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function create(array $data): Questionnaire
     {
@@ -38,7 +36,7 @@ class QuestionnaireService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function update(Questionnaire $questionnaire, array $data): Questionnaire
     {
@@ -53,7 +51,7 @@ class QuestionnaireService
      * Archive (soft-delete) a questionnaire.
      *
      * @throws LookupRecordInUseException if any of its versions has been
-     *                                     used by an assessment.
+     *                                    used by an assessment.
      */
     public function delete(Questionnaire $questionnaire): void
     {

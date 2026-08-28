@@ -15,9 +15,7 @@ use Illuminate\View\View;
  */
 class ReportLayout extends Component
 {
-    public function __construct(public string $title = 'Report')
-    {
-    }
+    public function __construct(public string $title = 'Report') {}
 
     /**
      * Get the view / contents that represents the component.

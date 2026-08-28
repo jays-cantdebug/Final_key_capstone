@@ -19,8 +19,7 @@ class ClassificationThresholdService
     public function __construct(
         private readonly DatabaseManager $database,
         private readonly AuditLogService $auditLogService,
-    ) {
-    }
+    ) {}
 
     /**
      * All 15 threshold rows, ordered for display (subscale, then official
@@ -55,7 +54,7 @@ class ClassificationThresholdService
      * containing only the rows that actually changed. No entry is
      * recorded if nothing actually changed.
      *
-     * @param array<int, array{id: int, min_score: int, max_score: int}> $rows
+     * @param  array<int, array{id: int, min_score: int, max_score: int}>  $rows
      */
     public function update(array $rows): void
     {
@@ -99,7 +98,7 @@ class ClassificationThresholdService
      * the whole batch (keyed by "Subscale:SeverityLevel") if anything
      * changed.
      *
-     * @param array<int, array{min_score: int, max_score: int}> $targets
+     * @param  array<int, array{min_score: int, max_score: int}>  $targets
      */
     private function applyAndLog(array $targets, string $action): void
     {

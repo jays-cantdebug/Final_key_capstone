@@ -20,9 +20,7 @@ use Illuminate\Http\RedirectResponse;
  */
 class DassQuestionController extends Controller
 {
-    public function __construct(private readonly DassQuestionService $questionService)
-    {
-    }
+    public function __construct(private readonly DassQuestionService $questionService) {}
 
     public function create(Questionnaire $questionnaire, QuestionnaireVersion $version): View
     {

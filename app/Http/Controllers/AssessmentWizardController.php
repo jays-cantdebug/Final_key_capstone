@@ -33,8 +33,7 @@ class AssessmentWizardController extends Controller
 
     public function __construct(
         private readonly AssessmentService $assessmentService,
-    ) {
-    }
+    ) {}
 
     /**
      * STEP 1 (GET): Show the student intake form. Every New Assessment is

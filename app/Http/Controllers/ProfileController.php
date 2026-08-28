@@ -11,9 +11,7 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    public function __construct(private readonly AvatarService $avatarService)
-    {
-    }
+    public function __construct(private readonly AvatarService $avatarService) {}
 
     /**
      * Display the user's profile form.
