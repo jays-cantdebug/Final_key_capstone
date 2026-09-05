@@ -15,6 +15,13 @@ class StudentSeeder extends Seeder
      */
     public function run(): void
     {
+        // Demo/capstone-only sample students — never seed these into a real
+        // deployment, even if this seeder is invoked directly (e.g. via
+        // `db:seed --class=StudentSeeder`) rather than through DatabaseSeeder.
+        if (! app()->environment('local', 'testing')) {
+            return;
+        }
+
         $course = Course::query()->firstOrCreate(
             ['course_code' => 'BSIT'],
             ['course_name' => 'Bachelor of Science in Information Technology', 'status' => Course::STATUS_ACTIVE]
