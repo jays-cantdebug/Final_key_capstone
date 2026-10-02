@@ -121,7 +121,7 @@ class ReportService
 
     /**
      * Counseling Report: counseling sessions matching the given student
-     * name filter. Session note redaction (Module 9's confidentiality
+     * name filter, or scoped to one student via `student_id`. Session note redaction (Module 9's confidentiality
      * rule) is applied in the view, not here.
      *
      * @param  array<string, mixed>  $filters
@@ -139,6 +139,7 @@ class ReportService
                         ->orWhereRaw("CONCAT(first_name, ' ', middle_name, ' ', last_name) LIKE ?", ["%{$value}%"]);
                 });
             })
+            ->when($filters['student_id'] ?? null, fn (Builder $q, $v) => $q->where('student_id', $v))
             ->when($filters['date_from'] ?? null, fn (Builder $q, $v) => $q->whereDate('session_datetime', '>=', $v))
             ->when($filters['date_to'] ?? null, fn (Builder $q, $v) => $q->whereDate('session_datetime', '<=', $v))
             ->orderByDesc('session_datetime')

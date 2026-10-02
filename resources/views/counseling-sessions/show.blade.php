@@ -17,6 +17,9 @@
                         Edit session
                     </x-primary-button>
                 @endcan
+                <x-secondary-button :href="route('counseling-sessions.students.show', $session->student)">
+                    Student history
+                </x-secondary-button>
                 <x-secondary-button :href="route('counseling-sessions.index')">
                     Back to list
                 </x-secondary-button>

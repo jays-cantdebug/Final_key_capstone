@@ -23,6 +23,7 @@ use App\Http\Controllers\Reports\StudentHistoryReportController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\StudentCounselingHistoryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\YearLevelController;
 use Illuminate\Support\Facades\Auth;
@@ -124,6 +125,12 @@ Route::middleware(['auth', 'single-session'])->group(function (): void {
         Route::patch('/notifications/{notification}/archive', [NotificationController::class, 'archive'])->name('notifications.archive');
         Route::patch('/notifications/{notification}/unarchive', [NotificationController::class, 'unarchive'])->name('notifications.unarchive');
         Route::get('/notifications/{notification}/view', [NotificationController::class, 'view'])->name('notifications.view');
+
+        // Registered before the resource so "students" isn't captured as a {counseling_session} id.
+        Route::get('/counseling-sessions/students', [StudentCounselingHistoryController::class, 'index'])->name('counseling-sessions.students.index');
+        Route::get('/counseling-sessions/students/{student}', [StudentCounselingHistoryController::class, 'show'])
+            ->withTrashed()
+            ->name('counseling-sessions.students.show');
 
         Route::resource('counseling-sessions', CounselingSessionController::class);
     });

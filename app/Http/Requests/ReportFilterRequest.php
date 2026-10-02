@@ -18,7 +18,9 @@ use Illuminate\Validation\Rule;
  * only used by the Student Assessment History report, reached via an
  * exact deep link from a specific student's profile rather than typed
  * manually — it's never a search field a user fills in directly.
- * `flag_type` is only used by the Flagged Students Report.
+ * `flag_type` is only used by the Flagged Students Report. `student_id`
+ * is only used by the Counseling Report, to scope it to one student's
+ * counseling history (deep-linked from that history page).
  */
 class ReportFilterRequest extends FormRequest
 {
@@ -40,6 +42,7 @@ class ReportFilterRequest extends FormRequest
         return [
             'search' => ['nullable', 'string', 'max:100'],
             'student_number' => ['nullable', 'string', 'max:50'],
+            'student_id' => ['nullable', 'integer', 'exists:students,id'],
             'course_id' => ['nullable', 'integer', 'exists:courses,id'],
             'year_level_id' => ['nullable', 'integer', 'exists:year_levels,id'],
             'section_id' => ['nullable', 'integer', 'exists:sections,id'],

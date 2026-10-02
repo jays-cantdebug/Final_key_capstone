@@ -20,6 +20,8 @@
         <x-toast type="success">{{ session('status') }}</x-toast>
     @endif
 
+    @include('counseling-sessions._tabs', ['active' => 'counseling-sessions.index'])
+
     <div x-data="liveSearch()" x-on:input.debounce.400ms="handleInput($event)" x-on:click="handleClick($event)">
         <div x-ref="results">
             @include('counseling-sessions._table', ['sessions' => $sessions, 'search' => $search])

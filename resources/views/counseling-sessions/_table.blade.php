@@ -27,7 +27,9 @@
 
     @forelse ($sessions as $session)
         <tr>
-            <x-table.td class="font-medium text-body dark:text-slate-100">{{ $session->student->full_name }}</x-table.td>
+            <x-table.td class="font-medium text-body dark:text-slate-100">
+                <a href="{{ route('counseling-sessions.students.show', $session->student) }}" class="hover:text-primary hover:underline dark:hover:text-primary-soft">{{ $session->student->full_name }}</a>
+            </x-table.td>
             <x-table.td>{{ $session->counselor->name }}</x-table.td>
             <x-table.td>{{ $session->session_datetime->format('M d, Y g:i A') }}</x-table.td>
             <x-table.td><x-badge :color="$statusColors[$session->session_status] ?? 'slate'">{{ $session->session_status }}</x-badge></x-table.td>

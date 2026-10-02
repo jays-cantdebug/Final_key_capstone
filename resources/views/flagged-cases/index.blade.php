@@ -96,7 +96,7 @@
             @endphp
             <tr>
                 <x-table.td class="!px-3 font-medium text-body dark:text-slate-100">
-                    {{ $assessment->student->full_name }}
+                    <a href="{{ route('counseling-sessions.students.show', $assessment->student) }}" class="hover:text-primary hover:underline dark:hover:text-primary-soft" title="View counseling history">{{ $assessment->student->full_name }}</a>
                     <div class="text-xs font-normal text-slate-500 dark:text-slate-400">{{ $assessment->student->student_number }} &mdash; {{ $assessment->student->yearLevel?->label }} / {{ $assessment->student->section?->section_name }}</div>
                 </x-table.td>
                 <x-table.td class="!px-3">{{ $assessment->student->course?->course_code }}</x-table.td>
