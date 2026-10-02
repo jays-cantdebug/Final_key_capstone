@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Assessment;
 use App\Models\CounselingSession;
+use App\Services\Auth\DashboardRouteService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -18,6 +19,8 @@ use Illuminate\Http\Request;
  */
 class AssessmentController extends Controller
 {
+    public function __construct(private readonly DashboardRouteService $dashboardRouteService) {}
+
     public function show(Assessment $assessment, Request $request): View
     {
         $assessment->load([
@@ -35,7 +38,49 @@ class AssessmentController extends Controller
         return view('assessments.show', [
             'assessment' => $assessment,
             'backToCounselingSession' => $this->resolveBackToCounselingSession($assessment, $request),
+            'backToDashboardUrl' => $this->resolveBackToDashboardUrl($request),
         ]);
+    }
+
+    /**
+     * The Referer's path, or null when there is no Referer or it points at
+     * another host — so a back link is only ever derived from a page on
+     * this app. Shared by both Referer-resolved back links on this page
+     * ("Back to Counseling Session" and "Back to Dashboard").
+     */
+    private function refererPath(Request $request): ?string
+    {
+        $referer = $request->headers->get('referer');
+
+        if ($referer === null || parse_url($referer, PHP_URL_HOST) !== $request->getHost()) {
+            return null;
+        }
+
+        return (string) parse_url($referer, PHP_URL_PATH);
+    }
+
+    /**
+     * "Back to Dashboard" appears when this page was reached from the
+     * viewer's own role dashboard (the Recent Assessments "View" link on
+     * the Psychometrician or Guidance Counselor Dashboard). Only the
+     * viewer's own dashboard route counts, so the link can never point at
+     * a dashboard their role can't open. The Referer's query string
+     * (Psychometrician Dashboard period/course/year-level/severity filters
+     * and Recent Assessments page) is carried back so returning restores
+     * the exact view the user left — rebuilt through route() rather than
+     * echoing the raw Referer URL.
+     */
+    private function resolveBackToDashboardUrl(Request $request): ?string
+    {
+        $routeName = $this->dashboardRouteService->resolve($request->user());
+
+        if ($routeName === 'dashboard' || $this->refererPath($request) !== parse_url(route($routeName), PHP_URL_PATH)) {
+            return null;
+        }
+
+        parse_str((string) parse_url((string) $request->headers->get('referer'), PHP_URL_QUERY), $query);
+
+        return route($routeName, $query);
     }
 
     /**
@@ -53,13 +98,9 @@ class AssessmentController extends Controller
      */
     private function resolveBackToCounselingSession(Assessment $assessment, Request $request): ?CounselingSession
     {
-        $referer = $request->headers->get('referer');
+        $path = $this->refererPath($request);
 
-        if ($referer === null || parse_url($referer, PHP_URL_HOST) !== $request->getHost()) {
-            return null;
-        }
-
-        if (! preg_match('#/counseling-sessions/(\d+)$#', (string) parse_url($referer, PHP_URL_PATH), $matches)) {
+        if ($path === null || ! preg_match('#/counseling-sessions/(\d+)$#', $path, $matches)) {
             return null;
         }
 

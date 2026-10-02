@@ -11,6 +11,12 @@ use Illuminate\Validation\Rule;
 class CounselingSessionFormRequest extends FormRequest
 {
     /**
+     * Shared with the form's client-side pre-submit check
+     * (counseling-sessions/_form.blade.php) so both say the same thing.
+     */
+    public const FOLLOW_UP_DATE_REQUIRED_MESSAGE = 'Please choose a follow-up date, or untick Follow-up required.';
+
+    /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
@@ -84,5 +90,17 @@ class CounselingSessionFormRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'follow_up_date.required_if' => self::FOLLOW_UP_DATE_REQUIRED_MESSAGE,
+        ];
     }
 }

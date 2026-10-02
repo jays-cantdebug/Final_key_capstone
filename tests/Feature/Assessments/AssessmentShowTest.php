@@ -102,4 +102,68 @@ class AssessmentShowTest extends TestCase
 
         $response->assertDontSee('Back to Counseling Session');
     }
+
+    public function test_back_to_dashboard_link_appears_when_referred_from_the_guidance_counselor_dashboard(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $assessment = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $assessment->id]);
+
+        $response = $this->actingAs($counselor)
+            ->withHeader('referer', route('guidance-counselor.dashboard'))
+            ->get(route('assessments.show', $assessment));
+
+        $response->assertOk();
+        $response->assertSee('Back to Dashboard');
+        $response->assertSee(route('guidance-counselor.dashboard'));
+        $response->assertDontSee('Back to Counseling Session');
+    }
+
+    public function test_back_to_dashboard_link_does_not_appear_from_other_pages_or_external_referers(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $assessment = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $assessment->id]);
+
+        foreach ([null, route('flagged-cases.index'), 'https://evil.example.com/guidance-counselor/dashboard'] as $referer) {
+            $request = $this->actingAs($counselor);
+
+            if ($referer !== null) {
+                $request = $request->withHeader('referer', $referer);
+            }
+
+            $request->get(route('assessments.show', $assessment))
+                ->assertOk()
+                ->assertDontSee('Back to Dashboard');
+        }
+    }
+
+    public function test_back_to_dashboard_link_appears_on_the_psychometrician_dashboard_and_keeps_its_filters(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $assessment = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $assessment->id]);
+        $filters = ['period' => 'week', 'severity_subscale' => 'stress', 'page' => 2];
+
+        $response = $this->actingAs($psychometrician)
+            ->withHeader('referer', route('psychometrician.dashboard', $filters))
+            ->get(route('assessments.show', $assessment));
+
+        $response->assertOk();
+        $response->assertSee('Back to Dashboard');
+        $response->assertViewHas('backToDashboardUrl', route('psychometrician.dashboard', $filters));
+    }
+
+    public function test_back_to_dashboard_link_only_points_at_the_viewers_own_dashboard(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $assessment = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $assessment->id]);
+
+        $this->actingAs($counselor)
+            ->withHeader('referer', route('psychometrician.dashboard'))
+            ->get(route('assessments.show', $assessment))
+            ->assertOk()
+            ->assertDontSee('Back to Dashboard');
+    }
 }

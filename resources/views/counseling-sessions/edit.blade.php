@@ -15,7 +15,7 @@
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $session->student->student_number }}</p>
         </div>
 
-        <form method="POST" action="{{ route('counseling-sessions.update', $session) }}" class="mt-6">
+        <form method="POST" action="{{ route('counseling-sessions.update', $session) }}" class="mt-6" novalidate>
             @csrf
             @method('PUT')
 

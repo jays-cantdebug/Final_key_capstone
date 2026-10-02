@@ -7,17 +7,8 @@
                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $foundStudent->student_number }}</p>
             </div>
 
-            @if ($errors->any())
-                <x-alert type="error" class="mt-6">
-                    <ul class="list-disc space-y-1 pl-5">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </x-alert>
-            @endif
-
-            <form method="POST" action="{{ route('counseling-sessions.store') }}" class="mt-6">
+            {{-- Validation errors render as per-field tooltips inside _form (see resources/js/session-form.js). --}}
+            <form method="POST" action="{{ route('counseling-sessions.store') }}" class="mt-6" novalidate>
                 @csrf
                 <input type="hidden" name="student_id" value="{{ $foundStudent->id }}" />
 

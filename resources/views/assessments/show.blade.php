@@ -32,6 +32,12 @@
         <x-toast type="success">{{ session('status') }}</x-toast>
     @endif
 
+    @if ($backToDashboardUrl)
+        <div class="mb-4 text-sm">
+            <a href="{{ $backToDashboardUrl }}" class="font-semibold text-primary hover:underline dark:text-primary-soft">&larr; Back to Dashboard</a>
+        </div>
+    @endif
+
     @if ($assessment->flaggedCases->isNotEmpty())
         <div class="mb-6 flex flex-wrap gap-2">
             @foreach ($assessment->flaggedCases as $flaggedCase)

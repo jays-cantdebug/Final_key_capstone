@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Http\Requests\CounselingSessionFormRequest;
 use App\Models\CounselingSession;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -159,5 +160,71 @@ class CounselingSessionTest extends TestCase
         $psychometrician = $this->psychometrician();
 
         $this->actingAs($psychometrician)->get(route('counseling-sessions.index'))->assertForbidden();
+    }
+
+    public function test_follow_up_required_without_a_date_fails_with_a_clear_message(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $student = Student::factory()->create();
+
+        $response = $this->actingAs($counselor)->post(route('counseling-sessions.store'), [
+            'student_id' => $student->id,
+            'session_date' => now()->addDay()->format('Y-m-d'),
+            'session_time' => '09:00',
+            'session_notes' => 'Initial consultation.',
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+            'follow_up_required' => '1',
+            'follow_up_date' => '',
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertSessionHasErrors(['follow_up_date' => CounselingSessionFormRequest::FOLLOW_UP_DATE_REQUIRED_MESSAGE]);
+        $this->assertDatabaseCount('counseling_sessions', 0);
+    }
+
+    public function test_schedule_form_shows_validation_errors_as_field_tooltips_not_a_duplicate_list(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $student = Student::factory()->create();
+        $createUrl = route('counseling-sessions.create', ['student_id' => $student->id]);
+
+        $response = $this->actingAs($counselor)->from($createUrl)->followingRedirects()->post(route('counseling-sessions.store'), [
+            'student_id' => $student->id,
+            'session_date' => now()->addDay()->format('Y-m-d'),
+            'session_time' => '09:00',
+            'session_notes' => 'Initial consultation.',
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+            'follow_up_required' => '1',
+            'follow_up_date' => '',
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertOk();
+        $response->assertSee(CounselingSessionFormRequest::FOLLOW_UP_DATE_REQUIRED_MESSAGE);
+        $response->assertSee('showsTooltip(', false);
+        $response->assertDontSee('list-disc space-y-1 pl-5', false);
+        $response->assertDontSee('when follow up required is 1');
+    }
+
+    public function test_edit_form_shows_validation_errors_as_field_tooltips(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $session = CounselingSession::factory()->create(['counselor_id' => $counselor->id]);
+
+        $response = $this->actingAs($counselor)
+            ->from(route('counseling-sessions.edit', $session))
+            ->followingRedirects()
+            ->put(route('counseling-sessions.update', $session), [
+                'session_date' => now()->addDay()->format('Y-m-d'),
+                'session_time' => '09:00',
+                'session_notes' => 'Updated notes.',
+                'session_status' => CounselingSession::STATUS_COMPLETED,
+                'follow_up_required' => '1',
+                'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+            ]);
+
+        $response->assertOk();
+        $response->assertSee(CounselingSessionFormRequest::FOLLOW_UP_DATE_REQUIRED_MESSAGE);
+        $this->assertFalse($session->refresh()->follow_up_required);
     }
 }
