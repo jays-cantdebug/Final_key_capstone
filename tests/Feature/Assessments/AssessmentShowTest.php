@@ -166,4 +166,78 @@ class AssessmentShowTest extends TestCase
             ->assertOk()
             ->assertDontSee('Back to Dashboard');
     }
+
+    public function test_back_to_counseling_history_link_appears_when_referred_from_the_students_history_page(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $assessment = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $assessment->id]);
+        CounselingSession::factory()->create([
+            'student_id' => $assessment->student_id,
+            'assessment_id' => $assessment->id,
+            'counselor_id' => $counselor->id,
+        ]);
+        $historyUrl = route('counseling-sessions.students.show', $assessment->student_id);
+
+        $response = $this->actingAs($counselor)
+            ->withHeader('referer', $historyUrl)
+            ->get(route('assessments.show', $assessment));
+
+        $response->assertOk();
+        $response->assertSee('Back to Counseling History');
+        $response->assertViewHas('backToCounselingHistoryUrl', $historyUrl);
+        $response->assertDontSee('Back to Counseling Session');
+    }
+
+    public function test_back_to_counseling_history_link_does_not_appear_when_the_student_has_no_session_for_this_assessment(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $assessment = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $assessment->id]);
+
+        $otherAssessment = Assessment::factory()->create();
+        CounselingSession::factory()->create([
+            'student_id' => $otherAssessment->student_id,
+            'assessment_id' => $otherAssessment->id,
+            'counselor_id' => $counselor->id,
+        ]);
+
+        $this->actingAs($counselor)
+            ->withHeader('referer', route('counseling-sessions.students.show', $otherAssessment->student_id))
+            ->get(route('assessments.show', $assessment))
+            ->assertOk()
+            ->assertDontSee('Back to Counseling History');
+    }
+
+    public function test_back_to_counseling_history_link_does_not_appear_for_other_referers_or_roles(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $assessment = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $assessment->id]);
+        CounselingSession::factory()->create([
+            'student_id' => $assessment->student_id,
+            'assessment_id' => $assessment->id,
+            'counselor_id' => $counselor->id,
+        ]);
+        $historyPath = parse_url(route('counseling-sessions.students.show', $assessment->student_id), PHP_URL_PATH);
+
+        foreach ([null, route('counseling-sessions.students.index'), 'https://evil.example.com'.$historyPath] as $referer) {
+            $request = $this->actingAs($counselor);
+
+            if ($referer !== null) {
+                $request = $request->withHeader('referer', $referer);
+            }
+
+            $request->get(route('assessments.show', $assessment))
+                ->assertOk()
+                ->assertDontSee('Back to Counseling History');
+        }
+
+        // Counseling History is Guidance Counselor-only, so a Psychometrician never gets a link that would 403.
+        $this->actingAs($this->psychometrician())
+            ->withHeader('referer', route('counseling-sessions.students.show', $assessment->student_id))
+            ->get(route('assessments.show', $assessment))
+            ->assertOk()
+            ->assertDontSee('Back to Counseling History');
+    }
 }

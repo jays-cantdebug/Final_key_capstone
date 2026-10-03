@@ -9,6 +9,7 @@ use App\Models\CounselingSession;
 use App\Services\Auth\DashboardRouteService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Displays the final, read-only result of a completed assessment.
@@ -39,14 +40,16 @@ class AssessmentController extends Controller
             'assessment' => $assessment,
             'backToCounselingSession' => $this->resolveBackToCounselingSession($assessment, $request),
             'backToDashboardUrl' => $this->resolveBackToDashboardUrl($request),
+            'backToCounselingHistoryUrl' => $this->resolveBackToCounselingHistoryUrl($assessment, $request),
         ]);
     }
 
     /**
      * The Referer's path, or null when there is no Referer or it points at
      * another host — so a back link is only ever derived from a page on
-     * this app. Shared by both Referer-resolved back links on this page
-     * ("Back to Counseling Session" and "Back to Dashboard").
+     * this app. Shared by every Referer-resolved back link on this page
+     * ("Back to Counseling Session", "Back to Counseling History", and
+     * "Back to Dashboard").
      */
     private function refererPath(Request $request): ?string
     {
@@ -107,5 +110,36 @@ class AssessmentController extends Controller
         $session = CounselingSession::find((int) $matches[1]);
 
         return $session?->assessment_id === $assessment->id ? $session : null;
+    }
+
+    /**
+     * "Back to Counseling History" appears when this page was reached via a
+     * session row's "Related Assessment" link on a student's Counseling
+     * History page (`/counseling-sessions/students/{id}`). Same Referer
+     * approach as "Back to Counseling Session": the referring student must
+     * actually have a counseling session linked to this assessment, and
+     * the viewer must be allowed to open Counseling Sessions at all
+     * (Guidance Counselor-only), so the link is never stale or a dead end.
+     */
+    private function resolveBackToCounselingHistoryUrl(Assessment $assessment, Request $request): ?string
+    {
+        $path = $this->refererPath($request);
+
+        if ($path === null || ! preg_match('#/counseling-sessions/students/(\d+)$#', $path, $matches)) {
+            return null;
+        }
+
+        if (! Gate::allows('viewAny', CounselingSession::class)) {
+            return null;
+        }
+
+        $studentId = (int) $matches[1];
+
+        $linked = CounselingSession::query()
+            ->where('student_id', $studentId)
+            ->where('assessment_id', $assessment->id)
+            ->exists();
+
+        return $linked ? route('counseling-sessions.students.show', $studentId) : null;
     }
 }

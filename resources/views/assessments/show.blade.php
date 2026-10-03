@@ -18,6 +18,11 @@
                         Back to Counseling Session
                     </x-secondary-button>
                 @endif
+                @if ($backToCounselingHistoryUrl)
+                    <x-secondary-button :href="$backToCounselingHistoryUrl">
+                        Back to Counseling History
+                    </x-secondary-button>
+                @endif
                 <x-secondary-button :href="route('reports.assessment.print', $assessment)" target="_blank">
                     Print Report
                 </x-secondary-button>

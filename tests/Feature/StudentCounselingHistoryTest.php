@@ -248,6 +248,23 @@ class StudentCounselingHistoryTest extends TestCase
         $this->assertSame(StudentCounselingHistoryService::FOLLOW_UP_NONE, $this->summary($student)->follow_up_status);
     }
 
+    public function test_a_scheduled_sessions_own_follow_up_flag_does_not_count_until_it_is_completed(): void
+    {
+        $student = Student::factory()->create();
+        $this->counselingSession($student, CounselingSession::STATUS_COMPLETED, now()->subWeek(), [
+            'follow_up_required' => false, 'follow_up_date' => null,
+        ]);
+        $scheduled = $this->counselingSession($student, CounselingSession::STATUS_SCHEDULED, now()->addDays(3), [
+            'follow_up_required' => true, 'follow_up_date' => now()->addWeeks(3),
+        ]);
+
+        $this->assertSame(StudentCounselingHistoryService::FOLLOW_UP_NONE, $this->summary($student)->follow_up_status);
+
+        $scheduled->update(['session_status' => CounselingSession::STATUS_COMPLETED]);
+
+        $this->assertSame(StudentCounselingHistoryService::FOLLOW_UP_NEEDED, $this->summary($student)->follow_up_status);
+    }
+
     // --- History page ---------------------------------------------------------
 
     public function test_history_page_lists_the_students_sessions_newest_first(): void
