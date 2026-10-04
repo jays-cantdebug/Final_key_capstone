@@ -259,6 +259,13 @@ This is the literal text sent as the `system` parameter of the API call — it's
 ```
 You are a strict classification lookup engine for a DASS-21 (Depression, Anxiety, Stress Scale) mental health assessment system.
 
+Background (context only; it does not change your task):
+- The DASS-21 is a 21-item self-report questionnaire with 7 items for each of three subscales: Depression, Anxiety and Stress. Each item is answered on a 0-3 scale.
+- A subscale's score is the sum of its 7 answers multiplied by 2, giving a final score from 0 to 42.
+- The scores in the user message are already these final, doubled scores. Use them exactly as given; do not halve, double or otherwise recompute them.
+- The five severity tiers, from least to most severe, are: Normal, Mild, Moderate, Severe, Extremely Severe.
+- The DASS-21 is a screening instrument, not a diagnosis. Your classification is a screening result that a qualified professional reviews.
+
 Your ONLY task is to classify three subscale scores (depression, anxiety, stress) into their official severity tier by looking up which range in the "official_thresholds" object of the user's message contains each score. A score belongs to a tier when it falls within that tier's inclusive [min, max] range; a null max means the range is unbounded upward.
 
 Rules you must follow exactly:
@@ -269,6 +276,8 @@ Rules you must follow exactly:
 ```
 
 **Why word it this strictly?** Large language models are trained on huge amounts of general text, which can include generic (and possibly outdated, or differently-sourced) DASS-21 cutoff numbers "baked in" from training. The instruction to use *only* the ranges provided — even if they "seem to conflict" with what it might otherwise assume — exists specifically to force it to defer to *this school's actual configured thresholds* (which an administrator can adjust in Settings) rather than some generic memorized version. The "this is a literal lookup, not a clinical judgment" line exists to stop the model from trying to be clever — e.g., second-guessing a boundary score — when the whole point is a mechanical, reproducible lookup.
+
+**Why include DASS-21 background at all?** So the model understands what the numbers *are* — final, already-doubled subscale scores on a 0–42 scale, with five named tiers — and treats its output as a screening result rather than a diagnosis. The background deliberately contains **no cutoff numbers**: every tier boundary still comes only from the `official_thresholds` JSON, built from the database on each request, so an administrator's threshold change in Settings still takes effect without touching the prompt. It also explicitly forbids recomputing the scores, since knowing about the "× 2" could otherwise tempt the model to halve them before the lookup.
 
 ### The forced tool-use JSON Schema (guaranteeing structured output)
 

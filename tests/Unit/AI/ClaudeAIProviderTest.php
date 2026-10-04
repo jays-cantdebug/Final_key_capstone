@@ -168,6 +168,66 @@ class ClaudeAIProviderTest extends TestCase
         });
     }
 
+    public function test_system_prompt_gives_dass21_background_but_no_cutoff_numbers(): void
+    {
+        Http::fake([
+            '*' => Http::response($this->toolUseResponse([
+                'depression_level' => 'Normal',
+                'anxiety_level' => 'Normal',
+                'stress_level' => 'Normal',
+            ])),
+        ]);
+
+        $this->classify(depression: 0, anxiety: 0, stress: 0);
+
+        Http::assertSent(function ($request) {
+            $prompt = $request['system'];
+
+            // The DASS-21 background context.
+            foreach ([
+                '21-item',
+                '7 items for each of three subscales: Depression, Anxiety and Stress',
+                '0-3 scale',
+                'multiplied by 2',
+                'final score from 0 to 42',
+                'already these final, doubled scores',
+                'do not halve, double or otherwise recompute them',
+                'Normal, Mild, Moderate, Severe, Extremely Severe',
+                'screening instrument, not a diagnosis',
+            ] as $expected) {
+                $this->assertStringContainsString($expected, $prompt);
+            }
+
+            // The safety rules are unchanged.
+            $this->assertStringContainsString('Use ONLY the threshold ranges provided in the user message.', $prompt);
+            $this->assertStringContainsString('This is a literal lookup, not a clinical judgment.', $prompt);
+
+            // No cutoffs: every number must be structural (21 items, 7 per
+            // subscale, 0-3 answers, x2, 0-42 range). Several of these
+            // coincide with real cutoffs (e.g. Anxiety Normal ends at 7,
+            // Depression Severe starts at 21), so instead of banning all
+            // threshold values, allow only these and ban every other one.
+            $structural = [0, 2, 3, 7, 21, 42];
+            preg_match_all('/\d+/', $prompt, $numbers);
+            $this->assertSame([], array_values(array_diff(array_map('intval', $numbers[0]), $structural)));
+
+            $cutoffs = collect(ClassificationThreshold::officialValues())
+                ->flatMap(fn (array $row) => [$row['min_score'], $row['max_score']])
+                ->unique()
+                ->diff($structural);
+            $this->assertNotEmpty($cutoffs);
+            foreach ($cutoffs as $cutoff) {
+                $this->assertDoesNotMatchRegularExpression('/\b'.$cutoff.'\b/', $prompt);
+            }
+
+            // No range expressions other than the two structural ones.
+            preg_match_all('/\d+\s*(?:-|–|to)\s*\d+|\[\s*\d+\s*,\s*\d+\s*\]/', $prompt, $ranges);
+            $this->assertSame(['0-3', '0 to 42'], $ranges[0]);
+
+            return true;
+        });
+    }
+
     /**
      * @return array<string, mixed>
      */
