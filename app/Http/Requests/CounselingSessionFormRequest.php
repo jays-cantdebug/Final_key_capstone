@@ -31,6 +31,11 @@ class CounselingSessionFormRequest extends FormRequest
      * segments were confusing to interact with). Only combines when both
      * are present so each field's own `required` rule still fires with a
      * precise per-field message if one is left blank.
+     *
+     * When Follow-up required is unticked, `follow_up_date` is forced to
+     * null: the form only hides the date input, which still submits its
+     * last value, so without this an unticked follow-up would keep a stale
+     * date on the session.
      */
     protected function prepareForValidation(): void
     {
@@ -38,6 +43,10 @@ class CounselingSessionFormRequest extends FormRequest
             $this->merge([
                 'session_datetime' => $this->input('session_date').' '.$this->input('session_time'),
             ]);
+        }
+
+        if (! $this->boolean('follow_up_required')) {
+            $this->merge(['follow_up_date' => null]);
         }
     }
 

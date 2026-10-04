@@ -182,6 +182,56 @@ class CounselingSessionTest extends TestCase
         $this->assertDatabaseCount('counseling_sessions', 0);
     }
 
+    public function test_unticking_follow_up_required_clears_the_stored_follow_up_date(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $session = CounselingSession::factory()->create([
+            'counselor_id' => $counselor->id,
+            'follow_up_required' => true,
+            'follow_up_date' => now()->addWeek()->toDateString(),
+        ]);
+
+        // The hidden date input still submits its last value when unticked.
+        $response = $this->actingAs($counselor)->put(route('counseling-sessions.update', $session), [
+            'session_date' => now()->addDay()->format('Y-m-d'),
+            'session_time' => '09:00',
+            'session_notes' => 'Follow-up no longer needed.',
+            'session_status' => CounselingSession::STATUS_COMPLETED,
+            'follow_up_required' => '0',
+            'follow_up_date' => now()->addWeek()->toDateString(),
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $session->refresh();
+        $this->assertFalse($session->follow_up_required);
+        $this->assertNull($session->follow_up_date);
+    }
+
+    public function test_creating_a_session_without_follow_up_ignores_a_submitted_follow_up_date(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $student = Student::factory()->create();
+
+        $response = $this->actingAs($counselor)->post(route('counseling-sessions.store'), [
+            'student_id' => $student->id,
+            'session_date' => now()->addDay()->format('Y-m-d'),
+            'session_time' => '09:00',
+            'session_notes' => 'Initial consultation.',
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+            'follow_up_required' => '0',
+            'follow_up_date' => now()->addWeek()->toDateString(),
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('counseling_sessions', [
+            'student_id' => $student->id,
+            'follow_up_required' => false,
+            'follow_up_date' => null,
+        ]);
+    }
+
     public function test_schedule_form_shows_validation_errors_as_field_tooltips_not_a_duplicate_list(): void
     {
         $counselor = $this->guidanceCounselor();
