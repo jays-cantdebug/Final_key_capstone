@@ -141,7 +141,11 @@ Manages the DASS-21 questionnaire itself: its versions, and the individual quest
 
 **Editing rules:** questions can only be added, edited, or removed while their parent version is still in `Draft` status. Once a version goes `Active` (meaning real students may have already been assessed against it), it's locked — this prevents someone from quietly changing a question's wording or scoring weight *after* real assessments have already been scored against the old wording.
 
-**Deleting a questionnaire** is blocked if any of its versions has ever been used by a real assessment — the system checks this automatically and shows a friendly error instead of silently corrupting historical data.
+**Activating a version** (including reactivating an Archived one) is only allowed when it has the official DASS-21 layout: exactly 7 Depression, 7 Anxiety and 7 Stress questions, every one of them required. DASS-21 scoring (each subscale's raw sum × 2) and the official classification thresholds (top band ending at 42) are only valid for that layout: fewer questions silently cap a subscale below Severe, so a student could never be flagged; more can push a score past 42, where no threshold band matches; and an optional question left blank would make scoring fail. If the layout is wrong, activation is refused with an error that names each wrong subscale and its count (e.g. "Depression has 5 questions; it needs exactly 7.") or the optional item numbers, and the message stays on screen until it is dismissed. A Draft can hold any layout while it is being built — only activation is checked.
+
+**Archiving the Active version** is allowed, but it leaves no active version, so New Assessments are blocked until another version is activated; the confirmation dialog says so. Only the Active version can be archived.
+
+**Deleting a questionnaire** is blocked if any of its versions has ever been used by a real assessment — the system checks this automatically and shows a friendly error instead of silently corrupting historical data. It is also blocked while one of its versions is the Active one ("Activate another version before archiving this questionnaire."), since an archived questionnaire's version would otherwise keep being used for new assessments while being hidden from Questionnaire Management.
 
 ---
 
@@ -465,6 +469,20 @@ The Guidance Counselor's inbox for flagged-case alerts. Each notification links 
 Where a Guidance Counselor records an actual counseling session held with a student — session date/time, notes, follow-up requirements, and confidentiality level — optionally linked to the specific assessment that prompted it.
 
 Creating a session starts with searching for the student by name (the same shared search pattern used everywhere — see below); if the search matches exactly one student, that student is pre-selected automatically to save a click.
+
+**Completed sessions can't be in the future:** a session marked Completed cannot have a session date after today ("A Completed session cannot be dated after today. Set the status to Scheduled, or correct the date."). The check is by date, not time, so a session completed today is accepted whatever its time. It applies on both create and edit, and only to Completed — a Scheduled session can be booked for any future date. Because follow-up status is based on the latest Completed session, this keeps "Needed"/"Overdue" tied to a session that actually took place. Sessions saved before this rule existed are not changed automatically: a Completed session that is still dated in the future must have its date corrected (or its status set back to Scheduled) the next time it is edited.
+
+**Follow-up date:** when "Follow-up required" is ticked, a follow-up date is required and cannot be earlier than the session date (the same day is allowed). Unticking it clears any follow-up date on save, so a session never keeps a stale date.
+
+**By Student tab and follow-up status:** besides the flat "All Sessions" list, the module has a "By Student" tab with one summary row per student who has at least one session — session count, last Completed session, next Scheduled session, and a follow-up status — and a per-student history page listing all of that student's sessions, most recent first. Archived students are included, because their history must stay viewable. Follow-up status is worked out on the fly, never stored:
+
+- **Needed** — the student's latest *Completed* session has "Follow-up required" ticked, and no Scheduled or Completed session exists after it.
+- **Overdue** — as Needed, and that session's follow-up date has already passed.
+- **None** — otherwise.
+
+Cancelled and No-Show sessions never count as the "last session" and never satisfy a pending follow-up. The list is sorted Overdue first, then Needed, and can be filtered to students needing follow-up (Needed includes Overdue) or Overdue only. Everything is computed in SQL from unencrypted columns, so session notes are never read for this list.
+
+**Per-student PDF:** the history page offers a print view and PDF download for that one student. It reuses the Counseling Report (filtered by `student_id`), so Restricted session notes stay redacted exactly as they are in the full report.
 
 ---
 

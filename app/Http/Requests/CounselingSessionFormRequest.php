@@ -16,6 +16,10 @@ class CounselingSessionFormRequest extends FormRequest
      */
     public const FOLLOW_UP_DATE_REQUIRED_MESSAGE = 'Please choose a follow-up date, or untick Follow-up required.';
 
+    public const FOLLOW_UP_DATE_BEFORE_SESSION_MESSAGE = 'The follow-up date cannot be earlier than the session date.';
+
+    public const COMPLETED_IN_FUTURE_MESSAGE = 'A Completed session cannot be dated after today. Set the status to Scheduled, or correct the date.';
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -35,7 +39,9 @@ class CounselingSessionFormRequest extends FormRequest
      * When Follow-up required is unticked, `follow_up_date` is forced to
      * null: the form only hides the date input, which still submits its
      * last value, so without this an unticked follow-up would keep a stale
-     * date on the session.
+     * date on the session. Only an explicit "unticked" counts — a request
+     * that leaves `follow_up_required` out entirely leaves the date alone,
+     * since the stored flag isn't changed either.
      */
     protected function prepareForValidation(): void
     {
@@ -45,7 +51,7 @@ class CounselingSessionFormRequest extends FormRequest
             ]);
         }
 
-        if (! $this->boolean('follow_up_required')) {
+        if ($this->has('follow_up_required') && ! $this->boolean('follow_up_required')) {
             $this->merge(['follow_up_date' => null]);
         }
     }
@@ -70,7 +76,17 @@ class CounselingSessionFormRequest extends FormRequest
                 'integer',
                 Rule::exists('assessments', 'id')->where('student_id', $studentId),
             ],
-            'session_date' => ['required', 'date_format:Y-m-d'],
+            'session_date' => [
+                'required',
+                'date_format:Y-m-d',
+                // A session can only be Completed once it has happened:
+                // date-level, so a Completed session dated today is fine.
+                // Scheduled (and the other statuses) may be in the future.
+                Rule::when(
+                    $this->input('session_status') === CounselingSession::STATUS_COMPLETED,
+                    'before_or_equal:today'
+                ),
+            ],
             'session_time' => ['required', 'date_format:H:i'],
             'session_datetime' => ['required', 'date'],
             'session_notes' => ['required', 'string'],
@@ -84,7 +100,14 @@ class CounselingSessionFormRequest extends FormRequest
                 ]),
             ],
             'follow_up_required' => ['boolean'],
-            'follow_up_date' => ['nullable', 'date', 'required_if:follow_up_required,1'],
+            'follow_up_date' => [
+                'nullable',
+                'date',
+                'required_if:follow_up_required,1',
+                // Only when there is a session date to compare against, so a
+                // blank session date doesn't also raise a misleading error here.
+                Rule::when($this->filled('session_date'), 'after_or_equal:session_date'),
+            ],
             'confidentiality_level' => [
                 'required',
                 Rule::in([
@@ -110,6 +133,8 @@ class CounselingSessionFormRequest extends FormRequest
     {
         return [
             'follow_up_date.required_if' => self::FOLLOW_UP_DATE_REQUIRED_MESSAGE,
+            'follow_up_date.after_or_equal' => self::FOLLOW_UP_DATE_BEFORE_SESSION_MESSAGE,
+            'session_date.before_or_equal' => self::COMPLETED_IN_FUTURE_MESSAGE,
         ];
     }
 }

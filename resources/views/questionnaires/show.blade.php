@@ -96,7 +96,7 @@
                             </form>
                             <button
                                 type="button"
-                                @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Archive this version?', message: 'Its questions will no longer be available for new assessments. You can reactivate it later if needed.', confirmLabel: 'Archive', formId: 'archive-version-form-{{ $version->id }}' })"
+                                @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Archive this version?', message: 'New assessments will be blocked until another version is activated. Past assessments keep this version, and you can reactivate it later.', confirmLabel: 'Archive', formId: 'archive-version-form-{{ $version->id }}' })"
                                 class="rounded-md border border-amber-200 px-3 py-1.5 font-medium text-amber-700 transition hover:bg-amber-50"
                             >Archive</button>
                         @else

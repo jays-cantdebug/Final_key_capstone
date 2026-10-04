@@ -115,9 +115,17 @@ class QuestionnaireVersionService
     /**
      * Archive an Active version, retiring it while keeping it available
      * for historical assessments.
+     *
+     * @throws QuestionnaireVersionLockedException if the version is not Active.
      */
     public function archive(QuestionnaireVersion $version): QuestionnaireVersion
     {
+        if ($version->status !== QuestionnaireVersion::STATUS_ACTIVE) {
+            throw new QuestionnaireVersionLockedException(
+                'Only the Active version can be archived.'
+            );
+        }
+
         return $this->database->transaction(function () use ($version): QuestionnaireVersion {
             $version->update(['status' => QuestionnaireVersion::STATUS_ARCHIVED]);
 

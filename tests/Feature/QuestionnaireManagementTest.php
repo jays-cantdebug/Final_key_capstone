@@ -298,6 +298,61 @@ class QuestionnaireManagementTest extends TestCase
         $this->assertSoftDeleted('questionnaires', ['id' => $questionnaire->id]);
     }
 
+    public function test_a_questionnaire_with_an_active_version_cannot_be_archived(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $questionnaire = Questionnaire::factory()->create();
+        $version = QuestionnaireVersion::factory()->active()->create(['questionnaire_id' => $questionnaire->id]);
+
+        $response = $this->actingAs($psychometrician)->delete(route('questionnaires.destroy', $questionnaire));
+
+        $response->assertSessionHasErrors([
+            'questionnaire' => 'Activate another version before archiving this questionnaire.',
+        ]);
+        $this->assertNotSoftDeleted('questionnaires', ['id' => $questionnaire->id]);
+        $this->assertSame(QuestionnaireVersion::STATUS_ACTIVE, $version->fresh()->status);
+    }
+
+    public function test_the_active_version_can_be_archived(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->active()->create();
+
+        $response = $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.archive', [$version->questionnaire, $version])
+        );
+
+        $response->assertSessionHasNoErrors();
+        $this->assertSame(QuestionnaireVersion::STATUS_ARCHIVED, $version->fresh()->status);
+    }
+
+    public function test_a_draft_version_cannot_be_archived(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $draft = QuestionnaireVersion::factory()->create();
+
+        $response = $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.archive', [$draft->questionnaire, $draft])
+        );
+
+        $response->assertSessionHasErrors(['version' => 'Only the Active version can be archived.']);
+        $this->assertSame(QuestionnaireVersion::STATUS_DRAFT, $draft->fresh()->status);
+    }
+
+    public function test_archive_confirmation_warns_that_new_assessments_will_be_blocked(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->active()->create();
+        $warning = 'New assessments will be blocked until another version is activated.';
+
+        $this->actingAs($psychometrician)
+            ->get(route('questionnaires.versions.show', [$version->questionnaire, $version]))
+            ->assertSee($warning);
+        $this->actingAs($psychometrician)
+            ->get(route('questionnaires.show', $version->questionnaire))
+            ->assertSee($warning);
+    }
+
     public function test_a_questionnaire_with_a_version_used_by_an_assessment_cannot_be_archived(): void
     {
         $psychometrician = $this->psychometrician();

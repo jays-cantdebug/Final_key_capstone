@@ -101,7 +101,11 @@ class QuestionnaireVersionController extends Controller
 
     public function archive(Questionnaire $questionnaire, QuestionnaireVersion $version): RedirectResponse
     {
-        $this->versionService->archive($version);
+        try {
+            $this->versionService->archive($version);
+        } catch (QuestionnaireVersionLockedException $exception) {
+            return back()->withErrors(['version' => $exception->getMessage()]);
+        }
 
         return redirect()->route('questionnaires.versions.show', [$questionnaire, $version])
             ->with('status', 'Questionnaire version archived successfully.');

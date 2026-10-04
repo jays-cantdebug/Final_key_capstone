@@ -85,7 +85,7 @@
                     </form>
                     <button
                         type="button"
-                        @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Archive this version?', message: 'Its questions will no longer be available for new assessments. You can reactivate it later if needed.', confirmLabel: 'Archive', formId: 'archive-version-form' })"
+                        @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Archive this version?', message: 'New assessments will be blocked until another version is activated. Past assessments keep this version, and you can reactivate it later.', confirmLabel: 'Archive', formId: 'archive-version-form' })"
                         class="inline-flex items-center justify-center rounded-md border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-50"
                     >
                         Archive version

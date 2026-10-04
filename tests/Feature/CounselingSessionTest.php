@@ -193,7 +193,7 @@ class CounselingSessionTest extends TestCase
 
         // The hidden date input still submits its last value when unticked.
         $response = $this->actingAs($counselor)->put(route('counseling-sessions.update', $session), [
-            'session_date' => now()->addDay()->format('Y-m-d'),
+            'session_date' => now()->format('Y-m-d'),
             'session_time' => '09:00',
             'session_notes' => 'Follow-up no longer needed.',
             'session_status' => CounselingSession::STATUS_COMPLETED,
@@ -232,6 +232,91 @@ class CounselingSessionTest extends TestCase
         ]);
     }
 
+    public function test_follow_up_date_before_the_session_date_is_rejected(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $student = Student::factory()->create();
+
+        $response = $this->actingAs($counselor)->post(route('counseling-sessions.store'), [
+            'student_id' => $student->id,
+            'session_date' => '2026-10-10',
+            'session_time' => '09:00',
+            'session_notes' => 'Initial consultation.',
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+            'follow_up_required' => '1',
+            'follow_up_date' => '2026-10-09',
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertSessionHasErrors(['follow_up_date' => CounselingSessionFormRequest::FOLLOW_UP_DATE_BEFORE_SESSION_MESSAGE]);
+        $this->assertDatabaseCount('counseling_sessions', 0);
+    }
+
+    public function test_follow_up_date_on_the_same_day_as_the_session_is_allowed(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $student = Student::factory()->create();
+
+        $response = $this->actingAs($counselor)->post(route('counseling-sessions.store'), [
+            'student_id' => $student->id,
+            'session_date' => '2026-10-10',
+            'session_time' => '09:00',
+            'session_notes' => 'Initial consultation.',
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+            'follow_up_required' => '1',
+            'follow_up_date' => '2026-10-10',
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $session = CounselingSession::query()->where('student_id', $student->id)->sole();
+        $this->assertSame('2026-10-10', $session->follow_up_date->toDateString());
+    }
+
+    public function test_a_blank_session_date_does_not_add_a_misleading_follow_up_date_error(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $student = Student::factory()->create();
+
+        $response = $this->actingAs($counselor)->post(route('counseling-sessions.store'), [
+            'student_id' => $student->id,
+            'session_date' => '',
+            'session_time' => '09:00',
+            'session_notes' => 'Initial consultation.',
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+            'follow_up_required' => '1',
+            'follow_up_date' => '2026-10-10',
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertSessionHasErrors('session_date');
+        $response->assertSessionDoesntHaveErrors('follow_up_date');
+    }
+
+    public function test_an_update_that_leaves_out_follow_up_required_keeps_the_follow_up_date(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $session = CounselingSession::factory()->create([
+            'counselor_id' => $counselor->id,
+            'follow_up_required' => true,
+            'follow_up_date' => '2026-10-20',
+        ]);
+
+        $response = $this->actingAs($counselor)->put(route('counseling-sessions.update', $session), [
+            'session_date' => '2026-10-10',
+            'session_time' => '09:00',
+            'session_notes' => 'Notes only.',
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+            // follow_up_required and follow_up_date deliberately omitted.
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $session->refresh();
+        $this->assertTrue($session->follow_up_required);
+        $this->assertSame('2026-10-20', $session->follow_up_date->toDateString());
+    }
+
     public function test_schedule_form_shows_validation_errors_as_field_tooltips_not_a_duplicate_list(): void
     {
         $counselor = $this->guidanceCounselor();
@@ -265,7 +350,7 @@ class CounselingSessionTest extends TestCase
             ->from(route('counseling-sessions.edit', $session))
             ->followingRedirects()
             ->put(route('counseling-sessions.update', $session), [
-                'session_date' => now()->addDay()->format('Y-m-d'),
+                'session_date' => now()->format('Y-m-d'),
                 'session_time' => '09:00',
                 'session_notes' => 'Updated notes.',
                 'session_status' => CounselingSession::STATUS_COMPLETED,
@@ -276,5 +361,92 @@ class CounselingSessionTest extends TestCase
         $response->assertOk();
         $response->assertSee(CounselingSessionFormRequest::FOLLOW_UP_DATE_REQUIRED_MESSAGE);
         $this->assertFalse($session->refresh()->follow_up_required);
+    }
+
+    public function test_a_completed_session_dated_after_today_is_rejected_on_create(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $student = Student::factory()->create();
+
+        $response = $this->actingAs($counselor)->post(route('counseling-sessions.store'), [
+            'student_id' => $student->id,
+            'session_date' => now()->addDay()->format('Y-m-d'),
+            'session_time' => '09:00',
+            'session_notes' => 'Logged too early.',
+            'session_status' => CounselingSession::STATUS_COMPLETED,
+            'follow_up_required' => '0',
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertSessionHasErrors([
+            'session_date' => 'A Completed session cannot be dated after today. Set the status to Scheduled, or correct the date.',
+        ]);
+        $this->assertDatabaseCount('counseling_sessions', 0);
+    }
+
+    public function test_a_completed_session_dated_after_today_is_rejected_on_update(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $session = CounselingSession::factory()->create([
+            'counselor_id' => $counselor->id,
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+            'session_datetime' => now()->addWeek()->setTime(9, 0),
+        ]);
+
+        $response = $this->actingAs($counselor)->put(route('counseling-sessions.update', $session), [
+            'session_date' => now()->addWeek()->format('Y-m-d'),
+            'session_time' => '09:00',
+            'session_notes' => 'Marked completed before it happened.',
+            'session_status' => CounselingSession::STATUS_COMPLETED,
+            'follow_up_required' => '0',
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertSessionHasErrors(['session_date' => CounselingSessionFormRequest::COMPLETED_IN_FUTURE_MESSAGE]);
+        $this->assertSame(CounselingSession::STATUS_SCHEDULED, $session->refresh()->session_status);
+    }
+
+    public function test_a_completed_session_dated_today_is_allowed(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $student = Student::factory()->create();
+
+        $response = $this->actingAs($counselor)->post(route('counseling-sessions.store'), [
+            'student_id' => $student->id,
+            'session_date' => now()->format('Y-m-d'),
+            'session_time' => '23:59',
+            'session_notes' => 'Held today.',
+            'session_status' => CounselingSession::STATUS_COMPLETED,
+            'follow_up_required' => '0',
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('counseling_sessions', [
+            'student_id' => $student->id,
+            'session_status' => CounselingSession::STATUS_COMPLETED,
+        ]);
+    }
+
+    public function test_a_scheduled_session_dated_after_today_is_allowed(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $student = Student::factory()->create();
+
+        $response = $this->actingAs($counselor)->post(route('counseling-sessions.store'), [
+            'student_id' => $student->id,
+            'session_date' => now()->addMonth()->format('Y-m-d'),
+            'session_time' => '09:00',
+            'session_notes' => 'Upcoming session.',
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+            'follow_up_required' => '0',
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('counseling_sessions', [
+            'student_id' => $student->id,
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+        ]);
     }
 }
