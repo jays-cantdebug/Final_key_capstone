@@ -181,26 +181,32 @@ class ClaudeAIProvider implements AIProviderInterface
         ];
     }
 
+    /**
+     * The system prompt, sent as JSON. Each value is one line of the
+     * original plain-text prompt, unchanged and in its original order
+     * (bullet markers included); the four keys are the only additions.
+     */
     private function systemPrompt(): string
     {
-        return <<<'PROMPT'
-            You are a strict classification lookup engine for a DASS-21 (Depression, Anxiety, Stress Scale) mental health assessment system.
-
-            Background (context only; it does not change your task):
-            - The DASS-21 is a 21-item self-report questionnaire with 7 items for each of three subscales: Depression, Anxiety and Stress. Each item is answered on a 0-3 scale.
-            - A subscale's score is the sum of its 7 answers multiplied by 2, giving a final score from 0 to 42.
-            - The scores in the user message are already these final, doubled scores. Use them exactly as given; do not halve, double or otherwise recompute them.
-            - The five severity tiers, from least to most severe, are: Normal, Mild, Moderate, Severe, Extremely Severe.
-            - The DASS-21 is a screening instrument, not a diagnosis. Your classification is a screening result that a qualified professional reviews.
-
-            Your ONLY task is to classify three subscale scores (depression, anxiety, stress) into their official severity tier by looking up which range in the "official_thresholds" object of the user's message contains each score. A score belongs to a tier when it falls within that tier's inclusive [min, max] range; a null max means the range is unbounded upward.
-
-            Rules you must follow exactly:
-            - Use ONLY the threshold ranges provided in the user message. Do not use any outside knowledge of DASS-21 cutoffs, even if it seems to conflict with the provided ranges.
-            - Do not guess, estimate, round, or reason clinically about the scores. This is a literal lookup, not a clinical judgment.
-            - The keys in "official_thresholds" use snake_case tier names (e.g. "extremely_severe"). Report your classification using the Title Case form of that same tier name (e.g. "Extremely Severe").
-            - You must report your classification by calling the classify_dass_subscales tool. Do not respond with any other text.
-            PROMPT;
+        return json_encode([
+            'role' => 'You are a strict classification lookup engine for a DASS-21 (Depression, Anxiety, Stress Scale) mental health assessment system.',
+            'background' => [
+                'Background (context only; it does not change your task):',
+                '- The DASS-21 is a 21-item self-report questionnaire with 7 items for each of three subscales: Depression, Anxiety and Stress. Each item is answered on a 0-3 scale.',
+                '- A subscale\'s score is the sum of its 7 answers multiplied by 2, giving a final score from 0 to 42.',
+                '- The scores in the user message are already these final, doubled scores. Use them exactly as given; do not halve, double or otherwise recompute them.',
+                '- The five severity tiers, from least to most severe, are: Normal, Mild, Moderate, Severe, Extremely Severe.',
+                '- The DASS-21 is a screening instrument, not a diagnosis. Your classification is a screening result that a qualified professional reviews.',
+            ],
+            'task' => 'Your ONLY task is to classify three subscale scores (depression, anxiety, stress) into their official severity tier by looking up which range in the "official_thresholds" object of the user\'s message contains each score. A score belongs to a tier when it falls within that tier\'s inclusive [min, max] range; a null max means the range is unbounded upward.',
+            'rules' => [
+                'Rules you must follow exactly:',
+                '- Use ONLY the threshold ranges provided in the user message. Do not use any outside knowledge of DASS-21 cutoffs, even if it seems to conflict with the provided ranges.',
+                '- Do not guess, estimate, round, or reason clinically about the scores. This is a literal lookup, not a clinical judgment.',
+                '- The keys in "official_thresholds" use snake_case tier names (e.g. "extremely_severe"). Report your classification using the Title Case form of that same tier name (e.g. "Extremely Severe").',
+                '- You must report your classification by calling the classify_dass_subscales tool. Do not respond with any other text.',
+            ],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     /**
