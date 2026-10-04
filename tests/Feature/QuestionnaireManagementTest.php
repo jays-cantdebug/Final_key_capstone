@@ -57,7 +57,7 @@ class QuestionnaireManagementTest extends TestCase
             route('questionnaires.versions.activate', [$version->questionnaire, $version])
         );
 
-        $response->assertSessionHasErrors('version');
+        $response->assertSessionHasErrors('activation');
         $this->assertSame(QuestionnaireVersion::STATUS_DRAFT, $version->fresh()->status);
     }
 
@@ -66,7 +66,7 @@ class QuestionnaireManagementTest extends TestCase
         $psychometrician = $this->psychometrician();
         $currentlyActive = QuestionnaireVersion::factory()->active()->create();
         $newVersion = QuestionnaireVersion::factory()->create();
-        DassQuestion::factory()->create(['questionnaire_version_id' => $newVersion->id]);
+        $this->addDassQuestions($newVersion);
 
         $this->actingAs($psychometrician)->patch(
             route('questionnaires.versions.activate', [$newVersion->questionnaire, $newVersion])
@@ -79,14 +79,14 @@ class QuestionnaireManagementTest extends TestCase
     /**
      * Regression test: an Archived version previously had no UI path back
      * to Active. activate() itself places no restriction on the version's
-     * current status (only that it has questions), so a previously
-     * Archived version can be reactivated directly.
+     * current status (only that it is a valid 7/7/7 DASS-21 layout), so a
+     * previously Archived version can be reactivated directly.
      */
     public function test_an_archived_version_can_be_reactivated(): void
     {
         $psychometrician = $this->psychometrician();
         $archived = QuestionnaireVersion::factory()->archived()->create();
-        DassQuestion::factory()->create(['questionnaire_version_id' => $archived->id]);
+        $this->addDassQuestions($archived);
 
         $response = $this->actingAs($psychometrician)->patch(
             route('questionnaires.versions.activate', [$archived->questionnaire, $archived])
@@ -94,6 +94,172 @@ class QuestionnaireManagementTest extends TestCase
 
         $response->assertRedirect();
         $this->assertSame(QuestionnaireVersion::STATUS_ACTIVE, $archived->fresh()->status);
+    }
+
+    public function test_a_version_with_exactly_seven_required_questions_per_subscale_activates(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->create();
+        $this->addDassQuestions($version, depression: 7, anxiety: 7, stress: 7);
+
+        $response = $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.activate', [$version->questionnaire, $version])
+        );
+
+        $response->assertSessionHasNoErrors();
+        $this->assertSame(QuestionnaireVersion::STATUS_ACTIVE, $version->fresh()->status);
+    }
+
+    public function test_a_subscale_with_six_questions_blocks_activation(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->create();
+        $this->addDassQuestions($version, depression: 6, anxiety: 7, stress: 7);
+
+        $response = $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.activate', [$version->questionnaire, $version])
+        );
+
+        $response->assertSessionHasErrors([
+            'activation' => 'This version cannot be activated. Depression has 6 questions; it needs exactly 7.',
+        ]);
+        $this->assertSame(QuestionnaireVersion::STATUS_DRAFT, $version->fresh()->status);
+    }
+
+    public function test_a_subscale_with_eight_questions_blocks_activation(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->create();
+        $this->addDassQuestions($version, depression: 7, anxiety: 7, stress: 8);
+
+        $response = $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.activate', [$version->questionnaire, $version])
+        );
+
+        $response->assertSessionHasErrors([
+            'activation' => 'This version cannot be activated. Stress has 8 questions; it needs exactly 7.',
+        ]);
+        $this->assertSame(QuestionnaireVersion::STATUS_DRAFT, $version->fresh()->status);
+    }
+
+    public function test_every_wrong_subscale_is_named_in_one_message(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->create();
+        $this->addDassQuestions($version, depression: 5, anxiety: 7, stress: 1);
+
+        $response = $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.activate', [$version->questionnaire, $version])
+        );
+
+        $response->assertSessionHasErrors([
+            'activation' => 'This version cannot be activated. Depression has 5 questions; it needs exactly 7. Stress has 1 question; it needs exactly 7.',
+        ]);
+    }
+
+    public function test_a_non_required_question_blocks_activation(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->create();
+        $this->addDassQuestions($version);
+        $version->questions()->where('item_number', 4)->update(['is_required' => false]);
+
+        $response = $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.activate', [$version->questionnaire, $version])
+        );
+
+        $response->assertSessionHasErrors([
+            'activation' => 'This version cannot be activated. Every question must be required; item 4 is optional.',
+        ]);
+        $this->assertSame(QuestionnaireVersion::STATUS_DRAFT, $version->fresh()->status);
+    }
+
+    public function test_reactivating_an_archived_version_with_wrong_counts_is_blocked(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $currentlyActive = $this->createActiveQuestionnaireVersion();
+        $archived = QuestionnaireVersion::factory()->archived()->create();
+        $this->addDassQuestions($archived, depression: 1, anxiety: 1, stress: 1);
+
+        $response = $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.activate', [$archived->questionnaire, $archived])
+        );
+
+        $response->assertSessionHasErrors('activation');
+        $this->assertSame(QuestionnaireVersion::STATUS_ARCHIVED, $archived->fresh()->status);
+        $this->assertSame(QuestionnaireVersion::STATUS_ACTIVE, $currentlyActive->fresh()->status);
+    }
+
+    public function test_activation_error_stays_on_screen_until_dismissed_on_the_version_page(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->create();
+        $this->addDassQuestions($version, depression: 5, anxiety: 7, stress: 8);
+
+        $response = $this->actingAs($psychometrician)
+            ->from(route('questionnaires.versions.show', [$version->questionnaire, $version]))
+            ->followingRedirects()
+            ->patch(route('questionnaires.versions.activate', [$version->questionnaire, $version]));
+
+        $response->assertOk();
+        $response->assertSee('Depression has 5 questions; it needs exactly 7. Stress has 8 questions; it needs exactly 7.');
+        $response->assertSee('aria-label="Dismiss"', false);
+        $response->assertDontSee('setTimeout(() => show = false', false);
+    }
+
+    public function test_activation_error_stays_on_screen_until_dismissed_on_the_questionnaire_page(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->create();
+        $this->addDassQuestions($version, depression: 6, anxiety: 7, stress: 7);
+
+        $response = $this->actingAs($psychometrician)
+            ->from(route('questionnaires.show', $version->questionnaire))
+            ->followingRedirects()
+            ->patch(route('questionnaires.versions.activate', [$version->questionnaire, $version]));
+
+        $response->assertOk();
+        $response->assertSee('Depression has 6 questions; it needs exactly 7.');
+        $response->assertSee('aria-label="Dismiss"', false);
+        $response->assertDontSee('setTimeout(() => show = false', false);
+    }
+
+    public function test_other_toasts_on_the_version_page_still_auto_hide(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->create();
+        $this->addDassQuestions($version);
+
+        $response = $this->actingAs($psychometrician)
+            ->followingRedirects()
+            ->patch(route('questionnaires.versions.activate', [$version->questionnaire, $version]));
+
+        $response->assertOk();
+        $response->assertSee('Questionnaire version activated successfully.');
+        $response->assertSee('setTimeout(() => show = false, 4000)', false);
+    }
+
+    public function test_a_draft_with_an_incomplete_layout_can_still_be_edited(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->create();
+        $this->addDassQuestions($version, depression: 2, anxiety: 0, stress: 0);
+        $question = $version->questions()->where('item_number', 1)->firstOrFail();
+
+        $response = $this->actingAs($psychometrician)->put(
+            route('questionnaires.versions.questions.update', [$version->questionnaire, $version, $question]),
+            [
+                'item_number' => 1,
+                'question_text' => 'Edited while still a partial Draft.',
+                'question_type' => DassQuestion::TYPE_LIKERT_SCALE,
+                'subscale' => DassQuestion::SUBSCALE_ANXIETY,
+                'display_order' => 1,
+                'is_required' => true,
+            ]
+        );
+
+        $response->assertSessionHasNoErrors();
+        $this->assertSame(DassQuestion::SUBSCALE_ANXIETY, $question->fresh()->subscale);
     }
 
     public function test_a_draft_version_can_be_deleted_but_an_active_version_cannot(): void

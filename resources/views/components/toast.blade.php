@@ -1,5 +1,7 @@
 @props(['type' => 'success', 'duration' => 4000])
 
+{{-- `duration` is in ms; 0 keeps the toast on screen until it is dismissed. --}}
+
 @php
 $variants = [
     'success' => ['bg-tint border-primary/20 text-[#1A5A31] dark:bg-primary-soft/10 dark:border-primary-soft/30 dark:text-primary-soft', 'M16.7 5.3a1 1 0 0 1 0 1.4l-7 7a1 1 0 0 1-1.4 0l-3-3a1 1 0 1 1 1.4-1.4L9 11.6l6.3-6.3a1 1 0 0 1 1.4 0Z'],
@@ -14,7 +16,9 @@ $variants = [
 <div
     x-data="{ show: true }"
     x-show="show"
-    x-init="setTimeout(() => show = false, {{ (int) $duration }})"
+    @if ((int) $duration > 0)
+        x-init="setTimeout(() => show = false, {{ (int) $duration }})"
+    @endif
     x-transition:enter="transition ease-out duration-300"
     x-transition:enter-start="opacity-0 translate-y-2"
     x-transition:enter-end="opacity-100 translate-y-0"

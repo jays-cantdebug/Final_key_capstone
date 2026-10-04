@@ -50,21 +50,43 @@ trait InteractsWithDomainData
     {
         $version = QuestionnaireVersion::factory()->active()->create();
 
+        $this->addDassQuestions($version, $perSubscale, $perSubscale, $perSubscale);
+
+        return $version->fresh('questions');
+    }
+
+    /**
+     * Add required questions to a version, numbered sequentially, with the
+     * given count per subscale. Defaults to the valid DASS-21 layout
+     * (7/7/7) that QuestionnaireVersionService::activate() requires.
+     */
+    protected function addDassQuestions(QuestionnaireVersion $version, int $depression = 7, int $anxiety = 7, int $stress = 7): void
+    {
         $itemNumber = 1;
         $displayOrder = 1;
 
-        foreach ([DassQuestion::SUBSCALE_DEPRESSION, DassQuestion::SUBSCALE_ANXIETY, DassQuestion::SUBSCALE_STRESS] as $subscale) {
-            for ($i = 0; $i < $perSubscale; $i++) {
-                DassQuestion::factory()->create([
-                    'questionnaire_version_id' => $version->id,
+        $counts = [
+            DassQuestion::SUBSCALE_DEPRESSION => $depression,
+            DassQuestion::SUBSCALE_ANXIETY => $anxiety,
+            DassQuestion::SUBSCALE_STRESS => $stress,
+        ];
+
+        // Created directly rather than via DassQuestionFactory: its
+        // definition draws item_number from faker->unique() over 1-21 even
+        // when overridden, which runs out once a test needs more than 21.
+        foreach ($counts as $subscale => $count) {
+            for ($i = 0; $i < $count; $i++) {
+                $version->questions()->create([
+                    'item_number' => $itemNumber,
+                    'question_text' => "{$subscale} question {$itemNumber}",
+                    'question_type' => DassQuestion::TYPE_LIKERT_SCALE,
                     'subscale' => $subscale,
-                    'item_number' => $itemNumber++,
                     'display_order' => $displayOrder++,
+                    'is_required' => true,
                 ]);
+                $itemNumber++;
             }
         }
-
-        return $version->fresh('questions');
     }
 
     /**

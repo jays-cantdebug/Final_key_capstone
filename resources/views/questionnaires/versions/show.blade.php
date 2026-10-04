@@ -40,6 +40,10 @@
         <x-toast type="error">{{ $message }}</x-toast>
     @enderror
 
+    @error('activation')
+        <x-toast type="error" :duration="0">{{ $message }}</x-toast>
+    @enderror
+
     <x-card class="mb-6">
         <div class="flex items-start justify-between gap-4">
             <dl class="grid gap-4 sm:grid-cols-2">

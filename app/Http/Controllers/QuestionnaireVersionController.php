@@ -89,7 +89,10 @@ class QuestionnaireVersionController extends Controller
         try {
             $this->versionService->activate($version);
         } catch (QuestionnaireVersionLockedException $exception) {
-            return back()->withErrors(['version' => $exception->getMessage()]);
+            // Own error key (not the shared `version`) so the questionnaire
+            // and version pages can keep this one on screen until dismissed:
+            // it can list several subscales, too long for an auto-hiding toast.
+            return back()->withErrors(['activation' => $exception->getMessage()]);
         }
 
         return redirect()->route('questionnaires.versions.show', [$questionnaire, $version])

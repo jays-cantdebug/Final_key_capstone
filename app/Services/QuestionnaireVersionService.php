@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Exceptions\QuestionnaireVersionLockedException;
+use App\Models\DassQuestion;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireVersion;
 use Illuminate\Database\DatabaseManager;
@@ -20,6 +21,11 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class QuestionnaireVersionService
 {
+    /**
+     * The official DASS-21 layout: 7 items per subscale, 21 in total.
+     */
+    public const QUESTIONS_PER_SUBSCALE = 7;
+
     public function __construct(private readonly DatabaseManager $database) {}
 
     /**
@@ -85,15 +91,14 @@ class QuestionnaireVersionService
      * Activate a version: archives whatever version is currently Active
      * anywhere in the system, then marks the given version Active.
      *
-     * @throws QuestionnaireVersionLockedException if the version has no questions.
+     * Applies equally to a Draft and to a previously Archived version
+     * being reactivated.
+     *
+     * @throws QuestionnaireVersionLockedException if the version is not a valid DASS-21 layout.
      */
     public function activate(QuestionnaireVersion $version): QuestionnaireVersion
     {
-        if ($version->questions()->doesntExist()) {
-            throw new QuestionnaireVersionLockedException(
-                'A questionnaire version cannot be activated unless it contains at least one question.'
-            );
-        }
+        $this->assertValidDass21Layout($version);
 
         return $this->database->transaction(function () use ($version): QuestionnaireVersion {
             QuestionnaireVersion::query()
@@ -118,6 +123,51 @@ class QuestionnaireVersionService
 
             return $version->refresh();
         });
+    }
+
+    /**
+     * DASS-21 scoring (raw sum x 2, see DassScoringService) and the official
+     * classification_thresholds (top band ending at 42) are only valid for
+     * exactly 7 questions per subscale, every one of them answered. Fewer
+     * questions silently cap the score below Severe (so a student can never
+     * be flagged); more can exceed 42 and match no threshold band; an
+     * optional question left blank fails scoring. Only activation is
+     * guarded — a Draft may hold any layout while it is being built.
+     *
+     * @throws QuestionnaireVersionLockedException naming each wrong subscale and its count.
+     */
+    private function assertValidDass21Layout(QuestionnaireVersion $version): void
+    {
+        $questions = $version->questions()->get(['subscale', 'item_number', 'is_required']);
+        $problems = [];
+
+        foreach ([DassQuestion::SUBSCALE_DEPRESSION, DassQuestion::SUBSCALE_ANXIETY, DassQuestion::SUBSCALE_STRESS] as $subscale) {
+            $count = $questions->where('subscale', $subscale)->count();
+
+            if ($count !== self::QUESTIONS_PER_SUBSCALE) {
+                $problems[] = sprintf(
+                    '%s has %d %s; it needs exactly %d.',
+                    $subscale,
+                    $count,
+                    $count === 1 ? 'question' : 'questions',
+                    self::QUESTIONS_PER_SUBSCALE
+                );
+            }
+        }
+
+        $optionalItems = $questions->where('is_required', false)->pluck('item_number')->sort()->values();
+
+        if ($optionalItems->isNotEmpty()) {
+            $problems[] = $optionalItems->count() === 1
+                ? "Every question must be required; item {$optionalItems->first()} is optional."
+                : "Every question must be required; items {$optionalItems->implode(', ')} are optional.";
+        }
+
+        if ($problems !== []) {
+            throw new QuestionnaireVersionLockedException(
+                'This version cannot be activated. '.implode(' ', $problems)
+            );
+        }
     }
 
     /**
