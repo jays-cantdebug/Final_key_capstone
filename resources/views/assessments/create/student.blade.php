@@ -21,6 +21,10 @@
         >
             @csrf
 
+            @if ($duplicate)
+                @include('assessments.create._duplicate-student', ['duplicate' => $duplicate])
+            @endif
+
             <div class="grid gap-6 sm:grid-cols-2">
                 <div class="sm:col-span-2 grid gap-6 sm:grid-cols-3">
                     <div class="relative" x-data="{ show: {{ $errors->has('first_name') ? 'true' : 'false' }} }">

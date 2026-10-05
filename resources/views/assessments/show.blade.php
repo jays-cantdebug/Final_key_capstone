@@ -43,6 +43,30 @@
         </div>
     @endif
 
+    @if ($backToStudentProfileUrl)
+        <div class="mb-4 text-sm">
+            <a href="{{ $backToStudentProfileUrl }}" class="font-semibold text-primary hover:underline dark:text-primary-soft">&larr; Back to Student Profile</a>
+        </div>
+    @endif
+
+    @if ($backToAssessmentHistoryUrl)
+        <div class="mb-4 text-sm">
+            <a href="{{ $backToAssessmentHistoryUrl }}" class="font-semibold text-primary hover:underline dark:text-primary-soft">&larr; Back to Assessment History</a>
+        </div>
+    @endif
+
+    @if ($backToFlaggedCasesUrl)
+        <div class="mb-4 text-sm">
+            <a href="{{ $backToFlaggedCasesUrl }}" class="font-semibold text-primary hover:underline dark:text-primary-soft">&larr; Back to Flagged Cases</a>
+        </div>
+    @endif
+
+    @if ($backToNotificationsUrl)
+        <div class="mb-4 text-sm">
+            <a href="{{ $backToNotificationsUrl }}" class="font-semibold text-primary hover:underline dark:text-primary-soft">&larr; Back to Notifications</a>
+        </div>
+    @endif
+
     @if ($assessment->flaggedCases->isNotEmpty())
         <div class="mb-6 flex flex-wrap gap-2">
             @foreach ($assessment->flaggedCases as $flaggedCase)

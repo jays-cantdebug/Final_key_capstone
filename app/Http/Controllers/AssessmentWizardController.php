@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\DuplicateStudentException;
 use App\Http\Requests\AssessmentResponseFormRequest;
 use App\Http\Requests\AssessmentStudentRequest;
 use App\Http\Requests\PredictionFeedbackFormRequest;
 use App\Models\Student;
 use App\Services\AssessmentService;
+use App\Services\StudentDuplicateService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -31,21 +34,30 @@ class AssessmentWizardController extends Controller
 {
     private const SESSION_KEY = 'assessment_wizard';
 
+    public const CONFIRM_ARCHIVED_MATCH_MESSAGE = 'Please tick the box to confirm you want to create a new student record.';
+
     public function __construct(
         private readonly AssessmentService $assessmentService,
+        private readonly StudentDuplicateService $duplicateService,
     ) {}
 
     /**
-     * STEP 1 (GET): Show the student intake form. Every New Assessment is
-     * treated as the student's first consultation encounter at intake —
-     * there is no search for or reuse of an existing student record here.
+     * STEP 1 (GET): Show the student intake form, plus the duplicate-
+     * student panel when Step 1 (or the final save) was just refused or
+     * warned about a student with the same name — see confirmStudent().
      */
-    public function showStudentStep(): View
+    public function showStudentStep(Request $request): View
     {
+        $duplicate = $request->session()->get('duplicate_student');
+
         return view('assessments.create.student', [
             'courses' => $this->assessmentService->activeCourses(),
             'yearLevels' => $this->assessmentService->activeYearLevels(),
             'sections' => $this->assessmentService->activeSections(),
+            'duplicate' => $duplicate === null ? null : [
+                ...$duplicate,
+                'students' => $this->duplicateService->describe($duplicate['ids']),
+            ],
         ]);
     }
 
@@ -58,8 +70,8 @@ class AssessmentWizardController extends Controller
      * flow lands directly on Step 2. This is the only path that can make
      * `submit()` attach a new assessment to an existing student instead
      * of registering a fresh one; the regular Step 1 form never sets
-     * `existing_student_id`, so its "always a fresh student" behavior is
-     * untouched. Route-model binding on `$student` already 404s for an
+     * `existing_student_id` — and refuses a name that already belongs to
+     * an active student, pointing here instead. Route-model binding on `$student` already 404s for an
      * archived (soft-deleted) student, matching how they're excluded
      * everywhere else.
      */
@@ -84,6 +96,7 @@ class AssessmentWizardController extends Controller
         session()->forget(self::SESSION_KEY.'.responses');
         session()->forget(self::SESSION_KEY.'.privacy_consent_at');
         session()->forget(self::SESSION_KEY.'.review');
+        session()->forget(self::SESSION_KEY.'.acknowledged_archived_ids');
 
         return redirect()->route('assessments.create.questionnaire');
     }
@@ -91,26 +104,56 @@ class AssessmentWizardController extends Controller
     /**
      * STEP 1 (POST): Validate the intake form and stage it in session,
      * then advance to Step 2. Nothing is written to the `students` table
-     * yet — that only happens on final submit (Step 3), so a fresh
-     * `students` row is guaranteed on every *completed* wizard run
-     * without leaving an orphan row behind for abandoned ones.
+     * yet — that only happens on final submit (Step 3), so an abandoned
+     * wizard run never leaves an orphan row behind.
      *
-     * Explicitly clears `existing_student_id`/`privacy_consent_at` in
-     * case a "Take Again" retake was started and abandoned earlier in
-     * this same session — without this, starting a regular New
-     * Assessment afterward would silently stay in retake mode and attach
-     * to that earlier student instead of registering a fresh one.
+     * Every Step 1 POST starts the wizard over: any earlier staged state
+     * (including a "Take Again" retake that was started and abandoned, and
+     * any earlier archived-match confirmation) is cleared first, so a
+     * regular New Assessment can never silently stay in retake mode or
+     * inherit a confirmation given for a different name.
+     *
+     * Duplicate check (StudentDuplicateService): a matching *active*
+     * student always blocks — the Psychometrician is sent to that
+     * student's Take Again instead, with no way to continue as a new
+     * student. A matching *archived* student (who can't use Take Again)
+     * only warns: the form must be re-submitted with the warning's confirm
+     * box ticked, and the archived students found right now — computed
+     * here, never taken from the request — are staged as
+     * `acknowledged_archived_ids` for the final save's audit entry.
      */
     public function confirmStudent(AssessmentStudentRequest $request): RedirectResponse
     {
-        $studentData = $request->safe()->except(['privacy_consent']);
+        $request->session()->forget(self::SESSION_KEY);
+
+        $matches = $this->duplicateService->findMatches(
+            $request->validated('first_name'),
+            $request->validated('middle_name'),
+            $request->validated('last_name'),
+        );
+
+        if ($matches['active']->isNotEmpty()) {
+            return $this->backToStudentStepWithDuplicate('active', $matches['active']->modelKeys(), $request->validated());
+        }
+
+        if ($matches['archived']->isNotEmpty() && ! $request->boolean('confirm_archived_match')) {
+            $redirect = $this->backToStudentStepWithDuplicate('archived', $matches['archived']->modelKeys(), $request->validated());
+
+            // Only flag the checkbox once the warning (and so the
+            // checkbox) has actually been on screen.
+            return $request->boolean('archived_warning_shown')
+                ? $redirect->withErrors(['confirm_archived_match' => self::CONFIRM_ARCHIVED_MATCH_MESSAGE])
+                : $redirect;
+        }
+
+        $studentData = $request->safe()->except(['privacy_consent', 'archived_warning_shown', 'confirm_archived_match']);
         $studentData['privacy_consent_at'] = now();
 
         $request->session()->put(self::SESSION_KEY.'.student_data', $studentData);
-        $request->session()->forget(self::SESSION_KEY.'.responses');
-        $request->session()->forget(self::SESSION_KEY.'.existing_student_id');
-        $request->session()->forget(self::SESSION_KEY.'.privacy_consent_at');
-        $request->session()->forget(self::SESSION_KEY.'.review');
+
+        if ($matches['archived']->isNotEmpty()) {
+            $request->session()->put(self::SESSION_KEY.'.acknowledged_archived_ids', $matches['archived']->modelKeys());
+        }
 
         return redirect()->route('assessments.create.questionnaire');
     }
@@ -246,20 +289,55 @@ class AssessmentWizardController extends Controller
         $existingStudent = $existingStudentId !== null ? Student::findOrFail($existingStudentId) : null;
         $privacyConsentAt = $request->session()->get(self::SESSION_KEY.'.privacy_consent_at');
 
-        $assessment = $this->assessmentService->save(
-            $studentData,
-            $version,
-            $request->user(),
-            $responses,
-            $review,
-            $request->validated(),
-            $existingStudent,
-            $privacyConsentAt,
-        );
+        try {
+            $assessment = $this->assessmentService->save(
+                $studentData,
+                $version,
+                $request->user(),
+                $responses,
+                $review,
+                $request->validated(),
+                $existingStudent,
+                $privacyConsentAt,
+                $request->session()->get(self::SESSION_KEY.'.acknowledged_archived_ids', []),
+            );
+        } catch (DuplicateStudentException $exception) {
+            // Someone registered this student after Step 1's check (another
+            // tab, a stale session, a double submit). Nothing was saved;
+            // the wizard starts over and points at Take Again.
+            $request->session()->forget(self::SESSION_KEY);
+
+            return $this->backToStudentStepWithDuplicate('conflict', $exception->studentIds, $studentData);
+        }
 
         $request->session()->forget(self::SESSION_KEY);
 
         return redirect()->route('assessments.show', $assessment)
             ->with('status', 'Assessment reviewed and saved successfully.');
+    }
+
+    /**
+     * Back to Step 1 with the duplicate-student panel: `$kind` is
+     * "active" (blocked at Step 1), "archived" (warning that needs
+     * confirming) or "conflict" (blocked at final save). Only the
+     * matching students' IDs are flashed; showStudentStep() loads their
+     * details fresh. The entered student details are kept as old input
+     * so confirming an archived match doesn't mean retyping the form.
+     *
+     * @param  array<int, int>  $studentIds
+     * @param  array<string, mixed>  $studentData
+     */
+    private function backToStudentStepWithDuplicate(string $kind, array $studentIds, array $studentData): RedirectResponse
+    {
+        $nameParts = Arr::only($studentData, ['first_name', 'middle_name', 'last_name']);
+
+        return redirect()->route('assessments.create')
+            ->withInput(Arr::only($studentData, ['first_name', 'middle_name', 'last_name', 'gender', 'course_id', 'year_level_id', 'section_id']))
+            ->with('duplicate_student', [
+                'kind' => $kind,
+                'ids' => $studentIds,
+                'name' => implode(' ', array_filter($nameParts, fn ($part): bool => filled($part))),
+                'search' => trim(($studentData['first_name'] ?? '').' '.($studentData['last_name'] ?? '')),
+            ]);
     }
 }

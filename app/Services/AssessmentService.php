@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\AI\DTOs\AssessmentPayload;
 use App\AI\Services\AIService;
+use App\Exceptions\DuplicateStudentException;
 use App\Models\Assessment;
 use App\Models\Course;
 use App\Models\DassResult;
@@ -37,6 +38,8 @@ class AssessmentService
         private readonly PredictionFeedbackService $predictionFeedbackService,
         private readonly StudentNumberGeneratorService $studentNumberGenerator,
         private readonly ClassificationThresholdService $thresholdService,
+        private readonly StudentDuplicateService $duplicateService,
+        private readonly AuditLogService $auditLogService,
     ) {}
 
     /**
@@ -157,14 +160,30 @@ class AssessmentService
      * (see `AssessmentWizardController::startRetake()`), to attach a new
      * assessment to an already-registered student instead of always
      * minting a new one. The regular New Assessment wizard never passes
-     * it, so its "always a fresh student" behavior is unchanged.
+     * it and always registers a new student (subject to the duplicate
+     * check below).
      * `$privacyConsentAt` is likewise retake-only — the regular flow's
      * consent is captured on the `students` row at Step 1, not here.
+     *
+     * When registering a new student (no `$existingStudent`), the
+     * duplicate check from Step 1 runs again first: an active student with
+     * the same name — registered from another tab, or reached through a
+     * stale wizard session or a double submit — throws
+     * `DuplicateStudentException` and nothing is saved. There is no
+     * override. Archived matches never block here; when the
+     * Psychometrician confirmed Step 1's archived-match warning,
+     * `$acknowledgedArchivedIds` (computed server-side at Step 1) is
+     * recorded as its own audit entry against the new student. An
+     * archived match that appeared after Step 1 (archived by someone else
+     * in between) was never confirmed and is accepted without one.
      *
      * @param  array<string, mixed>  $studentData
      * @param  array<int, int>  $responses  Question ID => answer value (0-3).
      * @param  array<string, mixed>  $review  The cached return value of `reviewAssessment()`.
      * @param  array<string, mixed>  $feedbackData  Validated `PredictionFeedbackFormRequest` data.
+     * @param  array<int, int>  $acknowledgedArchivedIds  Archived students confirmed at Step 1.
+     *
+     * @throws DuplicateStudentException if an active student with the same name already exists.
      */
     public function save(
         array $studentData,
@@ -175,9 +194,10 @@ class AssessmentService
         array $feedbackData,
         ?Student $existingStudent = null,
         ?\DateTimeInterface $privacyConsentAt = null,
+        array $acknowledgedArchivedIds = [],
     ): Assessment {
-        return $this->database->transaction(function () use ($studentData, $version, $psychometrician, $responses, $review, $feedbackData, $existingStudent, $privacyConsentAt): Assessment {
-            $student = $existingStudent ?? $this->registerStudent($studentData);
+        return $this->database->transaction(function () use ($studentData, $version, $psychometrician, $responses, $review, $feedbackData, $existingStudent, $privacyConsentAt, $acknowledgedArchivedIds): Assessment {
+            $student = $existingStudent ?? $this->registerNewStudent($studentData, $acknowledgedArchivedIds);
 
             $assessment = Assessment::query()->create([
                 'student_id' => $student->id,
@@ -219,5 +239,51 @@ class AssessmentService
 
             return $assessment->refresh();
         });
+    }
+
+    /**
+     * The final-save half of the duplicate check (Step 1 runs the same
+     * check first): refuse an active same-name match, register the
+     * student, and record any archived-match confirmation from Step 1.
+     *
+     * @param  array<string, mixed>  $studentData
+     * @param  array<int, int>  $acknowledgedArchivedIds
+     *
+     * @throws DuplicateStudentException
+     */
+    private function registerNewStudent(array $studentData, array $acknowledgedArchivedIds): Student
+    {
+        $matches = $this->duplicateService->findMatches(
+            (string) $studentData['first_name'],
+            $studentData['middle_name'] ?? null,
+            (string) $studentData['last_name'],
+        );
+
+        if ($matches['active']->isNotEmpty()) {
+            throw new DuplicateStudentException($matches['active']->modelKeys());
+        }
+
+        $student = $this->registerStudent($studentData);
+
+        if ($acknowledgedArchivedIds !== []) {
+            $archivedStudents = Student::onlyTrashed()->whereIn('id', $acknowledgedArchivedIds)->orderBy('student_number')->get();
+
+            $this->auditLogService->record(
+                'Student Information',
+                'Archived Match Confirmed',
+                $student->id,
+                null,
+                [
+                    'student_number' => $student->student_number,
+                    'archived_matches' => $archivedStudents->map(fn (Student $archived): array => [
+                        'id' => $archived->id,
+                        'student_number' => $archived->student_number,
+                        'archived_at' => $archived->deleted_at?->toDateTimeString(),
+                    ])->all(),
+                ],
+            );
+        }
+
+        return $student;
     }
 }

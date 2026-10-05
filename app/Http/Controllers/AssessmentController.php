@@ -20,6 +20,21 @@ use Illuminate\Support\Facades\Gate;
  */
 class AssessmentController extends Controller
 {
+    /**
+     * The query keys each role dashboard actually uses, carried back by
+     * "Back to Dashboard". Psychometrician: DashboardFilterRequest's four
+     * filters, plus `page` from the All Assessments table's paginator
+     * (DashboardService::allAssessmentsTable()). Guidance Counselor: none —
+     * its dashboard takes no filters and Recent Assessments isn't
+     * paginated. Keep in sync if either dashboard gains a filter.
+     *
+     * @var array<string, array<int, string>>
+     */
+    private const DASHBOARD_QUERY_KEYS = [
+        'psychometrician.dashboard' => ['period', 'course_id', 'year_level_id', 'severity_subscale', 'page'],
+        'guidance-counselor.dashboard' => [],
+    ];
+
     public function __construct(private readonly DashboardRouteService $dashboardRouteService) {}
 
     public function show(Assessment $assessment, Request $request): View
@@ -41,15 +56,22 @@ class AssessmentController extends Controller
             'backToCounselingSession' => $this->resolveBackToCounselingSession($assessment, $request),
             'backToDashboardUrl' => $this->resolveBackToDashboardUrl($request),
             'backToCounselingHistoryUrl' => $this->resolveBackToCounselingHistoryUrl($assessment, $request),
+            'backToStudentProfileUrl' => $this->resolveBackToStudentProfileUrl($assessment, $request),
+            'backToAssessmentHistoryUrl' => $this->resolveBackToAssessmentHistoryUrl($request),
+            'backToFlaggedCasesUrl' => $this->resolveBackToFlaggedCasesUrl($request),
+            'backToNotificationsUrl' => $this->resolveBackToNotificationsUrl($request),
         ]);
     }
 
     /**
      * The Referer's path, or null when there is no Referer or it points at
      * another host — so a back link is only ever derived from a page on
-     * this app. Shared by every Referer-resolved back link on this page
-     * ("Back to Counseling Session", "Back to Counseling History", and
-     * "Back to Dashboard").
+     * this app. Shared by every Referer-resolved back link on this page.
+     *
+     * Every back link matches the Referer path *exactly* against the one
+     * page it leads back to, and those pages all have different paths, so
+     * at most one back link can ever apply to a single request — there is
+     * no precedence between them to resolve.
      */
     private function refererPath(Request $request): ?string
     {
@@ -67,23 +89,21 @@ class AssessmentController extends Controller
      * viewer's own role dashboard (the Recent Assessments "View" link on
      * the Psychometrician or Guidance Counselor Dashboard). Only the
      * viewer's own dashboard route counts, so the link can never point at
-     * a dashboard their role can't open. The Referer's query string
-     * (Psychometrician Dashboard period/course/year-level/severity filters
-     * and Recent Assessments page) is carried back so returning restores
-     * the exact view the user left — rebuilt through route() rather than
-     * echoing the raw Referer URL.
+     * a dashboard their role can't open. Only that dashboard's own query
+     * keys are carried back (see DASHBOARD_QUERY_KEYS), so returning
+     * restores the exact view the user left — rebuilt through route(),
+     * never echoing the raw Referer URL.
      */
     private function resolveBackToDashboardUrl(Request $request): ?string
     {
         $routeName = $this->dashboardRouteService->resolve($request->user());
 
-        if ($routeName === 'dashboard' || $this->refererPath($request) !== parse_url(route($routeName), PHP_URL_PATH)) {
+        if (! array_key_exists($routeName, self::DASHBOARD_QUERY_KEYS)
+            || $this->refererPath($request) !== parse_url(route($routeName), PHP_URL_PATH)) {
             return null;
         }
 
-        parse_str((string) parse_url((string) $request->headers->get('referer'), PHP_URL_QUERY), $query);
-
-        return route($routeName, $query);
+        return route($routeName, $this->refererQuery($request, self::DASHBOARD_QUERY_KEYS[$routeName]));
     }
 
     /**
@@ -141,5 +161,138 @@ class AssessmentController extends Controller
             ->exists();
 
         return $linked ? route('counseling-sessions.students.show', $studentId) : null;
+    }
+
+    /**
+     * "Back to Student Profile" appears when this page was reached via the
+     * Assessment History "View" link on the profile of the student this
+     * assessment belongs to (`/students/{id}`, Psychometrician-only). The
+     * Referer path must equal that student's own profile path exactly —
+     * another student's profile, or a different page that merely ends in
+     * `/students/{id}` (e.g. Counseling History), never counts — and the
+     * viewer must be allowed to open that profile, so the link is never a
+     * dead end. An archived student's profile can't be opened (route model
+     * binding excludes them), so no link is offered for one. The URL is
+     * rebuilt through route() from the assessment's own student; only the
+     * profile's Assessment History page number is carried over, and only
+     * when it's a positive integer.
+     */
+    private function resolveBackToStudentProfileUrl(Assessment $assessment, Request $request): ?string
+    {
+        $student = $assessment->student;
+
+        if ($student === null || $student->trashed() || ! Gate::allows('view', $student)) {
+            return null;
+        }
+
+        if ($this->refererPath($request) !== parse_url(route('students.show', $student), PHP_URL_PATH)) {
+            return null;
+        }
+
+        return route('students.show', [$student, ...$this->refererQuery($request, ['page'])]);
+    }
+
+    /**
+     * "Back to Assessment History" appears when this page was reached from
+     * the Assessment History list (`/assessments`, both roles). Its name
+     * search, its `student_number` deep-link filter, and its page are
+     * carried back.
+     */
+    private function resolveBackToAssessmentHistoryUrl(Request $request): ?string
+    {
+        if (! $request->user()->hasRole(['psychometrician', 'guidance_counselor'])
+            || $this->refererPath($request) !== parse_url(route('assessments.index'), PHP_URL_PATH)) {
+            return null;
+        }
+
+        return route('assessments.index', $this->refererQuery($request, ['search', 'student_number', 'page']));
+    }
+
+    /**
+     * "Back to Flagged Cases" appears when this page was reached from the
+     * Flagged Cases list (`/flagged-cases`, Guidance Counselor-only, the
+     * same role its route middleware allows). Its tab, name search,
+     * course/year level/section and date filters, and page are carried
+     * back.
+     */
+    private function resolveBackToFlaggedCasesUrl(Request $request): ?string
+    {
+        if (! $request->user()->hasRole('guidance_counselor')
+            || $this->refererPath($request) !== parse_url(route('flagged-cases.index'), PHP_URL_PATH)) {
+            return null;
+        }
+
+        return route('flagged-cases.index', $this->refererQuery($request, [
+            'tab', 'search', 'course_id', 'year_level_id', 'section_id', 'date_from', 'date_to', 'page',
+        ]));
+    }
+
+    /**
+     * "Back to Notifications" appears when this page was reached by
+     * opening a notification (Guidance Counselor-only). That goes through
+     * NotificationController::view(), which marks it read and redirects
+     * here; browsers keep the original page as the Referer across that
+     * redirect (checked in headless Chrome and Edge), so the Referer is
+     * the Notifications list itself. Whether the archived view was on, and
+     * the page, are carried back.
+     */
+    private function resolveBackToNotificationsUrl(Request $request): ?string
+    {
+        if (! $request->user()->hasRole('guidance_counselor')
+            || $this->refererPath($request) !== parse_url(route('notifications.index'), PHP_URL_PATH)) {
+            return null;
+        }
+
+        $query = $this->refererQuery($request, ['archived', 'page']);
+
+        if (isset($query['archived'])) {
+            if (filter_var($query['archived'], FILTER_VALIDATE_BOOLEAN)) {
+                $query['archived'] = 1;
+            } else {
+                unset($query['archived']);
+            }
+        }
+
+        return route('notifications.index', $query);
+    }
+
+    /**
+     * The Referer's query string, reduced to the given whitelist of keys
+     * so a back link never carries anything else from it: only plain,
+     * non-empty string values are kept (arrays are dropped), and `page`
+     * only when it's a whole number of 2 or more. The caller always
+     * rebuilds the URL with route(), which encodes these values — the raw
+     * Referer is never echoed.
+     *
+     * @param  array<int, string>  $allowedKeys
+     * @return array<string, string|int>
+     */
+    private function refererQuery(Request $request, array $allowedKeys): array
+    {
+        parse_str((string) parse_url((string) $request->headers->get('referer'), PHP_URL_QUERY), $query);
+
+        $kept = [];
+
+        foreach ($allowedKeys as $key) {
+            $value = $query[$key] ?? null;
+
+            if (! is_string($value) || trim($value) === '') {
+                continue;
+            }
+
+            if ($key === 'page') {
+                $page = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 2]]);
+
+                if ($page !== false) {
+                    $kept['page'] = $page;
+                }
+
+                continue;
+            }
+
+            $kept[$key] = $value;
+        }
+
+        return $kept;
     }
 }

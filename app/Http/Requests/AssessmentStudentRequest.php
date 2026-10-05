@@ -9,9 +9,10 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
- * New Assessment Step 1 (Student Information) intake. Every submission
- * always registers a brand-new student — there is no search for or
- * reuse of an existing student record here.
+ * New Assessment Step 1 (Student Information) intake. A submission
+ * registers a new student at final save — unless a student with the same
+ * name already exists, which AssessmentWizardController checks after this
+ * request validates (see StudentDuplicateService).
  */
 class AssessmentStudentRequest extends FormRequest
 {
@@ -24,12 +25,21 @@ class AssessmentStudentRequest extends FormRequest
     }
 
     /**
-     * Normalize the middle initial to uppercase before it's validated, so
-     * "p." is accepted and staged as "P." rather than rejected outright —
-     * the format is what matters, not the case the Psychometrician typed.
+     * Collapse stray whitespace in the three name parts ("Dela  Cruz " ->
+     * "Dela Cruz"), so the staged — and eventually saved — name is
+     * consistent with how duplicates are matched. Then normalize the
+     * middle initial to uppercase before it's validated, so "p." is
+     * accepted and staged as "P." rather than rejected outright — the
+     * format is what matters, not the case the Psychometrician typed.
      */
     protected function prepareForValidation(): void
     {
+        foreach (['first_name', 'middle_name', 'last_name'] as $field) {
+            if (is_string($this->input($field))) {
+                $this->merge([$field => Str::squish($this->input($field))]);
+            }
+        }
+
         if ($this->filled('middle_name')) {
             $this->merge(['middle_name' => Str::upper((string) $this->input('middle_name'))]);
         }
@@ -53,6 +63,10 @@ class AssessmentStudentRequest extends FormRequest
             'year_level_id' => ['required', 'integer', 'exists:year_levels,id'],
             'section_id' => ['required', 'integer', 'exists:sections,id'],
             'privacy_consent' => ['required', 'accepted'],
+            // Only sent from the archived-match warning: whether it was
+            // on screen, and whether its confirm box was ticked.
+            'archived_warning_shown' => ['nullable', 'boolean'],
+            'confirm_archived_match' => ['nullable', 'boolean'],
         ];
     }
 

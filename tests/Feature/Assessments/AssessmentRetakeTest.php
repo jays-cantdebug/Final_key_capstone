@@ -45,8 +45,10 @@ class AssessmentRetakeTest extends TestCase
         $version = $this->createActiveQuestionnaireVersion();
         $responses = $this->buildResponses($version, depressionRaw: 1, anxietyRaw: 1, stressRaw: 1);
 
-        // Retake mode: omitting privacy_consent is rejected.
-        $student = Student::factory()->create();
+        // Retake mode: omitting privacy_consent is rejected. The name is
+        // pinned so it can never randomly match "Ana R. Lopez" below,
+        // which Step 1's duplicate-student check would then refuse.
+        $student = Student::factory()->create(['first_name' => 'Retake', 'middle_name' => 'T.', 'last_name' => 'Student']);
         $this->actingAs($psychometrician)->get(route('assessments.create.retake', $student));
 
         $retakeResponse = $this->actingAs($psychometrician)

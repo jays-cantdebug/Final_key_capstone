@@ -2,7 +2,23 @@
     $severityOptions = ['Normal', 'Mild', 'Moderate', 'Severe', 'Extremely Severe'];
 @endphp
 
-<form method="POST" action="{{ $action }}" class="space-y-4">
+{{--
+    Double-submit guard: only the first submit goes through. The clicked
+    button's own name/value (is_confirmed) must still be sent, and a
+    browser leaves a *disabled* submitter out of the request, so the
+    buttons are only made unclickable at once (pointer-events/opacity) and
+    get the real `disabled` attribute on the next tick, after the request
+    has been built. Re-enabled if the page is restored from the back/forward
+    cache so it is never left stuck.
+--}}
+<form
+    method="POST"
+    action="{{ $action }}"
+    class="space-y-4"
+    x-data="{ submitting: false }"
+    x-on:submit="if (submitting) { $event.preventDefault(); return; } submitting = true; setTimeout(() => $el.querySelectorAll('button[type=submit]').forEach((button) => button.disabled = true))"
+    x-on:pageshow.window="if ($event.persisted) { submitting = false; $el.querySelectorAll('button[type=submit]').forEach((button) => button.disabled = false) }"
+>
     @csrf
 
     <div class="grid gap-3 sm:grid-cols-3">
@@ -45,10 +61,10 @@
     <x-input-error :messages="$errors->get('corrected_stress_level')" class="mt-2" />
 
     <div class="flex flex-wrap gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
-        <button type="submit" name="is_confirmed" value="1" class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark dark:bg-primary-soft dark:hover:bg-primary-soft/90">
+        <button type="submit" name="is_confirmed" value="1" x-bind:aria-disabled="submitting" x-bind:class="submitting && 'pointer-events-none opacity-60'" class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark dark:bg-primary-soft dark:hover:bg-primary-soft/90">
             {{ $confirmLabel ?? 'Confirm' }}
         </button>
-        <button type="submit" name="is_confirmed" value="0" class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-700">
+        <button type="submit" name="is_confirmed" value="0" x-bind:aria-disabled="submitting" x-bind:class="submitting && 'pointer-events-none opacity-60'" class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-700">
             {{ $correctLabel ?? 'Correct' }}
         </button>
         @isset($cancelHref)

@@ -163,7 +163,27 @@ Nothing is written to the database until the Psychometrician reaches the final s
 
 Captures First Name, Middle Name, Last Name (as three separate fields, not one "Full Name" field, to avoid ambiguous name-splitting), Gender, Course, Year Level, Section, and a privacy consent checkbox.
 
-**Middle Name format rule:** the Middle Name field only accepts a single letter followed by a period (e.g., `P.`) — a middle *initial*, not a full middle name. Lowercase is accepted but automatically converted to uppercase before it's saved, so `p.` becomes `P.` without the user needing to retype it. If the format doesn't match, a floating tooltip explains the expected format with an example.
+**Middle Name format rule:** the Middle Name field only accepts a single letter followed by a period (e.g., `P.`) — a middle *initial*, not a full middle name. Lowercase is accepted but automatically converted to uppercase before it's saved, so `p.` becomes `P.` without the user needing to retype it. If the format doesn't match, a floating tooltip explains the expected format with an example. Extra spaces in the three name fields are tidied up before anything else happens (`"Dela  Cruz "` becomes `"Dela Cruz"`).
+
+### Duplicate students: Step 1 refuses a student who is already registered
+
+A returning student must be assessed through **Take Again** (see below), never registered a second time — otherwise their assessments end up split across two student records. So when Step 1 is submitted, the system checks whether a student with the same name already exists.
+
+**What counts as "the same student":** the same first name, middle *initial*, and last name, after trimming spaces, collapsing double spaces, and ignoring upper/lower case. Only the first letter of the middle name is compared, so `D.`, `D`, and `Dela` all match `D.`; a stored record with no middle name at all does not match an entered initial. Course, year level, section and gender are deliberately **not** compared: they change over time (a returning student is usually in a later year level), and a mistyped gender would otherwise hide a real duplicate. The logic lives in `app/Services/StudentDuplicateService.php`.
+
+**What happens on a match:**
+
+- **An active student has the name** → the wizard stops at Step 1 and nothing is staged or saved. A message (which stays on screen until closed with its × button) names the existing student — student number, course, year level, section, and how many assessments they have — with a **Take Again** button and a **View student record** link. When several students have the name, it lists one row per student, each with its own buttons, plus an "Open these in Students" link to the Students list searched by first + last name. **There is no way to continue as a new student.**
+- **Only an archived student has the name** → a warning, not a block, because archived students can't use Take Again (their record can't be opened from the Students page either), so the user would otherwise be stuck. The warning says continuing will create a new, separate record, and links to the archived student's assessments in Assessment History. To continue, the Psychometrician must tick "I understand. Create a new student record." and submit again. That confirmation is recorded in the Audit Log as its own **"Archived Match Confirmed"** entry (module *Student Information*) against the newly created student, listing the archived student(s) it was confirmed against. It is written at the final save, not at Step 1 — consistent with the wizard writing nothing until the end, an abandoned run leaves no audit entry behind.
+- If both an active and an archived student match, the active one wins: the wizard is blocked.
+
+**The final save checks again.** Step 1's check alone isn't enough: the same student could be registered from another browser tab while this assessment is in progress, or a stale wizard session or a double submit could reach the final save. So `AssessmentService::save()` repeats the check inside its database transaction, just before registering the student. If an active student with the name now exists, nothing at all is saved (no student, assessment, result, flag or notification), and the Psychometrician is returned to Step 1 with a message explaining the student was registered while they were working, and a Take Again button. The questionnaire answers from that run are not kept — Take Again starts a fresh questionnaire. This check never applies to Take Again itself, which attaches to an existing student by design. Separately, the Step 3 Confirm & Save / Correct & Save buttons ignore every click after the first, so a double-click sends only one save.
+
+**Known limitations:**
+
+- **A different person with exactly the same first name, middle initial and last name cannot be registered through the wizard.** By design there is no override — a namesake is indistinguishable from a returning student at this point, and allowing one would reopen the duplicate problem. Since the wizard is the only way to register a student, such a student cannot be added until this rule is changed; staff should not work around it by entering a different middle initial, which would put incorrect data on record.
+- **An archived match that appears after Step 1 is accepted without confirmation.** Archived matches never block at the final save. So if someone else archives a same-name student between this run's Step 1 and its final save, the save goes ahead without the user ever seeing the archived-student warning, and that archived student is not listed in any "Archived Match Confirmed" entry (only students confirmed at Step 1 are). This needs a second account to archive a same-name student within the same few minutes, and was accepted as a deliberate trade-off rather than discarding the user's answers over a warning.
+- Typos ("Jon" vs "John"), swapped first/last names, and accent differences ("Peña" vs "Pena") are not treated as the same name.
 
 ### Step 2: Questionnaire
 
@@ -431,13 +451,40 @@ Lets a Psychometrician run a brand-new assessment on a student who is **already 
 
 **How it works:** clicking "Take Again" on an existing student's row stages that student's existing information into the wizard session and skips straight to Step 2 (Questionnaire) — Step 1 is bypassed entirely since the student's info is already known. Because Step 1 is skipped, the student's privacy consent (normally captured on Step 1) is instead captured on Step 2 for a retake — the retake flow adds a required consent checkbox there specifically to cover this gap.
 
-**Why this exists:** without it, every retake would either (a) require manually re-typing a returning student's full information every time, inviting typos and duplicate near-identical student records, or (b) require a "search for existing student" step baked into every single New Assessment run, slowing down the much more common case of a brand-new student encounter. Keeping the regular wizard's "always register a fresh student" behavior untouched, and adding retake as a separate, explicit entry point, keeps both paths simple.
+**Why this exists:** without it, every retake would either (a) require manually re-typing a returning student's full information every time, inviting typos and duplicate near-identical student records, or (b) require a "search for existing student" step baked into every single New Assessment run, slowing down the much more common case of a brand-new student encounter. The regular wizard always registers a new student, and retake is a separate, explicit entry point, which keeps both paths simple. The two are tied together by the duplicate check on Step 1 (see [Duplicate students](#duplicate-students-step-1-refuses-a-student-who-is-already-registered)): if the Psychometrician types in a student who is already registered, the wizard stops and sends them to that student's Take Again instead. Take Again itself is never subject to that check. It isn't available for archived students (the link returns "not found"), which is why an archived name match only warns rather than blocks.
 
 ---
 
 ## Assessment History
 
 A shared, searchable, read-only listing of every completed assessment — available to both roles, since both legitimately need to look up past results (the Psychometrician for record-keeping, the Guidance Counselor for case history).
+
+### Back links on the assessment page
+
+Many pages link to the same assessment page, so it offers a "back" link only when it can tell where the user actually came from. It works this out from the browser's *Referer* (the address of the previous page), with the same safety rules for every link:
+
+- The previous page must be on this app; an outside site never counts.
+- Its address must match the page the link leads back to **exactly** — not just end the same way (for example, a student's Counseling History page, `/counseling-sessions/students/5`, is never mistaken for that student's profile, `/students/5`).
+- The link is always rebuilt by the app itself, never copied from the previous address. Only a fixed list of that page's own filters is carried back (listed below); anything else in the address is dropped, and a page number is only kept when it is a whole number of 2 or more.
+- It only appears for a user whose role can open the page it leads back to.
+
+If the browser sends no Referer (some privacy settings or extensions strip it), no back link is shown and the user simply uses the browser's own Back button.
+
+| Arrived from | Who | Link shown | Carried back |
+|---|---|---|---|
+| Their own dashboard | Both (own dashboard only) | **← Back to Dashboard** | Psychometrician: period, course, year level, severity card filter, and the All Assessments table's page. Guidance Counselor: nothing (that dashboard has no filters or pages) |
+| The profile of the student this assessment belongs to | Psychometrician | **← Back to Student Profile** | Page of the profile's Assessment History. Another student's profile, or an archived student, never produces it |
+| Assessment History | Both | **← Back to Assessment History** | Name search, student number filter, page |
+| Flagged Cases | Guidance Counselor | **← Back to Flagged Cases** | Tab, name search, course, year level, section, date range, page |
+| Notifications (opening a notification) | Guidance Counselor | **← Back to Notifications** | Whether the archived view was on, page |
+| A counseling session linked to this assessment | Guidance Counselor | **Back to Counseling Session** | — |
+| A student's Counseling History page, when one of their sessions is linked to this assessment | Guidance Counselor | **Back to Counseling History** | — |
+
+**Only one back link can ever apply.** Each link matches one specific page's address exactly, and a request has only one previous address, so no two links can match at the same time — there is no "which one wins" rule to apply.
+
+**Notifications goes through a redirect.** Opening a notification first marks it as read, then redirects to the assessment. Browsers keep the Notifications page as the previous address across that redirect (checked in headless Chrome and Edge before this link was built), which is what lets "← Back to Notifications" work.
+
+Straight after saving a new assessment, no back link is shown — the wizard is finished, so there is nothing sensible to go back to.
 
 ---
 
