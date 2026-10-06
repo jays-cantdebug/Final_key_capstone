@@ -129,4 +129,24 @@ class NotificationTest extends TestCase
 
         $this->actingAs($counselor)->patch(route('notifications.unarchive', $notification))->assertForbidden();
     }
+
+    /**
+     * On a phone the action row wraps instead of squeezing its buttons
+     * (labels wrapping onto 2-3 lines). The reserved scrollbar space that
+     * stops Archive/Unarchive's dialog from widening the page now comes from
+     * the app layout itself (see PageLoadStabilityTest).
+     */
+    public function test_inbox_action_rows_wrap_in_both_views(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        SystemNotification::factory()->create(['user_id' => $counselor->id]);
+        SystemNotification::factory()->archived()->create(['user_id' => $counselor->id]);
+
+        foreach ([[], ['archived' => 1]] as $query) {
+            $html = $this->actingAs($counselor)->get(route('notifications.index', $query))->assertOk()->getContent();
+
+            $this->assertSame(1, substr_count($html, '<div class="mt-4 flex flex-wrap items-center gap-3">'), 'Each card\'s action row wraps.');
+            $this->assertStringNotContainsString('<div class="mt-4 flex items-center gap-3">', $html);
+        }
+    }
 }

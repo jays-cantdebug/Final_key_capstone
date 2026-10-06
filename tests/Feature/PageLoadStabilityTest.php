@@ -38,6 +38,55 @@ class PageLoadStabilityTest extends TestCase
         );
     }
 
+    public function test_every_app_layout_page_reserves_the_scrollbar_space(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $counselor = $this->guidanceCounselor();
+
+        $pages = [
+            [$psychometrician, route('psychometrician.dashboard')],
+            [$psychometrician, route('students.index')],
+            [$psychometrician, route('users.index')],
+            [$psychometrician, route('questionnaires.index')],
+            [$psychometrician, route('profile.edit')],
+            [$counselor, route('guidance-counselor.dashboard')],
+            [$counselor, route('notifications.index')],
+            [$counselor, route('notifications.index', ['archived' => 1])],
+        ];
+
+        foreach ($pages as [$user, $url]) {
+            $this->actingAs($user)->get($url)
+                ->assertOk()
+                ->assertSee('<html lang="en" class="[scrollbar-gutter:stable]">', false);
+        }
+    }
+
+    public function test_login_guest_and_report_layouts_do_not_reserve_the_scrollbar_space(): void
+    {
+        $this->get(route('login'))->assertOk()->assertDontSee('scrollbar-gutter', false);
+        $this->get(route('password.request'))->assertOk()->assertDontSee('scrollbar-gutter', false);
+
+        // Report layout (print view; the PDF renders the same view).
+        $this->actingAs($this->psychometrician())->get(route('reports.assessment-summary.print'))
+            ->assertOk()
+            ->assertDontSee('scrollbar-gutter', false);
+    }
+
+    public function test_reserved_scrollbar_strip_is_coloured_to_match_the_page_and_the_dialog_backdrop(): void
+    {
+        $css = (string) file_get_contents(resource_path('css/app.css'));
+
+        // No fixed overlay can paint over the reserved strip, so <html>'s own
+        // background is set: the page colour normally, the backdrop's
+        // dimmed colour (bg-body/60) while a dialog has locked scrolling.
+        $this->assertStringContainsString("background-color: theme('colors.page');", $css);
+        $this->assertStringContainsString("background-color: theme('colors.slate.900');", $css);
+        $this->assertStringContainsString(':has(> body.overflow-y-hidden)', $css);
+        $this->assertStringContainsString("color-mix(in srgb, theme('colors.body') 60%, theme('colors.page'))", $css);
+        $this->assertStringContainsString("color-mix(in srgb, theme('colors.body') 60%, theme('colors.slate.900'))", $css);
+        $this->assertStringContainsString('<div class="absolute inset-0 bg-body/60"></div>', (string) file_get_contents(resource_path('views/components/modal.blade.php')), 'The strip colour assumes the dialog backdrop is bg-body/60.');
+    }
+
     public function test_mobile_drawer_and_backdrop_are_cloaked(): void
     {
         $response = $this->actingAs($this->psychometrician())->get(route('profile.edit'));

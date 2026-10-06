@@ -42,7 +42,9 @@
 
                 <p class="mt-4 text-sm text-slate-600 dark:text-slate-400">{{ $notification->message }}</p>
 
-                <div class="mt-4 flex items-center gap-3">
+                {{-- flex-wrap: on a phone the buttons move to a new line instead of
+                     squeezing and wrapping their labels onto 2-3 lines. --}}
+                <div class="mt-4 flex flex-wrap items-center gap-3">
                     <x-primary-button :href="route('notifications.view', $notification)">
                         View Assessment
                     </x-primary-button>

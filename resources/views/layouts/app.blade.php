@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+{{-- [scrollbar-gutter:stable]: the scrollbar's space is always reserved, so a dialog's
+     scroll lock, or moving between a long and a short page, never changes the page
+     width. The strip's colour is set in resources/css/app.css. App layout only. --}}
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="[scrollbar-gutter:stable]">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">

@@ -39,3 +39,25 @@
 [x-cloak] {
     display: none !important;
 }
+
+/* The app layout reserves the scrollbar's space ([scrollbar-gutter:stable] on
+   <html>). When the page doesn't scroll — or a dialog has locked scrolling —
+   that strip shows <html>'s own background, not the body's, and no fixed
+   overlay can paint over it. So colour it: the page background normally, and
+   the colour the dialog backdrop (bg-body/60) makes while scrolling is locked. */
+html.\[scrollbar-gutter\:stable\] {
+    background-color: theme('colors.page');
+    transition: background-color 200ms ease-out;
+}
+
+html.dark.\[scrollbar-gutter\:stable\] {
+    background-color: theme('colors.slate.900');
+}
+
+html.\[scrollbar-gutter\:stable\]:has(> body.overflow-y-hidden) {
+    background-color: color-mix(in srgb, theme('colors.body') 60%, theme('colors.page'));
+}
+
+html.dark.\[scrollbar-gutter\:stable\]:has(> body.overflow-y-hidden) {
+    background-color: color-mix(in srgb, theme('colors.body') 60%, theme('colors.slate.900'));
+}
