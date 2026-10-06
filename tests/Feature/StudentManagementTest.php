@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Services\StudentNumberGeneratorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Testing\TestResponse;
 use Tests\Concerns\InteractsWithDomainData;
 use Tests\TestCase;
 
@@ -174,5 +175,118 @@ class StudentManagementTest extends TestCase
         $response->assertSee('No assessments yet for this student.');
         $response->assertDontSee('Print Report');
         $response->assertDontSee('Download PDF');
+    }
+
+    /**
+     * $count students registered one day apart, oldest first, all sharing
+     * $attributes. Returns their IDs oldest → newest.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<int, int>
+     */
+    private function studentsRegisteredDaysApart(int $count, array $attributes = []): array
+    {
+        $ids = [];
+
+        foreach (range($count, 1) as $daysAgo) {
+            $ids[] = Student::factory()->create([...$attributes, 'created_at' => now()->subDays($daysAgo)])->id;
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function listedStudentIds(TestResponse $response): array
+    {
+        return $response->assertOk()->viewData('students')->pluck('id')->all();
+    }
+
+    public function test_student_list_shows_the_newest_registered_student_first_and_the_oldest_on_the_last_page(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $oldestToNewest = $this->studentsRegisteredDaysApart(12);
+        $newestToOldest = array_reverse($oldestToNewest);
+
+        $page1 = $this->listedStudentIds($this->actingAs($psychometrician)->get(route('students.index')));
+        $page2 = $this->listedStudentIds($this->actingAs($psychometrician)->get(route('students.index', ['page' => 2])));
+
+        $this->assertSame(array_slice($newestToOldest, 0, 10), $page1);
+        $this->assertSame(array_slice($newestToOldest, 10), $page2);
+        $this->assertSame($oldestToNewest[0], end($page2), 'The oldest student is last on the last page.');
+    }
+
+    public function test_student_list_keeps_newest_first_when_searching_across_pages(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $matchingOldestToNewest = $this->studentsRegisteredDaysApart(12, ['last_name' => 'Findme']);
+        Student::factory()->create(['first_name' => 'Someone', 'last_name' => 'Else', 'created_at' => now()]);
+        $expected = array_reverse($matchingOldestToNewest);
+
+        $page1 = $this->actingAs($psychometrician)->get(route('students.index', ['search' => 'Findme']));
+        $this->assertSame(array_slice($expected, 0, 10), $this->listedStudentIds($page1));
+
+        // The pagination links carry the search, so page 2 stays filtered and in order.
+        $page1->assertSee(e(route('students.index', ['search' => 'Findme', 'page' => 2])), false);
+        $page2 = $this->actingAs($psychometrician)->get(route('students.index', ['search' => 'Findme', 'page' => 2]));
+        $this->assertSame(array_slice($expected, 10), $this->listedStudentIds($page2));
+    }
+
+    public function test_student_list_live_search_partial_uses_the_same_newest_first_order(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $this->studentsRegisteredDaysApart(12, ['last_name' => 'Findme']);
+
+        foreach ([1, 2] as $page) {
+            $query = ['search' => 'Findme', 'page' => $page];
+
+            $full = $this->actingAs($psychometrician)->get(route('students.index', $query));
+            $live = $this->actingAs($psychometrician)->get(route('students.index', $query), ['X-Live-Search' => 'true']);
+
+            $live->assertViewIs('students._table');
+            $this->assertSame($this->listedStudentIds($full), $this->listedStudentIds($live), "Page {$page} differs between the page load and the live-search partial.");
+        }
+    }
+
+    public function test_students_registered_in_the_same_second_are_ordered_by_id_descending(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $sameSecond = now()->startOfSecond();
+
+        $first = Student::factory()->create(['created_at' => $sameSecond]);
+        $second = Student::factory()->create(['created_at' => $sameSecond]);
+        $third = Student::factory()->create(['created_at' => $sameSecond]);
+
+        $this->assertSame(
+            [$third->id, $second->id, $first->id],
+            $this->listedStudentIds($this->actingAs($psychometrician)->get(route('students.index')))
+        );
+    }
+
+    public function test_take_again_does_not_move_a_student_up_the_list(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $this->seedOfficialThresholds();
+        $version = $this->createActiveQuestionnaireVersion();
+
+        $older = Student::factory()->create(['created_at' => now()->subDays(2)]);
+        $newer = Student::factory()->create(['created_at' => now()->subDay()]);
+        $createdAt = $older->created_at->toDateTimeString();
+
+        // Retake the older student through the real Take Again flow.
+        $this->actingAs($psychometrician)->get(route('assessments.create.retake', $older));
+        $this->post(route('assessments.create.questionnaire.store'), [
+            'responses' => $this->buildResponses($version, depressionRaw: 1, anxietyRaw: 1, stressRaw: 1),
+            'privacy_consent' => '1',
+        ])->assertRedirect(route('assessments.create.result'));
+        $this->reviewAndSaveAssessment()->assertRedirect();
+
+        $this->assertSame(1, Assessment::query()->where('student_id', $older->id)->count());
+        $this->assertSame($createdAt, $older->fresh()->created_at->toDateTimeString());
+        $this->assertSame(
+            [$newer->id, $older->id],
+            $this->listedStudentIds($this->actingAs($psychometrician)->get(route('students.index')))
+        );
     }
 }
