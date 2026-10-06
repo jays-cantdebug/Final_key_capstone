@@ -71,6 +71,10 @@
                 @endforeach
 
                 <x-slot:footer>
+                    {{-- overrideMode always starts false, so only Enable Override
+                         Mode is visible at first paint; the other two start hidden
+                         on the server (not x-cloak) so the state is right even
+                         if the page's JS never loads. --}}
                     <div class="flex flex-wrap items-center gap-3">
                         <button
                             type="button"
@@ -81,13 +85,14 @@
                             Enable Override Mode
                         </button>
 
-                        <x-primary-button x-show="overrideMode">
+                        <x-primary-button x-show="overrideMode" style="display: none;">
                             Save Changes
                         </x-primary-button>
 
                         <button
                             type="button"
                             x-show="overrideMode"
+                            style="display: none;"
                             @click="window.location.reload()"
                             class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-700"
                         >

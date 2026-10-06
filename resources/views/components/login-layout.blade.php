@@ -9,6 +9,9 @@
 
         <link rel="icon" type="image/png" href="{{ asset('images/normi-logo-favicon.png') }}?v={{ filemtime(public_path('images/normi-logo-favicon.png')) }}">
 
+        {{-- The login page uses all four: 700 headings/button, 600 school name, 500 labels, 400 inputs. --}}
+        @include('layouts.partials.font-preloads', ['weights' => [400, 500, 600, 700]])
+
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="min-h-screen bg-[#0B0F0D] font-sans antialiased">

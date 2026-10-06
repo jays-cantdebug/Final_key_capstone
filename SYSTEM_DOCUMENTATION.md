@@ -30,7 +30,8 @@ This document explains what the system does, how each part works, and — just a
 20. [Audit Logs](#audit-logs)
 21. [Data Encryption & Privacy (RA 10173)](#data-encryption--privacy-ra-10173)
 22. [Search & Filter System — How It Works Everywhere](#search--filter-system--how-it-works-everywhere)
-23. [Closing Summary](#closing-summary)
+23. [Page Loading Without a Flash](#page-loading-without-a-flash)
+24. [Closing Summary](#closing-summary)
 
 ---
 
@@ -666,6 +667,19 @@ Every page that has more than one filter (e.g., Flagged Cases: search + course +
 ### Pagination
 
 Every list in the system uses the same "page 1, page 2, ..." style pagination rather than infinite scroll — a deliberate choice for an admin/records tool, since staff often need to reference "page 3 of the flagged list" in conversation or return to roughly the same spot, which is harder to do with an infinite-scrolling list.
+
+---
+
+## Page Loading Without a Flash
+
+NORMI is a normal multi-page site: every sidebar click loads a complete new page from the server. That is deliberate (it keeps every page simple and works without special JavaScript routing), but anything that looks different at the browser's first paint than it does a moment later shows up as a "blink" on every click. The layouts are built so the first paint already looks like the finished page:
+
+- **Theme before first paint.** A tiny script at the top of the page's `<head>` (app and guest layouts) reads the saved theme and sets the `dark` class *and* the browser's `color-scheme` before any CSS or JavaScript loads, so a dark-mode user never sees a white page first. The Profile page's theme switch updates both too.
+- **Nothing hidden flashes into view.** Parts of the page that start hidden and are shown by Alpine.js (the mobile sidebar and its dimmed backdrop, the dashboard chart tooltips, the password field's "hide" eye icon) carry `x-cloak`, and the stylesheet hides anything with `x-cloak` until Alpine has started. Two places don't use `x-cloak` and instead have their starting state written by the server, so they are still correct even if the page's JavaScript fails to load: the counseling session form's Follow-Up Date field (hidden unless Follow-up required is ticked) and the Classification Thresholds buttons (only Enable Override Mode visible; Save Changes and Cancel start hidden).
+- **Fonts requested early.** The app's Figtree font files are self-hosted. Each layout tells the browser up front (a `preload` link) to fetch the weights it paints with — 400, 500 and 600 for the app and guest layouts, all four (400–700) for the login page — instead of the browser discovering them only after reading the stylesheet. The preload uses the exact same file address the stylesheet does, so each font is downloaded once. Text still appears immediately in a fallback font if a font is slow (`font-display: swap`).
+- **The sidebar keeps its scroll position.** On a short screen where the sidebar scrolls, its position is remembered for the current browser tab and restored before the new page is drawn, instead of jumping back to the top on every click. If the browser blocks this storage, the sidebar simply starts at the top as before.
+
+**Local development note:** the `php artisan serve` development server sends the built CSS, JavaScript and font files with no caching headers at all (no `Cache-Control`, `ETag` or `Last-Modified`), so the browser has no way to know a saved copy is still good and generally fetches them again on every page. That makes page changes slower locally than they need to be. A production web server (Apache/nginx) normally adds these headers; since the files' names change whenever their content changes, they can safely be cached for a long time there.
 
 ---
 

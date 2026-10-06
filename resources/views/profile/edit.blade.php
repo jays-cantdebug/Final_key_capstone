@@ -34,6 +34,7 @@
                     x-on:click="
                         dark = !dark;
                         document.documentElement.classList.toggle('dark', dark);
+                        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
                         localStorage.setItem('theme', dark ? 'dark' : 'light');
                     "
                     :aria-pressed="dark"

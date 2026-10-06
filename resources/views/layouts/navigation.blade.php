@@ -1,5 +1,5 @@
 <aside class="fixed inset-y-0 left-0 z-40 hidden md:flex md:w-20 md:flex-col lg:w-72">
-    <div class="flex h-full flex-col gap-y-6 overflow-y-auto bg-primary px-3 pb-4 pt-6 text-white shadow-2xl shadow-emerald-950/25 dark:bg-slate-900 dark:shadow-black/40 dark:border-r dark:border-slate-700/80 lg:px-6">
+    <div id="sidebar-scroll" class="flex h-full flex-col gap-y-6 overflow-y-auto bg-primary px-3 pb-4 pt-6 text-white shadow-2xl shadow-emerald-950/25 dark:bg-slate-900 dark:shadow-black/40 dark:border-r dark:border-slate-700/80 lg:px-6">
         <div class="flex items-center justify-center gap-3 lg:justify-start">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
                 <x-application-logo class="h-12 w-12 flex-shrink-0 text-white lg:h-20 lg:w-20" />
@@ -18,6 +18,36 @@
     </div>
 </aside>
 
+<script>
+    // Every sidebar click is a full page load, which would reset the
+    // sidebar's scroll to the top. Restore it here, right after the sidebar
+    // is parsed and before first paint, and save it when leaving the page.
+    // sessionStorage can throw (blocked storage, some private modes), so
+    // every access is guarded — the fallback is simply the old behaviour.
+    (function () {
+        var sidebar = document.getElementById('sidebar-scroll');
+        var key = 'normi.sidebarScrollTop';
+
+        if (!sidebar) {
+            return;
+        }
+
+        try {
+            var saved = parseInt(sessionStorage.getItem(key), 10);
+
+            if (saved > 0) {
+                sidebar.scrollTop = saved;
+            }
+        } catch (e) {}
+
+        window.addEventListener('pagehide', function () {
+            try {
+                sessionStorage.setItem(key, String(Math.round(sidebar.scrollTop)));
+            } catch (e) {}
+        });
+    })();
+</script>
+
 <div class="md:hidden">
     <div class="sticky top-0 z-40 flex items-center gap-x-6 bg-primary px-4 py-4 shadow-lg shadow-emerald-950/20 dark:bg-slate-900 dark:shadow-black/40 dark:border-b dark:border-slate-700/80 sm:px-6">
         <button type="button" class="-m-2.5 rounded-md p-2.5 text-white" @click="open = true">
@@ -27,9 +57,9 @@
         <div class="flex-1 text-sm font-semibold text-white">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</div>
     </div>
 
-    <div x-show="open" x-transition.opacity class="fixed inset-0 z-50 bg-body/60" @click="open = false"></div>
+    <div x-show="open" x-cloak x-transition.opacity class="fixed inset-0 z-50 bg-body/60" @click="open = false"></div>
 
-    <aside x-show="open" x-transition:enter="transition ease-in-out duration-300 transform" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in-out duration-300 transform" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" class="fixed inset-y-0 left-0 z-50 w-full max-w-xs">
+    <aside x-show="open" x-cloak x-transition:enter="transition ease-in-out duration-300 transform" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in-out duration-300 transform" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" class="fixed inset-y-0 left-0 z-50 w-full max-w-xs">
         <div class="flex h-full flex-col gap-y-6 overflow-y-auto bg-primary px-6 pb-4 pt-6 text-white shadow-2xl shadow-emerald-950/25 dark:bg-slate-900 dark:shadow-black/40">
             <div class="flex items-center gap-3">
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3">

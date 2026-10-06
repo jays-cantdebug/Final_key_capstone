@@ -13,9 +13,16 @@
             (function () {
                 // Light mode is the unconditional default; dark mode only
                 // activates once the user has explicitly toggled it.
-                document.documentElement.classList.toggle('dark', localStorage.getItem('theme') === 'dark');
+                // color-scheme is set alongside the class so the browser's
+                // own blank canvas (before CSS arrives) matches the theme.
+                var dark = localStorage.getItem('theme') === 'dark';
+                document.documentElement.classList.toggle('dark', dark);
+                document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
             })();
         </script>
+
+        {{-- Sidebar/header use 400 (body), 500 (nav links) and 600 (active link, names, headings). --}}
+        @include('layouts.partials.font-preloads', ['weights' => [400, 500, 600]])
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>

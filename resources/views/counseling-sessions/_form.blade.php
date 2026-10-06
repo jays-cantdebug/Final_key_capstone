@@ -98,7 +98,9 @@
             <x-field-error-tooltip field="follow_up_required" :message="$fieldErrors->get('follow_up_required')" />
         </div>
 
-        <div class="relative mt-3 sm:w-1/2" x-show="followUpRequired">
+        {{-- Starting state is rendered on the server (not x-cloak), so the
+             field is still correct if the page's JS never loads. --}}
+        <div class="relative mt-3 sm:w-1/2" x-show="followUpRequired" @unless ($followUpRequiredChecked) style="display: none;" @endunless>
             <x-input-label for="follow_up_date" :value="__('Follow-Up Date')" />
             <x-text-input id="follow_up_date" name="follow_up_date" type="date" class="mt-1 block w-full" :value="old('follow_up_date', $session?->follow_up_date?->format('Y-m-d'))" x-bind:required="followUpRequired" x-bind:class="hasError('follow_up_date') && {{ $invalidClasses }}" x-on:input="hideTooltip('follow_up_date')" />
             <x-field-error-tooltip field="follow_up_date" :message="$fieldErrors->get('follow_up_date')" />

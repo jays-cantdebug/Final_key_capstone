@@ -2,6 +2,7 @@
 
 <div
     x-show="show"
+    x-cloak
     x-transition
     class="pointer-events-none fixed z-20 w-max"
     :style="`left: ${x + 14}px; top: ${y - 12}px;`"

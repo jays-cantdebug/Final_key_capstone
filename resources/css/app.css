@@ -33,3 +33,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Alpine removes x-cloak once it has initialised, so an x-show element
+   that starts hidden stays hidden until then instead of flashing at first paint. */
+[x-cloak] {
+    display: none !important;
+}
