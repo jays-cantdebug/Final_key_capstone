@@ -22,29 +22,35 @@ class AssessmentSummaryReportController extends Controller
 
     public function index(ReportFilterRequest $request): View
     {
-        return view('reports.assessment-summary', $this->reportService->assessmentSummaryData($this->filters($request)) + [
-            'courses' => $this->reportService->courseOptions(),
-            'yearLevels' => $this->reportService->yearLevelOptions(),
-        ]);
+        return view('reports.assessment-summary', $this->reportData($request));
     }
 
     public function print(ReportFilterRequest $request): View
     {
-        return view('reports.print.assessment-summary', $this->reportService->assessmentSummaryData($this->filters($request)) + [
-            'courses' => $this->reportService->courseOptions(),
-            'yearLevels' => $this->reportService->yearLevelOptions(),
-        ]);
+        return view('reports.print.assessment-summary', $this->reportData($request));
     }
 
     public function pdf(ReportFilterRequest $request): Response
     {
-        $data = $this->reportService->assessmentSummaryData($this->filters($request)) + [
+        return Pdf::loadView('reports.print.assessment-summary', $this->reportData($request))
+            ->download('assessment-summary-report.pdf');
+    }
+
+    /**
+     * The Guidance Counselor's copy counts the reviewed severity levels
+     * (never the AI's raw ones); the Psychometrician's keeps the AI's.
+     *
+     * @return array<string, mixed>
+     */
+    private function reportData(ReportFilterRequest $request): array
+    {
+        return $this->reportService->assessmentSummaryData(
+            $this->filters($request),
+            reviewedLevels: $request->user()->hasRole('guidance_counselor'),
+        ) + [
             'courses' => $this->reportService->courseOptions(),
             'yearLevels' => $this->reportService->yearLevelOptions(),
         ];
-
-        return Pdf::loadView('reports.print.assessment-summary', $data)
-            ->download('assessment-summary-report.pdf');
     }
 
     /**

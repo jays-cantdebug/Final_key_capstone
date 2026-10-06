@@ -100,15 +100,21 @@
                     <div class="text-xs font-normal text-slate-500 dark:text-slate-400">{{ $assessment->student->student_number }} &mdash; {{ $assessment->student->yearLevel?->label }} / {{ $assessment->student->section?->section_name }}</div>
                 </x-table.td>
                 <x-table.td class="!px-3">{{ $assessment->student->course?->course_code }}</x-table.td>
-                <x-table.td class="!px-3"><x-severity-badge :level="$assessment->result?->stress_level" class="!px-2 !py-0.5" /></x-table.td>
-                <x-table.td class="!px-3"><x-severity-badge :level="$assessment->result?->anxiety_level" class="!px-2 !py-0.5" /></x-table.td>
-                <x-table.td class="!px-3"><x-severity-badge :level="$assessment->result?->depression_level" class="!px-2 !py-0.5" /></x-table.td>
+                {{-- Guidance Counselor-only page: reviewed levels, never the AI's raw ones. --}}
+                <x-table.td class="!px-3"><x-severity-badge :level="$assessment->effectiveLevel('stress')" class="!px-2 !py-0.5" /></x-table.td>
+                <x-table.td class="!px-3"><x-severity-badge :level="$assessment->effectiveLevel('anxiety')" class="!px-2 !py-0.5" /></x-table.td>
+                <x-table.td class="!px-3"><x-severity-badge :level="$assessment->effectiveLevel('depression')" class="!px-2 !py-0.5" /></x-table.td>
                 <x-table.td class="!px-3">
-                    @if ($priorityFlag)
-                        <x-flag-badge :type="$priorityFlag->flag_type" :secondary-count="$secondaryCount" class="!px-2 !py-0.5" />
-                    @else
-                        <x-badge color="slate" class="!px-2 !py-0.5">Normal</x-badge>
-                    @endif
+                    <div class="flex flex-col items-start gap-1">
+                        @if ($priorityFlag)
+                            <x-flag-badge :type="$priorityFlag->flag_type" :secondary-count="$secondaryCount" class="!px-2 !py-0.5" />
+                        @else
+                            <x-badge color="slate" class="!px-2 !py-0.5">Normal</x-badge>
+                        @endif
+                        @if ($assessment->wasCorrected())
+                            <x-corrected-badge class="!px-2 !py-0.5" />
+                        @endif
+                    </div>
                 </x-table.td>
                 <x-table.td class="!px-3">{{ $assessment->submitted_at->format('M d, Y') }}</x-table.td>
                 <x-table.td class="!px-3" align="right">

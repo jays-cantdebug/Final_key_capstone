@@ -82,7 +82,7 @@ class CounselingSessionController extends Controller
     {
         Gate::authorize('view', $counselingSession);
 
-        $counselingSession->load(['student.course', 'student.yearLevel', 'student.section', 'counselor', 'assessment.result']);
+        $counselingSession->load(['student.course', 'student.yearLevel', 'student.section', 'counselor', 'assessment.result', 'assessment.predictionFeedback']);
 
         return view('counseling-sessions.show', ['session' => $counselingSession]);
     }

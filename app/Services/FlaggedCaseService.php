@@ -117,7 +117,7 @@ class FlaggedCaseService
         $tab = $filters['tab'] ?? 'all';
 
         return Assessment::query()
-            ->with(['student.course', 'student.yearLevel', 'student.section', 'result', 'flaggedCases'])
+            ->with(['student.course', 'student.yearLevel', 'student.section', 'result', 'predictionFeedback', 'flaggedCases'])
             ->when($tab === 'endorsement', function ($query) {
                 $query->whereHas('flaggedCases', fn ($q) => $q->where('flag_type', FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT));
             })

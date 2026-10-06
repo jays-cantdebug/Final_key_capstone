@@ -22,7 +22,7 @@ class SystemNotificationService
         return SystemNotification::query()
             ->where('user_id', $user->id)
             ->active()
-            ->with(['assessment.student', 'assessment.result', 'flaggedCase'])
+            ->with(['assessment.student', 'assessment.result', 'assessment.predictionFeedback', 'flaggedCase'])
             ->orderByDesc('created_at')
             ->paginate($perPage)
             ->withQueryString();
@@ -36,7 +36,7 @@ class SystemNotificationService
         return SystemNotification::query()
             ->where('user_id', $user->id)
             ->archived()
-            ->with(['assessment.student', 'assessment.result', 'flaggedCase'])
+            ->with(['assessment.student', 'assessment.result', 'assessment.predictionFeedback', 'flaggedCase'])
             ->orderByDesc('archived_at')
             ->paginate($perPage)
             ->withQueryString();

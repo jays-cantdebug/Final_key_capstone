@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Concerns;
 
+use App\Models\Assessment;
 use App\Models\ClassificationThreshold;
+use App\Models\Course;
 use App\Models\DassQuestion;
 use App\Models\QuestionnaireVersion;
+use App\Models\Section;
 use App\Models\User;
+use App\Models\YearLevel;
 use Illuminate\Testing\TestResponse;
 
 /**
@@ -150,5 +154,43 @@ trait InteractsWithDomainData
             'is_confirmed' => '1',
             ...$feedback,
         ]);
+    }
+
+    /**
+     * Run the whole New Assessment wizard for a new student — Step 1, Step 2
+     * with the given raw subscale scores, then the given Step 3 decision —
+     * and return the saved assessment. The caller must already be `actingAs`
+     * a Psychometrician, with official thresholds seeded and $version active.
+     * Use a different name per call: the wizard refuses a duplicate student.
+     *
+     * @param  array<string, mixed>  $decision  Step 3 fields, e.g. `['is_confirmed' => '0', 'corrected_stress_level' => 'Severe']`.
+     */
+    protected function saveAssessmentThroughWizard(
+        QuestionnaireVersion $version,
+        int $depressionRaw,
+        int $anxietyRaw,
+        int $stressRaw,
+        array $decision = [],
+        string $firstName = 'Lia',
+        string $lastName = 'Reyes',
+    ): Assessment {
+        $this->post(route('assessments.create.student'), [
+            'first_name' => $firstName,
+            'middle_name' => 'C.',
+            'last_name' => $lastName,
+            'gender' => 'Female',
+            'privacy_consent' => '1',
+            'course_id' => Course::factory()->create()->id,
+            'year_level_id' => YearLevel::factory()->create()->id,
+            'section_id' => Section::factory()->create()->id,
+        ])->assertRedirect(route('assessments.create.questionnaire'));
+
+        $this->post(route('assessments.create.questionnaire.store'), [
+            'responses' => $this->buildResponses($version, $depressionRaw, $anxietyRaw, $stressRaw),
+        ])->assertRedirect(route('assessments.create.result'));
+
+        $this->reviewAndSaveAssessment($decision)->assertRedirect();
+
+        return Assessment::query()->latest('id')->firstOrFail();
     }
 }

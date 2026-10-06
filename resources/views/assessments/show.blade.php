@@ -1,9 +1,18 @@
 @php
+    // The Guidance Counselor sees the reviewed (effective) levels and a
+    // "Corrected" badge, never the AI's raw levels; the Psychometrician's
+    // view is unchanged and still shows the AI's raw levels.
+    $counselorView = auth()->user()?->hasRole('guidance_counselor') ?? false;
+    $level = fn (string $subscale): ?string => $counselorView
+        ? $assessment->effectiveLevel($subscale)
+        : $assessment->result->{"{$subscale}_level"};
+
     $subscales = [
-        ['label' => 'Depression', 'score' => $assessment->result->depression_final_score, 'level' => $assessment->result->depression_level],
-        ['label' => 'Anxiety', 'score' => $assessment->result->anxiety_final_score, 'level' => $assessment->result->anxiety_level],
-        ['label' => 'Stress', 'score' => $assessment->result->stress_final_score, 'level' => $assessment->result->stress_level],
+        ['label' => 'Depression', 'score' => $assessment->result->depression_final_score, 'level' => $level('depression')],
+        ['label' => 'Anxiety', 'score' => $assessment->result->anxiety_final_score, 'level' => $level('anxiety')],
+        ['label' => 'Stress', 'score' => $assessment->result->stress_final_score, 'level' => $level('stress')],
     ];
+    $showCorrectedBadge = $counselorView && $assessment->wasCorrected();
 
     $feedback = $assessment->predictionFeedback;
 @endphp
@@ -67,13 +76,16 @@
         </div>
     @endif
 
-    @if ($assessment->flaggedCases->isNotEmpty())
+    @if ($assessment->flaggedCases->isNotEmpty() || $showCorrectedBadge)
         <div class="mb-6 flex flex-wrap gap-2">
             @foreach ($assessment->flaggedCases as $flaggedCase)
                 <x-flag-badge :type="$flaggedCase->flag_type" class="!px-4 !py-2 !text-sm">
                     <span class="ml-1 font-normal opacity-75">({{ ucfirst($flaggedCase->triggering_subscale) }})</span>
                 </x-flag-badge>
             @endforeach
+            @if ($showCorrectedBadge)
+                <x-corrected-badge class="!px-4 !py-2 !text-sm" />
+            @endif
         </div>
     @endif
 

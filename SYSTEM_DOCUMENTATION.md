@@ -378,9 +378,21 @@ The actual sequence is:
 3. The system computes an **effective result**: for any subscale that was confirmed, the effective level is the AI's raw level; for any subscale that was corrected, the effective level is the Psychometrician's corrected level instead.
 4. **Differentiated Flagging (below) is evaluated only against this effective result — never against the AI's raw output directly.**
 
-So if the AI raw-classifies a subscale as *Extremely Severe*, but the Psychometrician corrects it down to *Normal* based on their own clinical judgment, **no flag is created and no Guidance Counselor is notified** — because the thing that actually happened, as far as the system is concerned, is what the Psychometrician decided, not what the AI initially suggested. The AI's original raw output is still permanently saved (for the audit trail — it's never overwritten or hidden), but it is not what drives any downstream action.
+So if the AI raw-classifies a subscale as *Extremely Severe*, but the Psychometrician corrects it down to *Normal* based on their own clinical judgment, **no flag is created and no Guidance Counselor is notified** — because the thing that actually happened, as far as the system is concerned, is what the Psychometrician decided, not what the AI initially suggested. The AI's original raw output is still permanently saved for the audit trail — it's never overwritten — and the Psychometrician can still see it, but it is not what drives any downstream action, and the Guidance Counselor's screens never show it: they show the reviewed level instead (see [What the Guidance Counselor sees about a review](#what-the-guidance-counselor-sees-about-a-review) below).
 
 **Why build it this way?** If the AI's raw output directly triggered flags/notifications, then a Psychometrician correcting an AI mistake would be pointless — the (possibly wrong) alarm would already be out the door. Routing every downstream consequence through the human-reviewed, *effective* result is what makes the mandatory review step meaningful rather than a rubber stamp.
+
+### What the Guidance Counselor sees about a review
+
+The Guidance Counselor works from the **reviewed** classification, not the AI's raw one:
+
+- **Reviewed levels on every Counselor screen.** The Notifications inbox, the Flagged Cases list, the assessment page, the Guidance Counselor Dashboard's Recent Assessments, the counseling session pages (including the Related Assessment picker on the session form), Assessment History, and the Counselor's printed/PDF copies of the Assessment Report and Student Assessment History Report all show the reviewed severity level — the Psychometrician's correction where one was made, the AI's level otherwise. The same rule decides flagging, so what the Counselor sees always matches the flags.
+- **Notification text.** Each notification names the reviewed level of the subscale that raised the flag (e.g. "… was assessed with Severe Stress …").
+- **A "Corrected by Psychometrician" badge** appears in the inbox, on the Flagged Cases list, and at the top of the assessment page when the Psychometrician really changed the AI's classification: the review was a Correct and at least one subscale was set to a level different from the AI's. A Confirm, a Correct whose picks all equal the AI's levels, or an older Confirm that happens to have corrections stored, shows no badge. The badge marks the whole assessment; it never says which subscale changed, what the AI's level was, or whether the level went up or down.
+- **Scores stay visible.** The numeric DASS-21 scores are still shown to the Counselor. Because the AI's classification is a direct lookup of each score against the published cutoffs, someone who knows the cutoff table could work out the AI's level for a corrected subscale from its score.
+- **The Prediction Feedback card** on the assessment page is shown to both roles as before: "Confirmed" or "Corrected" by the Psychometrician, the corrected level for each changed subscale, and any notes. It does not list the AI's levels.
+
+**What stays the same for the Psychometrician:** every Psychometrician screen — the Psychometrician Dashboard and its counts and charts, the student profile, Assessment History, the assessment page and both reports — still shows the AI's raw levels, alongside the review in the Prediction Feedback card. The **Assessment Summary Report** (both roles) counts each subscale's severity breakdown on a different basis per role, and says so on the report, on screen and in its print/PDF: the Guidance Counselor's copy counts the **reviewed** levels ("Counts use the reviewed classification…"), so its Severe/Extremely Severe counts agree with its Counseling Endorsement and Awareness Notification totals; the Psychometrician's copy keeps counting the **AI's** levels ("Severity counts use the AI's classification before review…"), so those counts can differ from the flag totals where a level was corrected. The flag totals themselves always come from the flags, which follow the reviewed levels.
 
 Before any of the classification above happens, the 21 raw answers first have to become three subscale scores — that calculation is its own dedicated step, covered in full next.
 
@@ -509,11 +521,13 @@ The Guidance Counselor's main working list — every assessment that has at leas
 
 Supports filtering by course, year level, section, and a date range, on top of name search — all combinable at once (see the [Search & Filter](#search--filter-system--how-it-works-everywhere) section for exactly how that combination works).
 
+The Stress, Anxiety and Depression columns show the reviewed severity levels, and a "Corrected by Psychometrician" badge appears under the flag when the AI's classification was really changed at review (see [What the Guidance Counselor sees about a review](#what-the-guidance-counselor-sees-about-a-review)).
+
 ---
 
 ## Notifications
 
-The Guidance Counselor's inbox for flagged-case alerts. Each notification links directly to the assessment that triggered it.
+The Guidance Counselor's inbox for flagged-case alerts. Each notification links directly to the assessment that triggered it, names the reviewed severity level that raised the flag, and carries a "Corrected by Psychometrician" badge when the AI's classification was really changed at review (see [What the Guidance Counselor sees about a review](#what-the-guidance-counselor-sees-about-a-review)). The unread count in the sidebar is unaffected by corrections.
 
 **Archive / Unarchive:** a notification can be archived to hide it from the default inbox view without deleting it — the row stays in the database permanently (for accountability — there's no way to make a real notification simply vanish), and a separate "View Archived" toggle shows them again on demand. Archiving an already-archived notification is a safe no-op (it doesn't reset the archive timestamp). Viewing a notification automatically marks it as read and redirects straight to the underlying assessment.
 
@@ -551,7 +565,7 @@ A set of printable/downloadable (PDF) reports, all built from the same underlyin
 
 | Report | Who can see it | What it shows |
 |---|---|---|
-| **Assessment Summary Report** | Both roles | Institution-wide totals and per-condition breakdowns, filterable by course/year level/gender/date range. |
+| **Assessment Summary Report** | Both roles | Institution-wide totals and per-condition breakdowns, filterable by course/year level/gender/date range. The severity breakdown counts the reviewed levels for the Guidance Counselor and the AI's levels for the Psychometrician; a note on the report states which. |
 | **Flagged Students Report** | Guidance Counselor only | A consolidated view of flagged cases, filterable by flag type plus the usual course/section/date filters. |
 | **Assessment Report** | Both roles | A single assessment's full detail, reached from Assessment History. |
 | **Student Assessment History Report** | Both roles | One specific student's full history, reached from their profile page. |

@@ -44,7 +44,7 @@ class DashboardService
                 ->whereHas('flaggedCases', fn (Builder $q) => $q->where('status', FlaggedCase::STATUS_OPEN))
                 ->count(),
             'recentAssessments' => Assessment::query()
-                ->with(['student', 'result'])
+                ->with(['student', 'result', 'predictionFeedback'])
                 ->latest('submitted_at')
                 ->limit(5)
                 ->get(),

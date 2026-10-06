@@ -9,9 +9,13 @@ use App\Models\ClassificationThreshold;
 use App\Models\Course;
 use App\Models\DassResult;
 use App\Models\FlaggedCase;
+use App\Models\PredictionFeedback;
 use App\Models\Student;
+use App\Models\User;
 use App\Models\YearLevel;
+use App\Services\ReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\InteractsWithDomainData;
 use Tests\TestCase;
 
@@ -180,5 +184,170 @@ class ReportsTest extends TestCase
         $pdfResponse = $this->actingAs($psychometrician)->get(route('reports.assessment-summary.pdf'));
         $pdfResponse->assertOk();
         $this->assertSame('application/pdf', $pdfResponse->headers->get('Content-Type'));
+    }
+
+    private const REVIEWED_BASIS_NOTE = 'Counts use the reviewed classification';
+
+    private const AI_BASIS_NOTE = "Severity counts use the AI's classification before review.";
+
+    /**
+     * Three assessments saved through the real wizard, so their flags are
+     * the ones the app itself raised:
+     *  - AI Stress Moderate, corrected to Severe → Counseling Endorsement;
+     *  - AI Depression Severe, corrected to Mild → no flag;
+     *  - AI Anxiety Severe, confirmed → Awareness Notification.
+     */
+    private function seedReviewedAssessmentMix(): void
+    {
+        $this->seedOfficialThresholds();
+        $version = $this->createActiveQuestionnaireVersion();
+        $this->actingAs($this->psychometrician());
+
+        $this->saveAssessmentThroughWizard($version, depressionRaw: 0, anxietyRaw: 0, stressRaw: 11, decision: [
+            'is_confirmed' => '0', 'corrected_stress_level' => 'Severe',
+        ], firstName: 'Ana', lastName: 'Cruz');
+
+        $this->saveAssessmentThroughWizard($version, depressionRaw: 11, anxietyRaw: 0, stressRaw: 0, decision: [
+            'is_confirmed' => '0', 'corrected_depression_level' => 'Mild',
+        ], firstName: 'Ben', lastName: 'Dizon');
+
+        $this->saveAssessmentThroughWizard($version, depressionRaw: 0, anxietyRaw: 8, stressRaw: 0, firstName: 'Cara', lastName: 'Lim');
+    }
+
+    /**
+     * @param  array<string, int>  $expected  Non-zero counts; every other tier must be 0.
+     * @param  array<string, int>  $actual
+     */
+    private function assertSeverityCounts(array $expected, array $actual): void
+    {
+        $this->assertSame(
+            array_merge(array_fill_keys(ClassificationThreshold::severityOrder(), 0), $expected),
+            $actual
+        );
+    }
+
+    public function test_assessment_summary_counts_reviewed_levels_for_the_guidance_counselor(): void
+    {
+        $this->seedReviewedAssessmentMix();
+
+        $response = $this->actingAs($this->guidanceCounselor())->get(route('reports.assessment-summary'));
+
+        $response->assertOk()
+            ->assertSee(self::REVIEWED_BASIS_NOTE)
+            ->assertDontSee(self::AI_BASIS_NOTE)
+            ->assertViewHas('countsBasis', ReportService::COUNTS_BASIS_REVIEWED);
+
+        $this->assertSeverityCounts(['Normal' => 2, 'Severe' => 1], $response->viewData('stressBySeverity'));
+        $this->assertSeverityCounts(['Normal' => 2, 'Mild' => 1], $response->viewData('depressionBySeverity'));
+        $this->assertSeverityCounts(['Normal' => 2, 'Severe' => 1], $response->viewData('anxietyBySeverity'));
+    }
+
+    public function test_assessment_summary_totals_and_flag_counts_agree_for_the_guidance_counselor(): void
+    {
+        $this->seedReviewedAssessmentMix();
+
+        $data = $this->actingAs($this->guidanceCounselor())->get(route('reports.assessment-summary'))->assertOk()->original->getData();
+        $severeOrWorse = fn (array $counts): int => $counts['Severe'] + $counts['Extremely Severe'];
+
+        $this->assertSame(3, $data['totalAssessments']);
+
+        foreach (['depressionBySeverity', 'anxietyBySeverity', 'stressBySeverity'] as $key) {
+            $this->assertSame($data['totalAssessments'], array_sum($data[$key]), "{$key} must cover every assessment once.");
+        }
+
+        $this->assertSame(1, $data['counselingEndorsements']);
+        $this->assertSame($data['counselingEndorsements'], $severeOrWorse($data['stressBySeverity']));
+
+        $this->assertSame(1, $data['awarenessNotifications']);
+        $this->assertSame(
+            $data['awarenessNotifications'],
+            $severeOrWorse($data['depressionBySeverity']) + $severeOrWorse($data['anxietyBySeverity'])
+        );
+    }
+
+    public function test_assessment_summary_keeps_the_ai_levels_for_the_psychometrician(): void
+    {
+        $this->seedReviewedAssessmentMix();
+
+        $response = $this->actingAs($this->psychometrician())->get(route('reports.assessment-summary'));
+
+        $response->assertOk()
+            ->assertSee(self::AI_BASIS_NOTE, false)
+            ->assertDontSee(self::REVIEWED_BASIS_NOTE)
+            ->assertViewHas('countsBasis', ReportService::COUNTS_BASIS_AI)
+            // Flag totals still follow the reviewed levels, as before.
+            ->assertViewHas('counselingEndorsements', 1)
+            ->assertViewHas('awarenessNotifications', 1);
+
+        $this->assertSeverityCounts(['Normal' => 2, 'Moderate' => 1], $response->viewData('stressBySeverity'));
+        $this->assertSeverityCounts(['Normal' => 2, 'Severe' => 1], $response->viewData('depressionBySeverity'));
+        $this->assertSeverityCounts(['Normal' => 2, 'Severe' => 1], $response->viewData('anxietyBySeverity'));
+    }
+
+    public function test_assessment_summary_print_and_pdf_carry_the_counts_basis_for_each_role(): void
+    {
+        $this->seedReviewedAssessmentMix();
+        $counselor = $this->guidanceCounselor();
+        $psychometrician = $this->psychometrician();
+
+        $counselorPrint = $this->actingAs($counselor)->get(route('reports.assessment-summary.print'));
+        $counselorPrint->assertOk()->assertSee(self::REVIEWED_BASIS_NOTE)->assertDontSee(self::AI_BASIS_NOTE, false);
+        $this->assertSeverityCounts(['Normal' => 2, 'Severe' => 1], $counselorPrint->viewData('stressBySeverity'));
+
+        $psychometricianPrint = $this->actingAs($psychometrician)->get(route('reports.assessment-summary.print'));
+        $psychometricianPrint->assertOk()->assertSee(self::AI_BASIS_NOTE, false)->assertDontSee(self::REVIEWED_BASIS_NOTE);
+        $this->assertSeverityCounts(['Normal' => 2, 'Moderate' => 1], $psychometricianPrint->viewData('stressBySeverity'));
+
+        foreach ([$counselor, $psychometrician] as $user) {
+            $pdf = $this->actingAs($user)->get(route('reports.assessment-summary.pdf'));
+            $pdf->assertOk();
+            $this->assertSame('application/pdf', $pdf->headers->get('Content-Type'));
+        }
+    }
+
+    public function test_assessment_summary_counts_the_ai_level_of_a_confirm_with_stored_corrections_for_the_counselor(): void
+    {
+        // Like dev assessment #125: confirmed, but with corrections stored.
+        // Flagging ignored them, so the reviewed level is the AI's own.
+        $assessment = Assessment::factory()->create();
+        DassResult::factory()->withLevels('Normal', 'Normal', 'Moderate')->create(['assessment_id' => $assessment->id]);
+        PredictionFeedback::factory()->create([
+            'assessment_id' => $assessment->id,
+            'is_confirmed' => true,
+            'corrected_stress_level' => 'Severe',
+        ]);
+
+        $response = $this->actingAs($this->guidanceCounselor())->get(route('reports.assessment-summary'))->assertOk();
+
+        $this->assertSeverityCounts(['Moderate' => 1], $response->viewData('stressBySeverity'));
+        $response->assertViewHas('counselingEndorsements', 0);
+    }
+
+    public function test_assessment_summary_reviewed_basis_costs_exactly_one_extra_query(): void
+    {
+        $this->seedReviewedAssessmentMix();
+        $counselor = $this->guidanceCounselor();
+        $psychometrician = $this->psychometrician();
+
+        // The print view has no sidebar (whose unread-count query only runs
+        // for counselors), so the only difference is the report itself.
+        // Each count follows a warm-up request that loads the user's role.
+        $this->assertSame(
+            $this->printQueryCount($psychometrician) + 1,
+            $this->printQueryCount($counselor)
+        );
+    }
+
+    private function printQueryCount(User $user): int
+    {
+        $this->actingAs($user)->get(route('reports.assessment-summary.print'))->assertOk();
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->get(route('reports.assessment-summary.print'))->assertOk();
+        $count = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        return $count;
     }
 }

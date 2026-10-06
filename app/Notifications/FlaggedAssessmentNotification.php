@@ -33,17 +33,10 @@ class FlaggedAssessmentNotification extends Notification
      */
     public function toSystemNotification(mixed $notifiable): array
     {
-        $assessment = $this->flaggedCase->assessment;
+        $assessment = $this->flaggedCase->assessment->loadMissing(['student', 'result', 'predictionFeedback']);
         $student = $assessment->student;
-        $result = $assessment->result;
 
         $isEndorsement = $this->flaggedCase->flag_type === FlaggedCase::FLAG_TYPE_COUNSELING_ENDORSEMENT;
-
-        $severityBySubscale = [
-            FlaggedCase::SUBSCALE_DEPRESSION => $result->depression_level,
-            FlaggedCase::SUBSCALE_ANXIETY => $result->anxiety_level,
-            FlaggedCase::SUBSCALE_STRESS => $result->stress_level,
-        ];
 
         return [
             'assessment_id' => $assessment->id,
@@ -56,7 +49,9 @@ class FlaggedAssessmentNotification extends Notification
                 '%s (%s) was assessed with %s %s on %s.',
                 $student->full_name,
                 $student->student_number,
-                $severityBySubscale[$this->flaggedCase->triggering_subscale],
+                // The reviewed level the flag was raised on — never the
+                // AI's raw level, which the Counselor must not see.
+                $assessment->effectiveLevel($this->flaggedCase->triggering_subscale),
                 ucfirst($this->flaggedCase->triggering_subscale),
                 $assessment->submitted_at->format('M d, Y')
             ),

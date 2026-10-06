@@ -32,7 +32,12 @@
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Student #: {{ $student->student_number }}</p>
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Assessment Date: {{ $notification->assessment->submitted_at->format('M d, Y g:i A') }}</p>
                     </div>
-                    <x-flag-badge :type="$notification->notification_type" />
+                    <div class="flex flex-wrap items-start gap-2">
+                        @if ($notification->assessment->wasCorrected())
+                            <x-corrected-badge />
+                        @endif
+                        <x-flag-badge :type="$notification->notification_type" />
+                    </div>
                 </div>
 
                 <p class="mt-4 text-sm text-slate-600 dark:text-slate-400">{{ $notification->message }}</p>

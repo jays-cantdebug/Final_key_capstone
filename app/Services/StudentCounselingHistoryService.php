@@ -98,7 +98,7 @@ class StudentCounselingHistoryService
     public function sessionsFor(Student $student): Collection
     {
         return $student->counselingSessions()
-            ->with(['counselor', 'assessment.result'])
+            ->with(['counselor', 'assessment.result', 'assessment.predictionFeedback'])
             ->orderByDesc('session_datetime')
             ->orderByDesc('id')
             ->get();

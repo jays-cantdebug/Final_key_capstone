@@ -50,6 +50,7 @@ class CounselingSessionService
     {
         return Assessment::query()
             ->where('student_id', $student->id)
+            ->with(['result', 'predictionFeedback'])
             ->orderByDesc('submitted_at')
             ->get();
     }

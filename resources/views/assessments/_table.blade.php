@@ -31,7 +31,8 @@
                 {{ $assessment->student->section?->section_name }}
             </x-table.td>
             <x-table.td>{{ $assessment->submitted_at->format('M d, Y g:i A') }}</x-table.td>
-            <x-table.td><x-severity-badge :level="$assessment->result?->highestSeverityLevel()" /></x-table.td>
+            {{-- Guidance Counselor: reviewed level; Psychometrician: the AI's raw level, as before. --}}
+            <x-table.td><x-severity-badge :level="auth()->user()?->hasRole('guidance_counselor') ? $assessment->effectiveHighestSeverityLevel() : $assessment->result?->highestSeverityLevel()" /></x-table.td>
             <x-table.td align="right">
                 <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
             </x-table.td>

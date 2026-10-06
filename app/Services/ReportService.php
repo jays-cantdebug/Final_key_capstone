@@ -23,6 +23,13 @@ use Illuminate\Database\Eloquent\Collection;
 class ReportService
 {
     /**
+     * Assessment Summary Report severity-count bases (`countsBasis`).
+     */
+    public const COUNTS_BASIS_REVIEWED = 'reviewed';
+
+    public const COUNTS_BASIS_AI = 'ai';
+
+    /**
      * Assessment Report: eager-load a single assessment for the report.
      */
     public function loadAssessmentForReport(Assessment $assessment): Assessment
@@ -33,6 +40,7 @@ class ReportService
             'student.section',
             'questionnaireVersion.questionnaire',
             'result',
+            'predictionFeedback',
             'responses.question',
             'psychometrician',
         ]);
@@ -56,7 +64,7 @@ class ReportService
 
         $assessments = Assessment::query()
             ->where('student_id', $student->id)
-            ->with('result')
+            ->with(['result', 'predictionFeedback'])
             ->when($dateFrom, fn (Builder $q, string $v) => $q->whereDate('submitted_at', '>=', $v))
             ->when($dateTo, fn (Builder $q, string $v) => $q->whereDate('submitted_at', '<=', $v))
             ->orderByDesc('submitted_at')
@@ -157,6 +165,18 @@ class ReportService
      * assessments (not every student in the system), so all four totals
      * describe the same filtered scope.
      *
+     * `$reviewedLevels` picks the basis of the severity breakdown:
+     *  - false (the Psychometrician's report): the AI's raw levels from
+     *    `dass_results`, unchanged;
+     *  - true (the Guidance Counselor's report, who must never see the AI's
+     *    raw levels): the reviewed levels via `Assessment::effectiveLevel()`
+     *    — the same rule flagging uses, so the Severe/Extremely Severe
+     *    counts agree with the Endorsement/Notification totals. Costs one
+     *    extra query (the `prediction_feedback` rows).
+     * The flag totals come from `flagged_cases`, which always follow the
+     * reviewed levels. `countsBasis` ("reviewed" / "ai") tells the views
+     * which note to show.
+     *
      * @param  array{course_id?: ?int, year_level_id?: ?int, gender?: ?string, date_from?: ?string, date_to?: ?string}  $filters
      * @return array{
      *     totalStudents: int,
@@ -166,6 +186,7 @@ class ReportService
      *     depressionBySeverity: array<string, int>,
      *     anxietyBySeverity: array<string, int>,
      *     stressBySeverity: array<string, int>,
+     *     countsBasis: string,
      *     courseId: ?int,
      *     yearLevelId: ?int,
      *     gender: ?string,
@@ -173,7 +194,7 @@ class ReportService
      *     dateTo: ?string,
      * }
      */
-    public function assessmentSummaryData(array $filters): array
+    public function assessmentSummaryData(array $filters, bool $reviewedLevels = false): array
     {
         $studentFilter = function (Builder $query) use ($filters): void {
             $query
@@ -182,27 +203,39 @@ class ReportService
                 ->when($filters['gender'] ?? null, fn (Builder $q, $v) => $q->where('gender', $v));
         };
 
-        $assessmentIds = Assessment::query()
+        $assessments = Assessment::query()
             ->whereHas('student', $studentFilter)
             ->when($filters['date_from'] ?? null, fn (Builder $q, $v) => $q->whereDate('submitted_at', '>=', $v))
             ->when($filters['date_to'] ?? null, fn (Builder $q, $v) => $q->whereDate('submitted_at', '<=', $v))
-            ->pluck('id');
+            ->get(['id']);
 
-        $totalAssessments = $assessmentIds->count();
+        $assessmentIds = $assessments->modelKeys();
+
+        $totalAssessments = count($assessmentIds);
 
         $totalStudents = Assessment::query()
             ->whereIn('id', $assessmentIds)
             ->distinct('student_id')
             ->count('student_id');
 
-        $results = DassResult::query()
-            ->whereIn('assessment_id', $assessmentIds)
-            ->get(['depression_level', 'anxiety_level', 'stress_level']);
+        // One row of three levels per assessment that has a result.
+        $levels = $reviewedLevels
+            ? $assessments
+                ->load(['result:id,assessment_id,depression_level,anxiety_level,stress_level', 'predictionFeedback'])
+                ->filter(fn (Assessment $assessment): bool => $assessment->result !== null)
+                ->map(fn (Assessment $assessment): array => [
+                    'depression_level' => $assessment->effectiveLevel(FlaggedCase::SUBSCALE_DEPRESSION),
+                    'anxiety_level' => $assessment->effectiveLevel(FlaggedCase::SUBSCALE_ANXIETY),
+                    'stress_level' => $assessment->effectiveLevel(FlaggedCase::SUBSCALE_STRESS),
+                ])
+            : DassResult::query()
+                ->whereIn('assessment_id', $assessmentIds)
+                ->get(['depression_level', 'anxiety_level', 'stress_level']);
 
-        $bySeverity = function (string $column) use ($results): array {
+        $bySeverity = function (string $column) use ($levels): array {
             $counts = [];
             foreach (ClassificationThreshold::severityOrder() as $severity) {
-                $counts[$severity] = $results->where($column, $severity)->count();
+                $counts[$severity] = $levels->where($column, $severity)->count();
             }
 
             return $counts;
@@ -218,6 +251,7 @@ class ReportService
             'depressionBySeverity' => $bySeverity('depression_level'),
             'anxietyBySeverity' => $bySeverity('anxiety_level'),
             'stressBySeverity' => $bySeverity('stress_level'),
+            'countsBasis' => $reviewedLevels ? self::COUNTS_BASIS_REVIEWED : self::COUNTS_BASIS_AI,
             'courseId' => $filters['course_id'] ?? null,
             'yearLevelId' => $filters['year_level_id'] ?? null,
             'gender' => $filters['gender'] ?? null,

@@ -59,7 +59,7 @@
             @if ($isRetake)
                 Saving will add this as a new assessment for {{ $student->full_name }}, alongside their existing history. The assessment cannot be edited after saving.
             @else
-                Saving will permanently record this assessment using the classification confirmed or corrected below. A Guidance Counselor is only notified about this final, reviewed classification &mdash; never the AI's raw proposal shown above.
+                Saving will permanently record this assessment using the classification confirmed or corrected below. A Guidance Counselor is notified about, and sees, only this final, reviewed classification &mdash; never the AI's raw proposal shown above. If you correct it, the Counselor also sees a &ldquo;Corrected by Psychometrician&rdquo; badge. The scores stay visible to the Counselor, and the AI's original classification stays on record, visible to you.
             @endif
         </p>
 

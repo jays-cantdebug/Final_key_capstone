@@ -6,6 +6,10 @@
         'Severe' => 'background:#FAECE7;color:#712B13;',
         'Extremely Severe' => 'background:#FCEBEB;color:#791F1F;',
     ];
+
+    // A Guidance Counselor's copy shows the reviewed (effective) levels,
+    // never the AI's raw ones; the Psychometrician's copy is unchanged.
+    $counselorView = auth()->user()?->hasRole('guidance_counselor') ?? false;
 @endphp
 
 <x-report-layout title="Student Assessment History Report">
@@ -34,12 +38,26 @@
             </thead>
             <tbody>
                 @forelse ($assessments as $assessment)
+                    @php
+                        $levels = $counselorView
+                            ? [
+                                $assessment->effectiveLevel('depression'),
+                                $assessment->effectiveLevel('anxiety'),
+                                $assessment->effectiveLevel('stress'),
+                                $assessment->effectiveHighestSeverityLevel(),
+                            ]
+                            : [
+                                $assessment->result?->depression_level,
+                                $assessment->result?->anxiety_level,
+                                $assessment->result?->stress_level,
+                                $assessment->result?->highestSeverityLevel(),
+                            ];
+                    @endphp
                     <tr>
                         <td>{{ $assessment->submitted_at->format('M d, Y g:i A') }}</td>
-                        <td><span class="badge" style="{{ $severityBadgeStyles[$assessment->result?->depression_level] ?? '' }}">{{ $assessment->result?->depression_level ?? 'N/A' }}</span></td>
-                        <td><span class="badge" style="{{ $severityBadgeStyles[$assessment->result?->anxiety_level] ?? '' }}">{{ $assessment->result?->anxiety_level ?? 'N/A' }}</span></td>
-                        <td><span class="badge" style="{{ $severityBadgeStyles[$assessment->result?->stress_level] ?? '' }}">{{ $assessment->result?->stress_level ?? 'N/A' }}</span></td>
-                        <td><span class="badge" style="{{ $severityBadgeStyles[$assessment->result?->highestSeverityLevel()] ?? '' }}">{{ $assessment->result?->highestSeverityLevel() ?? 'N/A' }}</span></td>
+                        @foreach ($levels as $level)
+                            <td><span class="badge" style="{{ $severityBadgeStyles[$level] ?? '' }}">{{ $level ?? 'N/A' }}</span></td>
+                        @endforeach
                     </tr>
                 @empty
                     <tr>

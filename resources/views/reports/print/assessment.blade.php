@@ -1,8 +1,16 @@
 @php
+    // A Guidance Counselor's copy shows the reviewed (effective) levels,
+    // never the AI's raw ones; the Psychometrician's copy is unchanged.
+    $counselorView = auth()->user()?->hasRole('guidance_counselor') ?? false;
+    $level = fn (string $subscale): ?string => $counselorView
+        ? $assessment->effectiveLevel($subscale)
+        : $assessment->result->{"{$subscale}_level"};
+    $overallLevel = $counselorView ? $assessment->effectiveHighestSeverityLevel() : $assessment->result->highestSeverityLevel();
+
     $subscales = [
-        ['label' => 'Depression', 'score' => $assessment->result->depression_final_score, 'level' => $assessment->result->depression_level],
-        ['label' => 'Anxiety', 'score' => $assessment->result->anxiety_final_score, 'level' => $assessment->result->anxiety_level],
-        ['label' => 'Stress', 'score' => $assessment->result->stress_final_score, 'level' => $assessment->result->stress_level],
+        ['label' => 'Depression', 'score' => $assessment->result->depression_final_score, 'level' => $level('depression')],
+        ['label' => 'Anxiety', 'score' => $assessment->result->anxiety_final_score, 'level' => $level('anxiety')],
+        ['label' => 'Stress', 'score' => $assessment->result->stress_final_score, 'level' => $level('stress')],
     ];
 
     $severityBadgeStyles = [
@@ -53,7 +61,7 @@
             <tr>
                 <td><strong>Overall</strong></td>
                 <td></td>
-                <td><span class="badge" style="{{ $severityBadgeStyles[$assessment->result->highestSeverityLevel()] ?? '' }}"><strong>{{ $assessment->result->highestSeverityLevel() }}</strong></span></td>
+                <td><span class="badge" style="{{ $severityBadgeStyles[$overallLevel] ?? '' }}"><strong>{{ $overallLevel }}</strong></span></td>
             </tr>
         </tbody>
     </table>

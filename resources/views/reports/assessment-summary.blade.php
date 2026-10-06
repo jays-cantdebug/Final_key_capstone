@@ -66,7 +66,11 @@
         <x-stat-card label="Total Awareness Notifications" :value="$awarenessNotifications" accent="gold" />
     </div>
 
-    <div class="mt-8 grid gap-6 lg:grid-cols-3">
+    <p class="mt-6 text-xs text-slate-500 dark:text-slate-400">
+        @include('reports._summary-counts-basis')
+    </p>
+
+    <div class="mt-4 grid gap-6 lg:grid-cols-3">
         @foreach ([
             'Depression' => $depressionBySeverity,
             'Anxiety' => $anxietyBySeverity,

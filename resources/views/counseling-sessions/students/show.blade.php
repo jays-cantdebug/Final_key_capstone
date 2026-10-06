@@ -88,7 +88,7 @@
                     <x-table.td>
                         @if ($session->assessment)
                             <a href="{{ route('assessments.show', $session->assessment) }}" class="text-primary underline dark:text-primary-soft">
-                                {{ $session->assessment->submitted_at->format('M d, Y') }} &mdash; {{ $session->assessment->result?->highestSeverityLevel() ?? 'N/A' }}
+                                {{ $session->assessment->submitted_at->format('M d, Y') }} &mdash; {{ $session->assessment->effectiveHighestSeverityLevel() ?? 'N/A' }}
                             </a>
                         @else
                             &mdash;

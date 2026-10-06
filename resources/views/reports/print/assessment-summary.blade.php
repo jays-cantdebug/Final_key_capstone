@@ -28,6 +28,8 @@
         <dd>{{ $awarenessNotifications }}</dd>
     </dl>
 
+    <p class="subtitle">@include('reports._summary-counts-basis')</p>
+
     @foreach ([
         'Depression' => $depressionBySeverity,
         'Anxiety' => $anxietyBySeverity,
