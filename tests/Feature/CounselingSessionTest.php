@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Http\Requests\CounselingSessionFormRequest;
+use App\Models\Assessment;
 use App\Models\CounselingSession;
+use App\Models\DassResult;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\InteractsWithDomainData;
@@ -448,5 +450,103 @@ class CounselingSessionTest extends TestCase
             'student_id' => $student->id,
             'session_status' => CounselingSession::STATUS_SCHEDULED,
         ]);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function sessionFields(array $overrides = []): array
+    {
+        return [
+            'session_date' => now()->format('Y-m-d'),
+            'session_time' => '09:00',
+            'session_notes' => 'Session notes.',
+            'session_status' => CounselingSession::STATUS_SCHEDULED,
+            'follow_up_required' => '0',
+            'confidentiality_level' => CounselingSession::CONFIDENTIALITY_STANDARD,
+            ...$overrides,
+        ];
+    }
+
+    public function test_an_update_cannot_link_another_students_assessment_through_a_submitted_student_id(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $session = CounselingSession::factory()->create(['counselor_id' => $counselor->id, 'assessment_id' => null]);
+        $otherAssessment = Assessment::factory()->create();
+
+        $this->actingAs($counselor)->put(route('counseling-sessions.update', $session), $this->sessionFields([
+            'student_id' => (string) $otherAssessment->student_id,
+            'assessment_id' => (string) $otherAssessment->id,
+        ]))->assertSessionHasErrors('assessment_id');
+
+        $session->refresh();
+        $this->assertNull($session->assessment_id);
+        $this->assertNotSame($otherAssessment->student_id, $session->student_id);
+    }
+
+    public function test_an_update_never_changes_the_sessions_student(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $session = CounselingSession::factory()->create(['counselor_id' => $counselor->id, 'assessment_id' => null]);
+        $originalStudentId = $session->student_id;
+        $otherStudent = Student::factory()->create();
+
+        $this->actingAs($counselor)->put(route('counseling-sessions.update', $session), $this->sessionFields([
+            'student_id' => (string) $otherStudent->id,
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame($originalStudentId, $session->fresh()->student_id);
+    }
+
+    public function test_an_update_can_still_link_the_sessions_own_students_assessment(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $session = CounselingSession::factory()->create(['counselor_id' => $counselor->id, 'assessment_id' => null]);
+        $ownAssessment = Assessment::factory()->create(['student_id' => $session->student_id]);
+
+        $this->actingAs($counselor)->put(route('counseling-sessions.update', $session), $this->sessionFields([
+            'assessment_id' => (string) $ownAssessment->id,
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame($ownAssessment->id, $session->fresh()->assessment_id);
+    }
+
+    public function test_a_session_cannot_be_created_for_an_archived_student(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $student = Student::factory()->create();
+        $student->delete();
+
+        $this->actingAs($counselor)->post(route('counseling-sessions.store'), $this->sessionFields([
+            'student_id' => (string) $student->id,
+        ]))->assertSessionHasErrors('student_id');
+
+        $this->assertDatabaseCount('counseling_sessions', 0);
+    }
+
+    public function test_an_archived_students_existing_session_stays_editable_and_viewable(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $assessment = Assessment::factory()->create();
+        DassResult::factory()->create(['assessment_id' => $assessment->id]);
+        $session = CounselingSession::factory()->create([
+            'counselor_id' => $counselor->id,
+            'student_id' => $assessment->student_id,
+            'assessment_id' => null,
+        ]);
+        $assessment->student->delete();
+
+        $this->actingAs($counselor)->get(route('counseling-sessions.edit', $session))->assertOk();
+        $this->put(route('counseling-sessions.update', $session), $this->sessionFields([
+            'session_notes' => 'Updated after archiving.',
+            'assessment_id' => (string) $assessment->id,
+        ]))->assertSessionHasNoErrors();
+
+        $session->refresh();
+        $this->assertSame('Updated after archiving.', $session->session_notes);
+        $this->assertSame($assessment->id, $session->assessment_id);
+
+        $this->get(route('counseling-sessions.show', $session))->assertOk();
+        $this->get(route('counseling-sessions.students.show', $assessment->student_id))->assertOk();
     }
 }

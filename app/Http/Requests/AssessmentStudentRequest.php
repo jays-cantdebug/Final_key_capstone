@@ -31,6 +31,11 @@ class AssessmentStudentRequest extends FormRequest
      * middle initial to uppercase before it's validated, so "p." is
      * accepted and staged as "P." rather than rejected outright — the
      * format is what matters, not the case the Psychometrician typed.
+     *
+     * The middle initial is also normalized to Unicode NFC first: some
+     * keyboards type Ñ as "N" plus a combining tilde (two characters),
+     * which NFC turns into the single letter Ñ the format rule and the
+     * duplicate check expect (see composeToNfc()).
      */
     protected function prepareForValidation(): void
     {
@@ -41,8 +46,30 @@ class AssessmentStudentRequest extends FormRequest
         }
 
         if ($this->filled('middle_name')) {
-            $this->merge(['middle_name' => Str::upper((string) $this->input('middle_name'))]);
+            $this->merge(['middle_name' => Str::upper(self::composeToNfc((string) $this->input('middle_name')))]);
         }
+    }
+
+    /**
+     * Unicode NFC normalization via the intl extension's `Normalizer`. When
+     * intl isn't installed the value is returned unchanged rather than
+     * crashing — a decomposed Ñ then fails the format rule with the usual
+     * message, while every precomposed letter (including Ñ) still works. A
+     * string intl can't normalize (invalid UTF-8) is likewise returned
+     * unchanged for validation to reject.
+     *
+     * `$intlAvailable` is only passed by tests, to exercise the fallback;
+     * null means "detect it".
+     */
+    public static function composeToNfc(string $value, ?bool $intlAvailable = null): string
+    {
+        if (! ($intlAvailable ?? class_exists(\Normalizer::class))) {
+            return $value;
+        }
+
+        $composed = \Normalizer::normalize($value, \Normalizer::FORM_C);
+
+        return $composed === false ? $value : $composed;
     }
 
     /**
@@ -54,9 +81,12 @@ class AssessmentStudentRequest extends FormRequest
     {
         return [
             'first_name' => ['required', 'string', 'max:100'],
-            // A middle initial only (e.g. "P."), not a full middle name —
-            // normalized to uppercase in prepareForValidation() above.
-            'middle_name' => ['required', 'string', 'regex:/^[A-Z]\.$/'],
+            // A middle initial only (e.g. "P.", or "Ñ." — a letter of the
+            // Filipino alphabet), not a full middle name — normalized to
+            // uppercase in prepareForValidation() above (Str::upper is
+            // multibyte-safe, so "ñ." becomes "Ñ."). `u` makes the pattern
+            // match Ñ as one character rather than two bytes.
+            'middle_name' => ['required', 'string', 'regex:/^[A-ZÑ]\.$/u'],
             'last_name' => ['required', 'string', 'max:100'],
             'gender' => ['required', Rule::in(['Male', 'Female', 'Prefer not to say'])],
             'course_id' => ['required', 'integer', 'exists:courses,id'],

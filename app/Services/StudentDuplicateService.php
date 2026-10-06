@@ -24,10 +24,14 @@ use Illuminate\Support\Str;
  * returning student is usually in a later year level), and a mistyped
  * gender would otherwise hide a real duplicate.
  *
- * The final comparison happens in PHP, after a broad SQL pre-filter, so
- * it behaves identically on MySQL (case- and accent-insensitive
- * collation) and on the test suite's SQLite (case-sensitive), and so
- * internal whitespace can be collapsed — which SQL can't do portably.
+ * The final comparison happens in PHP, after a broad SQL pre-filter on
+ * LOWER(REPLACE(name, ' ', '')), so internal whitespace can be collapsed —
+ * which SQL can't do portably. MySQL and the test suite's SQLite behave
+ * identically for ASCII names and for the Ñ middle initial (compared in
+ * PHP only). They differ for an uppercase non-ASCII letter in a stored
+ * first or last name (e.g. "PEÑA"): SQLite's LOWER() only lowercases
+ * ASCII, so such a record misses the SQLite pre-filter where MySQL matches
+ * it. Only MySQL gives the real behaviour for those names.
  */
 class StudentDuplicateService
 {

@@ -59,6 +59,7 @@
     <x-input-error :messages="$errors->get('corrected_depression_level')" class="mt-2" />
     <x-input-error :messages="$errors->get('corrected_anxiety_level')" class="mt-2" />
     <x-input-error :messages="$errors->get('corrected_stress_level')" class="mt-2" />
+    <x-input-error :messages="$errors->get('corrections')" class="mt-2" />
 
     <div class="flex flex-wrap gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
         <button type="submit" name="is_confirmed" value="1" x-bind:aria-disabled="submitting" x-bind:class="submitting && 'pointer-events-none opacity-60'" class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark dark:bg-primary-soft dark:hover:bg-primary-soft/90">

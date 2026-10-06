@@ -391,4 +391,104 @@ class DuplicateStudentTest extends TestCase
             ->assertSee('x-on:submit="if (submitting) { $event.preventDefault(); return; } submitting = true;', false)
             ->assertSee('button.disabled = true', false);
     }
+
+    /**
+     * The `<input>` tag for a checkbox on the Step 1 page, so a test can
+     * check whether it renders ticked.
+     */
+    private function checkboxTag(string $html, string $name): string
+    {
+        $this->assertSame(1, preg_match('/<input[^>]*name="'.$name.'"[^>]*>/', $html, $match), "No {$name} checkbox on the page.");
+
+        return $match[0];
+    }
+
+    public function test_the_archived_warning_keeps_the_privacy_consent_tick_so_confirming_works_in_one_go(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $archived = $this->archivedStudent();
+
+        $this->postStepOne()->assertRedirect(route('assessments.create'));
+        $page = $this->get(route('assessments.create'))->assertSee('A student with this name was archived')->getContent();
+
+        $this->assertStringContainsString('checked', $this->checkboxTag($page, 'privacy_consent'));
+        $this->assertStringNotContainsString('checked', $this->checkboxTag($page, 'confirm_archived_match'));
+
+        // What the browser now submits after ticking only "I understand".
+        $this->postStepOne(['archived_warning_shown' => '1', 'confirm_archived_match' => '1'])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('assessments.create.questionnaire'));
+        $this->assertSame([$archived->id], session('assessment_wizard.acknowledged_archived_ids'));
+    }
+
+    public function test_the_archived_warning_and_its_tick_survive_a_validation_error(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $this->archivedStudent();
+
+        $this->postStepOne(['privacy_consent' => null, 'archived_warning_shown' => '1', 'confirm_archived_match' => '1'])
+            ->assertSessionHasErrors('privacy_consent');
+
+        $page = $this->get(route('assessments.create'))->assertSee('A student with this name was archived')->getContent();
+        $this->assertStringContainsString('checked', $this->checkboxTag($page, 'confirm_archived_match'));
+        $this->assertStringNotContainsString('checked', $this->checkboxTag($page, 'privacy_consent'));
+
+        // Ticking privacy consent is now the only thing left to do.
+        $this->postStepOne(['archived_warning_shown' => '1', 'confirm_archived_match' => '1'])
+            ->assertRedirect(route('assessments.create.questionnaire'));
+    }
+
+    public function test_a_dismissed_archived_warning_is_not_rebuilt_after_a_validation_error(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $this->archivedStudent();
+
+        // Dismissing the panel removes its hidden archived_warning_shown input.
+        $this->postStepOne(['privacy_consent' => null])->assertSessionHasErrors('privacy_consent');
+
+        $this->get(route('assessments.create'))->assertDontSee('A student with this name was archived');
+    }
+
+    public function test_a_rebuilt_warning_does_not_reappear_once_the_name_no_longer_matches(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $this->archivedStudent();
+
+        $this->postStepOne(['last_name' => 'Santos', 'privacy_consent' => null, 'archived_warning_shown' => '1'])
+            ->assertSessionHasErrors('privacy_consent');
+
+        $this->get(route('assessments.create'))->assertDontSee('A student with this name was archived');
+    }
+
+    public function test_an_enye_middle_initial_matches_regardless_of_case(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $existing = $this->existingStudent(['middle_name' => 'Ñ.']);
+
+        $this->postStepOne(['middle_name' => 'ñ.'])->assertRedirect(route('assessments.create'));
+
+        $this->assertSame([$existing->id], session('duplicate_student.ids'));
+        $this->assertSame('active', session('duplicate_student.kind'));
+    }
+
+    public function test_an_enye_middle_initial_does_not_match_a_plain_n(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $this->existingStudent(['middle_name' => 'N.']);
+
+        $this->postStepOne(['middle_name' => 'Ñ.'])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('assessments.create.questionnaire'));
+    }
+
+    public function test_a_decomposed_enye_middle_initial_matches_a_stored_enye(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $existing = $this->existingStudent(['middle_name' => "\u{00D1}."]);
+
+        $this->postStepOne(['middle_name' => "N\u{0303}."])->assertRedirect(route('assessments.create'));
+
+        $this->assertSame('active', session('duplicate_student.kind'));
+        $this->assertSame([$existing->id], session('duplicate_student.ids'));
+    }
 }

@@ -93,7 +93,7 @@
 
             <div class="relative mt-6" x-data="{ show: {{ $errors->has('privacy_consent') ? 'true' : 'false' }} }">
                 <label class="flex items-start gap-2">
-                    <x-checkbox name="privacy_consent" value="1" class="mt-1" :invalid="$errors->has('privacy_consent')" @change="show = false" />
+                    <x-checkbox name="privacy_consent" value="1" class="mt-1" :checked="(bool) old('privacy_consent')" :invalid="$errors->has('privacy_consent')" @change="show = false" />
                     <span class="text-sm text-slate-700 dark:text-slate-300">{{ __('The student has acknowledged the data privacy consent notice for this assessment.') }}</span>
                 </label>
                 <x-field-error-tooltip :message="$errors->first('privacy_consent')" />

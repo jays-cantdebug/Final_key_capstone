@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Assessments;
 
+use App\Http\Requests\AssessmentStudentRequest;
+use App\Http\Requests\PredictionFeedbackFormRequest;
 use App\Models\Assessment;
 use App\Models\Course;
 use App\Models\FlaggedCase;
 use App\Models\Section;
 use App\Models\YearLevel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Tests\Concerns\InteractsWithDomainData;
 use Tests\TestCase;
 
@@ -429,5 +433,198 @@ class AssessmentWizardTest extends TestCase
         $counselor = $this->guidanceCounselor();
 
         $this->actingAs($counselor)->get(route('assessments.create'))->assertForbidden();
+    }
+
+    /**
+     * Stage Steps 1 and 2 with every subscale at raw 1 (final 2: Normal on
+     * all three official bands), so the AI's levels are Normal/Normal/Normal.
+     */
+    private function stageNormalAssessment(): void
+    {
+        $this->seedOfficialThresholds();
+        $version = $this->createActiveQuestionnaireVersion();
+
+        $this->post(route('assessments.create.student'), [
+            'first_name' => 'Rosa',
+            'middle_name' => 'L.',
+            'last_name' => 'Bautista',
+            'gender' => 'Female',
+            'privacy_consent' => '1',
+            ...$this->lookupIds(),
+        ]);
+
+        $this->post(route('assessments.create.questionnaire.store'), [
+            'responses' => $this->buildResponses($version, depressionRaw: 1, anxietyRaw: 1, stressRaw: 1),
+        ])->assertRedirect(route('assessments.create.result'));
+    }
+
+    private function assertNothingSaved(): void
+    {
+        $this->assertDatabaseCount('students', 0);
+        $this->assertDatabaseCount('assessments', 0);
+        $this->assertDatabaseCount('prediction_feedback', 0);
+        $this->assertDatabaseCount('flagged_cases', 0);
+    }
+
+    public function test_confirm_with_a_correction_selected_is_refused_and_saves_nothing(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $this->guidanceCounselor();
+        $this->stageNormalAssessment();
+
+        $response = $this->reviewAndSaveAssessment([
+            'is_confirmed' => '1',
+            'corrected_stress_level' => 'Extremely Severe',
+        ]);
+
+        $response->assertRedirect(route('assessments.create.result'));
+        $response->assertSessionHasErrors(['corrections' => PredictionFeedbackFormRequest::CORRECTIONS_WITH_CONFIRM_MESSAGE]);
+        $this->assertNothingSaved();
+
+        // Shown on the review page, which keeps the selection so it can be
+        // saved with Correct & Save or cleared back to Unchanged.
+        $this->get(route('assessments.create.result'))
+            ->assertSee(PredictionFeedbackFormRequest::CORRECTIONS_WITH_CONFIRM_MESSAGE)
+            ->assertSee('<option value="Extremely Severe" selected>', false);
+    }
+
+    public function test_confirm_with_every_subscale_unchanged_still_saves(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $this->stageNormalAssessment();
+
+        $this->reviewAndSaveAssessment([
+            'is_confirmed' => '1',
+            'corrected_depression_level' => '',
+            'corrected_anxiety_level' => '',
+            'corrected_stress_level' => '',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('prediction_feedback', [
+            'is_confirmed' => 1,
+            'corrected_depression_level' => null,
+            'corrected_anxiety_level' => null,
+            'corrected_stress_level' => null,
+        ]);
+    }
+
+    public function test_correct_with_every_subscale_unchanged_is_refused_and_saves_nothing(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $this->stageNormalAssessment();
+
+        $response = $this->reviewAndSaveAssessment(['is_confirmed' => '0']);
+
+        $response->assertSessionHasErrors(['corrections' => PredictionFeedbackFormRequest::NO_CORRECTION_MESSAGE]);
+        $this->assertNothingSaved();
+    }
+
+    public function test_correct_that_only_repeats_the_ais_own_levels_is_refused_and_saves_nothing(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $this->stageNormalAssessment();
+
+        $response = $this->reviewAndSaveAssessment([
+            'is_confirmed' => '0',
+            'corrected_depression_level' => 'Normal',
+            'corrected_stress_level' => 'Normal',
+        ]);
+
+        $response->assertRedirect(route('assessments.create.result'));
+        $response->assertSessionHasErrors(['corrections' => PredictionFeedbackFormRequest::NO_CORRECTION_MESSAGE]);
+        $this->assertNothingSaved();
+    }
+
+    public function test_a_same_level_pick_next_to_a_real_correction_is_kept_as_chosen(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $this->stageNormalAssessment();
+
+        $this->reviewAndSaveAssessment([
+            'is_confirmed' => '0',
+            'corrected_depression_level' => 'Normal',
+            'corrected_stress_level' => 'Mild',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('prediction_feedback', [
+            'is_confirmed' => 0,
+            'corrected_depression_level' => 'Normal',
+            'corrected_anxiety_level' => null,
+            'corrected_stress_level' => 'Mild',
+        ]);
+    }
+
+    public function test_a_lowercase_enye_middle_initial_is_accepted_and_staged_uppercase(): void
+    {
+        $this->actingAs($this->psychometrician())->post(route('assessments.create.student'), [
+            'first_name' => 'Jose',
+            'middle_name' => 'ñ.',
+            'last_name' => 'Rizal',
+            'gender' => 'Male',
+            'privacy_consent' => '1',
+            ...$this->lookupIds(),
+        ])->assertSessionHasNoErrors()->assertRedirect(route('assessments.create.questionnaire'));
+
+        $this->assertSame('Ñ.', session('assessment_wizard.student_data.middle_name'));
+    }
+
+    public function test_a_middle_initial_of_two_letters_is_still_rejected(): void
+    {
+        $this->actingAs($this->psychometrician())->post(route('assessments.create.student'), [
+            'first_name' => 'Jose',
+            'middle_name' => 'ÑA.',
+            'last_name' => 'Rizal',
+            'gender' => 'Male',
+            'privacy_consent' => '1',
+            ...$this->lookupIds(),
+        ])->assertSessionHasErrors('middle_name');
+    }
+
+    public function test_a_decomposed_enye_middle_initial_is_accepted_and_staged_as_one_letter(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $ids = $this->lookupIds();
+
+        // "N" / "n" followed by U+0303 COMBINING TILDE, as some keyboards type Ñ.
+        foreach (["N\u{0303}.", "n\u{0303}."] as $decomposed) {
+            $this->actingAs($psychometrician)->post(route('assessments.create.student'), [
+                'first_name' => 'Jose',
+                'middle_name' => $decomposed,
+                'last_name' => 'Rizal',
+                'gender' => 'Male',
+                'privacy_consent' => '1',
+                ...$ids,
+            ])->assertSessionHasNoErrors()->assertRedirect(route('assessments.create.questionnaire'));
+
+            $this->assertSame("\u{00D1}.", session('assessment_wizard.student_data.middle_name'));
+        }
+    }
+
+    public function test_without_intl_the_middle_initial_is_left_as_typed_and_a_decomposed_enye_is_rejected(): void
+    {
+        $decomposed = "N\u{0303}.";
+        $middleNameRule = ['middle_name' => (new AssessmentStudentRequest)->rules()['middle_name']];
+
+        // With intl (as in this environment) it is combined into one letter.
+        $this->assertSame("\u{00D1}.", AssessmentStudentRequest::composeToNfc($decomposed));
+
+        // Without intl nothing is changed and nothing crashes: a decomposed
+        // Ñ then fails the format rule, while a precomposed Ñ still passes.
+        $fallback = AssessmentStudentRequest::composeToNfc($decomposed, intlAvailable: false);
+        $this->assertSame($decomposed, $fallback);
+        $this->assertTrue(Validator::make(['middle_name' => Str::upper($fallback)], $middleNameRule)->fails());
+
+        $precomposed = AssessmentStudentRequest::composeToNfc("\u{00F1}.", intlAvailable: false);
+        $this->assertTrue(Validator::make(['middle_name' => Str::upper($precomposed)], $middleNameRule)->passes());
+    }
+
+    public function test_guidance_counselor_cannot_post_the_step_three_save(): void
+    {
+        $this->actingAs($this->guidanceCounselor())
+            ->post(route('assessments.create.submit'), ['is_confirmed' => '1'])
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('assessments', 0);
+        $this->assertDatabaseCount('prediction_feedback', 0);
     }
 }

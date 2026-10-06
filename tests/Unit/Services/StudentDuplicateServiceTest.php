@@ -41,4 +41,23 @@ class StudentDuplicateServiceTest extends TestCase
         $this->assertEqualsCanonicalizing([$initial->id, $fullMiddle->id], $matches['active']->modelKeys());
         $this->assertSame([$archived->id], $matches['archived']->modelKeys());
     }
+
+    public function test_an_enye_middle_initial_is_one_multibyte_letter_distinct_from_n(): void
+    {
+        $this->assertSame('ñ', StudentDuplicateService::middleInitial('Ñ.'));
+        $this->assertSame('ñ', StudentDuplicateService::middleInitial('ñ.'));
+        $this->assertSame('ñ', StudentDuplicateService::middleInitial('Ñuñez'));
+        $this->assertSame('n', StudentDuplicateService::middleInitial('N.'));
+    }
+
+    public function test_find_matches_compares_an_enye_middle_initial_case_insensitively_and_apart_from_n(): void
+    {
+        $upper = Student::factory()->create(['first_name' => 'Jose', 'middle_name' => 'Ñ.', 'last_name' => 'Rizal']);
+        $lower = Student::factory()->create(['first_name' => 'Jose', 'middle_name' => 'ñ.', 'last_name' => 'Rizal']);
+        Student::factory()->create(['first_name' => 'Jose', 'middle_name' => 'N.', 'last_name' => 'Rizal']);
+
+        $matches = (new StudentDuplicateService)->findMatches('Jose', 'ñ.', 'Rizal');
+
+        $this->assertEqualsCanonicalizing([$upper->id, $lower->id], $matches['active']->modelKeys());
+    }
 }

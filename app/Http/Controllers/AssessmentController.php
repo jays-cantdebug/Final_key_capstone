@@ -116,7 +116,9 @@ class AssessmentController extends Controller
      * inspects the Referer header: same host, path matching
      * `/counseling-sessions/{id}`, and that session must actually belong
      * to this assessment — a stale or unrelated referrer never produces
-     * a misleading link. If the browser doesn't send a Referer (privacy
+     * a misleading link. Like the other back links, the Referer path must
+     * equal that session's own page exactly, and the viewer must be
+     * allowed to open it. If the browser doesn't send a Referer (privacy
      * settings, extensions), the link just doesn't appear.
      */
     private function resolveBackToCounselingSession(Assessment $assessment, Request $request): ?CounselingSession
@@ -129,7 +131,14 @@ class AssessmentController extends Controller
 
         $session = CounselingSession::find((int) $matches[1]);
 
-        return $session?->assessment_id === $assessment->id ? $session : null;
+        if ($session === null
+            || $session->assessment_id !== $assessment->id
+            || $path !== parse_url(route('counseling-sessions.show', $session), PHP_URL_PATH)
+            || ! Gate::allows('view', $session)) {
+            return null;
+        }
+
+        return $session;
     }
 
     /**

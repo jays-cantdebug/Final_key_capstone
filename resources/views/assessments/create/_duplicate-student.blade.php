@@ -63,7 +63,7 @@
 
                 <div class="relative" x-data="{ show: {{ $errors->has('confirm_archived_match') ? 'true' : 'false' }} }">
                     <label class="flex items-start gap-2">
-                        <x-checkbox name="confirm_archived_match" value="1" class="mt-1" :invalid="$errors->has('confirm_archived_match')" @change="show = false" />
+                        <x-checkbox name="confirm_archived_match" value="1" class="mt-1" :checked="(bool) old('confirm_archived_match')" :invalid="$errors->has('confirm_archived_match')" @change="show = false" />
                         <span>I understand. Create a new student record.</span>
                     </label>
                     <x-field-error-tooltip :message="$errors->first('confirm_archived_match')" />

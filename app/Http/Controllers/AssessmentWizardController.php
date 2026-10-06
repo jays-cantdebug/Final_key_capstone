@@ -45,10 +45,16 @@ class AssessmentWizardController extends Controller
      * STEP 1 (GET): Show the student intake form, plus the duplicate-
      * student panel when Step 1 (or the final save) was just refused or
      * warned about a student with the same name — see confirmStudent().
+     *
+     * The panel is flashed for one page load only, so when a form that
+     * showed the archived-match warning fails validation (e.g. the privacy
+     * box left unticked), the warning is rebuilt from the old input
+     * instead — otherwise it would vanish along with the confirm box.
      */
     public function showStudentStep(Request $request): View
     {
-        $duplicate = $request->session()->get('duplicate_student');
+        $duplicate = $request->session()->get('duplicate_student')
+            ?? $this->archivedWarningFromOldInput($request);
 
         return view('assessments.create.student', [
             'courses' => $this->assessmentService->activeCourses(),
@@ -285,6 +291,13 @@ class AssessmentWizardController extends Controller
                 ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
         }
 
+        // A "correction" that picks the AI's own level changes nothing, so
+        // Correct & Save needs at least one subscale that really differs.
+        // Same-level picks next to a real change are kept as chosen.
+        if (! $request->boolean('is_confirmed') && ! $this->changesAnyLevel($request->correctedLevels(), $review)) {
+            return redirect()->route('assessments.create.result')->withInput()->withErrors(['corrections' => PredictionFeedbackFormRequest::NO_CORRECTION_MESSAGE]);
+        }
+
         $existingStudentId = $request->session()->get(self::SESSION_KEY.'.existing_student_id');
         $existingStudent = $existingStudentId !== null ? Student::findOrFail($existingStudentId) : null;
         $privacyConsentAt = $request->session()->get(self::SESSION_KEY.'.privacy_consent_at');
@@ -317,27 +330,93 @@ class AssessmentWizardController extends Controller
     }
 
     /**
+     * Whether any chosen correction differs from the AI's level for that
+     * subscale in the cached review.
+     *
+     * @param  array<string, string>  $correctedLevels  `corrected_{subscale}_level` => level.
+     * @param  array<string, mixed>  $review
+     */
+    private function changesAnyLevel(array $correctedLevels, array $review): bool
+    {
+        foreach ($correctedLevels as $field => $level) {
+            $aiLevelKey = str_replace('corrected_', '', $field);
+
+            if ($level !== ($review[$aiLevelKey] ?? null)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Back to Step 1 with the duplicate-student panel: `$kind` is
      * "active" (blocked at Step 1), "archived" (warning that needs
      * confirming) or "conflict" (blocked at final save). Only the
      * matching students' IDs are flashed; showStudentStep() loads their
-     * details fresh. The entered student details are kept as old input
-     * so confirming an archived match doesn't mean retyping the form.
+     * details fresh. The entered student details — and the privacy
+     * consent tick — are kept as old input so confirming an archived match
+     * doesn't mean retyping or re-ticking the form.
      *
      * @param  array<int, int>  $studentIds
      * @param  array<string, mixed>  $studentData
      */
     private function backToStudentStepWithDuplicate(string $kind, array $studentIds, array $studentData): RedirectResponse
     {
+        return redirect()->route('assessments.create')
+            ->withInput(Arr::only($studentData, ['first_name', 'middle_name', 'last_name', 'gender', 'course_id', 'year_level_id', 'section_id', 'privacy_consent']))
+            ->with('duplicate_student', $this->duplicatePanel($kind, $studentIds, $studentData));
+    }
+
+    /**
+     * The archived-match warning again, after a submit that had it on
+     * screen (`archived_warning_shown`) failed validation. Re-checked
+     * against the old input's name, so it only reappears while that name
+     * still has archived — and no active — matches; a dismissed warning
+     * sent no `archived_warning_shown` and stays dismissed.
+     *
+     * @return array{kind: string, ids: array<int, int>, name: string, search: string}|null
+     */
+    private function archivedWarningFromOldInput(Request $request): ?array
+    {
+        $name = [
+            'first_name' => $request->old('first_name'),
+            'middle_name' => $request->old('middle_name'),
+            'last_name' => $request->old('last_name'),
+        ];
+
+        if (! $request->old('archived_warning_shown')
+            || ! is_string($name['first_name']) || ! is_string($name['last_name'])
+            || ! (is_string($name['middle_name']) || $name['middle_name'] === null)) {
+            return null;
+        }
+
+        $matches = $this->duplicateService->findMatches($name['first_name'], $name['middle_name'], $name['last_name']);
+
+        if ($matches['active']->isNotEmpty() || $matches['archived']->isEmpty()) {
+            return null;
+        }
+
+        return $this->duplicatePanel('archived', $matches['archived']->modelKeys(), $name);
+    }
+
+    /**
+     * The duplicate-student panel's data: only the matching students' IDs
+     * (showStudentStep() loads their details fresh) and the entered name.
+     *
+     * @param  array<int, int>  $studentIds
+     * @param  array<string, mixed>  $studentData
+     * @return array{kind: string, ids: array<int, int>, name: string, search: string}
+     */
+    private function duplicatePanel(string $kind, array $studentIds, array $studentData): array
+    {
         $nameParts = Arr::only($studentData, ['first_name', 'middle_name', 'last_name']);
 
-        return redirect()->route('assessments.create')
-            ->withInput(Arr::only($studentData, ['first_name', 'middle_name', 'last_name', 'gender', 'course_id', 'year_level_id', 'section_id']))
-            ->with('duplicate_student', [
-                'kind' => $kind,
-                'ids' => $studentIds,
-                'name' => implode(' ', array_filter($nameParts, fn ($part): bool => filled($part))),
-                'search' => trim(($studentData['first_name'] ?? '').' '.($studentData['last_name'] ?? '')),
-            ]);
+        return [
+            'kind' => $kind,
+            'ids' => $studentIds,
+            'name' => implode(' ', array_filter($nameParts, fn ($part): bool => filled($part))),
+            'search' => trim(($studentData['first_name'] ?? '').' '.($studentData['last_name'] ?? '')),
+        ];
     }
 }

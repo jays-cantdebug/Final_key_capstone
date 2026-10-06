@@ -11,11 +11,14 @@ use Illuminate\Database\DatabaseManager;
 
 /**
  * Records a Psychometrician's confirmation or correction of an
- * assessment's AI classification (the Feedback Loop). Creates the
- * prediction_feedback row the first time, updates it in place on
- * subsequent edits — never duplicates it. Never retroactively alters the
- * original dass_results row or any flagged_cases/notifications already
- * issued for the assessment.
+ * assessment's AI classification (the Feedback Loop — in the Audit Log,
+ * "Feedback Loop Submission"). Called only from AssessmentService::save(),
+ * inside the same transaction that saves the assessment, so it records the
+ * mandatory Step 3 review decision exactly once; there is no post-save
+ * edit. `updateOrCreate` still keys the row on the assessment, so a repeat
+ * call could never create a second row. It never alters the original
+ * dass_results row — flagging off the reviewed (effective) levels is done
+ * by AssessmentService::save() afterwards.
  */
 class PredictionFeedbackService
 {

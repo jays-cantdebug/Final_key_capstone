@@ -365,4 +365,89 @@ class QuestionnaireManagementTest extends TestCase
         $response->assertSessionHasErrors('questionnaire');
         $this->assertDatabaseHas('questionnaires', ['id' => $questionnaire->id, 'deleted_at' => null]);
     }
+
+    public function test_a_version_cannot_be_reached_through_another_questionnaires_url(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $live = Questionnaire::factory()->create();
+        $hidden = Questionnaire::factory()->create();
+        $version = QuestionnaireVersion::factory()->create(['questionnaire_id' => $hidden->id]);
+        $this->addDassQuestions($version);
+        $this->actingAs($psychometrician)->delete(route('questionnaires.destroy', $hidden))->assertSessionHasNoErrors();
+
+        // Activating it here would leave the system's only Active version
+        // under an archived questionnaire, around the archive guard.
+        $this->patch(route('questionnaires.versions.activate', [$live, $version]))->assertNotFound();
+        $this->assertSame(QuestionnaireVersion::STATUS_DRAFT, $version->fresh()->status);
+
+        $this->get(route('questionnaires.versions.show', [$live, $version]))->assertNotFound();
+        $this->get(route('questionnaires.versions.edit', [$live, $version]))->assertNotFound();
+        $this->delete(route('questionnaires.versions.destroy', [$live, $version]))->assertNotFound();
+        $this->assertNotSoftDeleted($version);
+    }
+
+    public function test_a_question_cannot_be_reached_through_another_versions_url(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $questionnaire = Questionnaire::factory()->create();
+        $draft = QuestionnaireVersion::factory()->create(['questionnaire_id' => $questionnaire->id]);
+        $otherDraft = QuestionnaireVersion::factory()->create(['questionnaire_id' => $questionnaire->id, 'version_number' => 2]);
+        $this->addDassQuestions($otherDraft, 1, 0, 0);
+        $question = $otherDraft->questions()->first();
+
+        $this->actingAs($psychometrician)
+            ->get(route('questionnaires.versions.questions.edit', [$questionnaire, $draft, $question]))
+            ->assertNotFound();
+        $this->delete(route('questionnaires.versions.questions.destroy', [$questionnaire, $draft, $question]))->assertNotFound();
+        $this->assertNotSoftDeleted($question);
+
+        // A version under another questionnaire is refused here too.
+        $otherQuestionnaire = Questionnaire::factory()->create();
+        $this->get(route('questionnaires.versions.questions.create', [$otherQuestionnaire, $otherDraft]))->assertNotFound();
+    }
+
+    public function test_every_link_on_the_questionnaire_and_version_pages_still_opens(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $questionnaire = Questionnaire::factory()->create();
+        $draft = QuestionnaireVersion::factory()->create(['questionnaire_id' => $questionnaire->id, 'version_number' => 2]);
+        $this->addDassQuestions($draft, 1, 1, 1);
+        $active = $this->createActiveQuestionnaireVersion();
+        $active->update(['questionnaire_id' => $questionnaire->id]);
+
+        $pages = [
+            route('questionnaires.show', $questionnaire),
+            route('questionnaires.versions.show', [$questionnaire, $draft]),
+            route('questionnaires.versions.show', [$questionnaire, $active]),
+        ];
+
+        $links = [];
+
+        foreach ($pages as $page) {
+            $html = $this->actingAs($psychometrician)->get($page)->assertOk()->getContent();
+            preg_match_all('#href="(http://localhost/questionnaires/[^"]+)"#', $html, $matches);
+            $links = [...$links, ...$matches[1]];
+        }
+
+        $links = array_unique($links);
+        $this->assertContains(route('questionnaires.versions.questions.edit', [$questionnaire, $draft, $draft->questions()->first()]), $links);
+
+        foreach ($links as $link) {
+            $this->get(html_entity_decode($link))->assertOk();
+        }
+
+        // And the forms on those pages still reach their actions.
+        $question = $draft->questions()->first();
+        $this->put(route('questionnaires.versions.questions.update', [$questionnaire, $draft, $question]), [
+            'item_number' => $question->item_number,
+            'question_text' => 'Updated wording',
+            'question_type' => $question->question_type,
+            'subscale' => $question->subscale,
+            'display_order' => $question->display_order,
+            'is_required' => '1',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('Updated wording', $question->fresh()->question_text);
+        $this->patch(route('questionnaires.versions.archive', [$questionnaire, $active]))->assertSessionHasNoErrors();
+        $this->patch(route('questionnaires.versions.activate', [$questionnaire, $active]))->assertSessionHasNoErrors();
+    }
 }

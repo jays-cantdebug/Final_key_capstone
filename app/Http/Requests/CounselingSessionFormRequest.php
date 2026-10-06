@@ -59,16 +59,20 @@ class CounselingSessionFormRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * `student_id` is only required on create; the student a session
-     * belongs to cannot be changed afterward. `assessment_id`, when
-     * provided, must belong to that same student.
+     * `student_id` is only validated (and so only saved) on create, and
+     * must be an active student there — archived students can't get new
+     * sessions, though their existing ones stay editable. The student a
+     * session belongs to cannot be changed afterward: on update any
+     * submitted `student_id` is ignored, and `assessment_id`, when
+     * provided, must belong to the session's own student — never to one
+     * named in the request.
      *
      * @return array<string, array<int, mixed>>
      */
     public function rules(): array
     {
         $session = $this->route('counseling_session');
-        $studentId = $this->input('student_id') ?? $session?->student_id;
+        $studentId = $session !== null ? $session->student_id : $this->input('student_id');
 
         $rules = [
             'assessment_id' => [
@@ -118,7 +122,7 @@ class CounselingSessionFormRequest extends FormRequest
         ];
 
         if ($session === null) {
-            $rules['student_id'] = ['required', 'integer', 'exists:students,id'];
+            $rules['student_id'] = ['required', 'integer', Rule::exists('students', 'id')->whereNull('deleted_at')];
         }
 
         return $rules;

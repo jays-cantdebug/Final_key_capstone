@@ -151,10 +151,11 @@ class AssessmentService
      * `$feedbackData` is the validated Confirm/Correct submission
      * (`PredictionFeedbackFormRequest`'s shape: `is_confirmed`,
      * `corrected_{subscale}_level`, `notes`) — passed straight through to
-     * `PredictionFeedbackService::submit()`, the same service and table
-     * used by the standalone post-save Feedback Loop, so a mandatory
-     * pre-save review and an optional later revision are recorded
-     * identically.
+     * `PredictionFeedbackService::submit()`, which writes the assessment's
+     * one `prediction_feedback` row inside this transaction. This Step 3
+     * review is the only place a review decision is recorded — there is no
+     * post-save revision, so it can't be changed once the assessment is
+     * saved.
      *
      * `$existingStudent` is only passed by the "Take Again" retake flow
      * (see `AssessmentWizardController::startRetake()`), to attach a new

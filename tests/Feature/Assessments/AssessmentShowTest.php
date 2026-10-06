@@ -597,4 +597,41 @@ class AssessmentShowTest extends TestCase
             ->assertOk()
             ->assertViewHas('backToStudentProfileUrl', null);
     }
+
+    public function test_back_to_counseling_session_link_does_not_appear_for_the_psychometrician(): void
+    {
+        $assessment = $this->assessmentWithResult();
+        $session = CounselingSession::factory()->create([
+            'assessment_id' => $assessment->id,
+            'student_id' => $assessment->student_id,
+        ]);
+
+        // The Psychometrician can't open Counseling Sessions (403), so the
+        // link would be a dead end even with a matching Referer.
+        $response = $this->actingAs($this->psychometrician())
+            ->withHeader('referer', route('counseling-sessions.show', $session))
+            ->get(route('assessments.show', $assessment));
+
+        $response->assertOk();
+        $response->assertViewHas('backToCounselingSession', fn ($backTo) => $backTo === null);
+        $response->assertDontSee('Back to Counseling Session');
+    }
+
+    public function test_back_to_counseling_session_link_needs_the_sessions_exact_path(): void
+    {
+        $counselor = $this->guidanceCounselor();
+        $assessment = $this->assessmentWithResult();
+        $session = CounselingSession::factory()->create([
+            'assessment_id' => $assessment->id,
+            'student_id' => $assessment->student_id,
+            'counselor_id' => $counselor->id,
+        ]);
+
+        foreach (['http://localhost/reports/counseling-sessions/'.$session->id, 'http://localhost/counseling-sessions/'.$session->id.'/'] as $referer) {
+            $this->actingAs($counselor)
+                ->withHeader('referer', $referer)
+                ->get(route('assessments.show', $assessment))
+                ->assertViewHas('backToCounselingSession', fn ($backTo) => $backTo === null);
+        }
+    }
 }

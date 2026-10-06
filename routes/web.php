@@ -53,6 +53,7 @@ Route::middleware(['auth', 'single-session'])->group(function (): void {
 
         Route::prefix('questionnaires/{questionnaire}/versions')
             ->name('questionnaires.versions.')
+            ->scopeBindings()
             ->group(function (): void {
                 Route::get('/create', [QuestionnaireVersionController::class, 'create'])->name('create');
                 Route::post('/', [QuestionnaireVersionController::class, 'store'])->name('store');
@@ -66,6 +67,7 @@ Route::middleware(['auth', 'single-session'])->group(function (): void {
 
         Route::prefix('questionnaires/{questionnaire}/versions/{version}/questions')
             ->name('questionnaires.versions.questions.')
+            ->scopeBindings()
             ->group(function (): void {
                 Route::get('/create', [DassQuestionController::class, 'create'])->name('create');
                 Route::post('/', [DassQuestionController::class, 'store'])->name('store');
