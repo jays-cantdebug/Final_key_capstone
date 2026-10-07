@@ -82,6 +82,30 @@ class DuplicateStudentTest extends TestCase
         return $this->reviewAndSaveAssessment();
     }
 
+    /**
+     * The opening <svg> tag of the duplicate panel's leading icon on the
+     * Step 1 page.
+     */
+    private function panelIconTag(): string
+    {
+        $html = $this->get(route('assessments.create'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/role="alert">\s*<div class="flex items-start gap-3">.*?(<svg[^>]*>)/s', $html);
+        preg_match('/role="alert">\s*<div class="flex items-start gap-3">.*?(<svg[^>]*>)/s', $html, $match);
+
+        return $match[1];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function classesOf(string $tag): array
+    {
+        preg_match('/class="([^"]*)"/', $tag, $match);
+
+        return preg_split('/\s+/', trim($match[1] ?? ''));
+    }
+
     private function archivedMatchAuditCount(): int
     {
         return AuditLog::query()->where('action', 'Archived Match Confirmed')->count();
@@ -490,5 +514,39 @@ class DuplicateStudentTest extends TestCase
 
         $this->assertSame('active', session('duplicate_student.kind'));
         $this->assertSame([$existing->id], session('duplicate_student.ids'));
+    }
+
+    public function test_the_red_panels_hide_their_icon_but_the_archived_warning_keeps_it(): void
+    {
+        $this->actingAs($this->psychometrician());
+        $first = $this->existingStudent();
+
+        // Active match, one student.
+        $this->postStepOne();
+        $single = $this->panelIconTag();
+
+        // Active match, several students.
+        $this->existingStudent();
+        $this->postStepOne();
+        $several = $this->panelIconTag();
+
+        // Registered while you were working.
+        $conflict = $this->withSession(['duplicate_student' => ['kind' => 'conflict', 'ids' => [$first->id], 'name' => 'Juan D. Cruz', 'search' => 'Juan Cruz']])
+            ->panelIconTag();
+
+        foreach (['one student' => $single, 'several students' => $several, 'registered while working' => $conflict] as $panel => $tag) {
+            $this->assertContains('invisible', $this->classesOf($tag), "The {$panel} panel's icon should be invisible.");
+            $this->assertStringContainsString('aria-hidden="true"', $tag);
+            $this->assertStringNotContainsString('tabindex', $tag);
+        }
+
+        // Archived-match warning: the triangle stays visible.
+        Student::query()->delete();
+        $this->archivedStudent();
+        $this->postStepOne();
+        $archived = $this->panelIconTag();
+
+        $this->assertNotContains('invisible', $this->classesOf($archived));
+        $this->assertSame(['mt-0.5', 'h-5', 'w-5', 'flex-shrink-0'], $this->classesOf($archived));
     }
 }

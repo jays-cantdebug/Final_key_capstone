@@ -39,7 +39,8 @@
 
 <div x-data class="mb-6 rounded-lg border px-4 py-4 text-sm {{ $variant[0] }}" role="alert">
     <div class="flex items-start gap-3">
-        <svg class="mt-0.5 h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="{{ $variant[1] }}" /></svg>
+        {{-- The red panels' icon is hidden but keeps its space, so nothing moves. --}}
+        <svg @class(['mt-0.5 h-5 w-5 flex-shrink-0', 'invisible' => ! $isArchived]) viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="{{ $variant[1] }}" /></svg>
 
         <div class="min-w-0 flex-1 space-y-3">
             <p class="font-semibold">{{ $heading }}</p>
