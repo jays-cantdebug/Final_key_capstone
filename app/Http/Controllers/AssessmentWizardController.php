@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Exceptions\DuplicateStudentException;
+use App\Exceptions\QuestionnaireVersionMismatchException;
 use App\Http\Requests\AssessmentResponseFormRequest;
 use App\Http\Requests\AssessmentStudentRequest;
 use App\Http\Requests\PredictionFeedbackFormRequest;
+use App\Models\QuestionnaireVersion;
 use App\Models\Student;
 use App\Services\AssessmentService;
 use App\Services\StudentDuplicateService;
@@ -33,6 +35,13 @@ use Illuminate\Support\Facades\Gate;
 class AssessmentWizardController extends Controller
 {
     private const SESSION_KEY = 'assessment_wizard';
+
+    /**
+     * Shown at Step 2 when Step 3 or the final save has no pinned
+     * questionnaire version to work from (a wizard session started before
+     * pinning existed).
+     */
+    public const SUBMIT_QUESTIONNAIRE_FIRST_MESSAGE = 'Please submit the questionnaire before reviewing the assessment.';
 
     public const CONFIRM_ARCHIVED_MATCH_MESSAGE = 'Please tick the box to confirm you want to create a new student record.';
 
@@ -100,6 +109,7 @@ class AssessmentWizardController extends Controller
             self::SESSION_KEY.'.existing_student_id' => $student->id,
         ]);
         session()->forget(self::SESSION_KEY.'.responses');
+        session()->forget(self::SESSION_KEY.'.questionnaire_version_id');
         session()->forget(self::SESSION_KEY.'.privacy_consent_at');
         session()->forget(self::SESSION_KEY.'.review');
         session()->forget(self::SESSION_KEY.'.acknowledged_archived_ids');
@@ -183,9 +193,13 @@ class AssessmentWizardController extends Controller
                 ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
         }
 
+        $pinnedVersionId = $request->session()->get(self::SESSION_KEY.'.questionnaire_version_id');
+
         return view('assessments.create.questionnaire', [
             'student' => new Student($studentData),
             'version' => $version,
+            // Answered under a version that is no longer the active one.
+            'questionnaireChanged' => $pinnedVersionId !== null && $pinnedVersionId !== $version->id,
             'existingResponses' => $request->session()->get(self::SESSION_KEY.'.responses', []),
             'existingStudentId' => $request->session()->get(self::SESSION_KEY.'.existing_student_id'),
         ]);
@@ -199,6 +213,11 @@ class AssessmentWizardController extends Controller
      * it — is skipped entirely); the timestamp is staged in session and
      * only lands on the new assessment's own `privacy_consent_at` at
      * final submit.
+     *
+     * Pins the version the answers were validated against (the one Active
+     * now) in session: Step 3 and the final save use that version, even if
+     * another one is activated in the meantime. Resubmitting Step 2 re-pins
+     * whatever is Active at that moment.
      */
     public function storeResponses(AssessmentResponseFormRequest $request): RedirectResponse
     {
@@ -209,7 +228,15 @@ class AssessmentWizardController extends Controller
                 ->withErrors(['student' => 'Please select or register a student before continuing.']);
         }
 
+        $version = $request->questionnaireVersion();
+
+        if ($version === null) {
+            return redirect()->route('assessments.create')
+                ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
+        }
+
         $request->session()->put(self::SESSION_KEY.'.responses', $request->validated('responses'));
+        $request->session()->put(self::SESSION_KEY.'.questionnaire_version_id', $version->id);
         $request->session()->forget(self::SESSION_KEY.'.review');
 
         if ($request->session()->has(self::SESSION_KEY.'.existing_student_id')) {
@@ -241,11 +268,11 @@ class AssessmentWizardController extends Controller
                 ->withErrors(['student' => 'Please complete the previous steps before reviewing the assessment.']);
         }
 
-        $version = $this->assessmentService->activeQuestionnaireVersion();
+        $version = $this->pinnedVersion($request);
 
         if ($version === null) {
-            return redirect()->route('assessments.create')
-                ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
+            return redirect()->route('assessments.create.questionnaire')
+                ->withErrors(['questionnaire' => self::SUBMIT_QUESTIONNAIRE_FIRST_MESSAGE]);
         }
 
         $review = $request->session()->get(self::SESSION_KEY.'.review');
@@ -287,11 +314,11 @@ class AssessmentWizardController extends Controller
                 ->withErrors(['student' => 'Please complete the previous steps before submitting.']);
         }
 
-        $version = $this->assessmentService->activeQuestionnaireVersion();
+        $version = $this->pinnedVersion($request);
 
         if ($version === null) {
-            return redirect()->route('assessments.create')
-                ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
+            return redirect()->route('assessments.create.questionnaire')
+                ->withErrors(['questionnaire' => self::SUBMIT_QUESTIONNAIRE_FIRST_MESSAGE]);
         }
 
         // A "correction" that picks the AI's own level changes nothing, so
@@ -324,12 +351,34 @@ class AssessmentWizardController extends Controller
             $request->session()->forget(self::SESSION_KEY);
 
             return $this->backToStudentStepWithDuplicate('conflict', $exception->studentIds, $studentData);
+        } catch (QuestionnaireVersionMismatchException $exception) {
+            // Nothing was saved. Keep the student, drop the answers that
+            // don't fit, and have the questionnaire answered again.
+            $request->session()->forget([
+                self::SESSION_KEY.'.responses',
+                self::SESSION_KEY.'.review',
+                self::SESSION_KEY.'.questionnaire_version_id',
+            ]);
+
+            return redirect()->route('assessments.create.questionnaire')
+                ->withErrors(['questionnaire' => $exception->getMessage()]);
         }
 
         $request->session()->forget(self::SESSION_KEY);
 
         return redirect()->route('assessments.show', $assessment)
             ->with('status', 'Assessment reviewed and saved successfully.');
+    }
+
+    /**
+     * The questionnaire version pinned at Step 2, with its questions, or
+     * null when nothing is pinned (a wizard session from before pinning).
+     */
+    private function pinnedVersion(Request $request): ?QuestionnaireVersion
+    {
+        $versionId = $request->session()->get(self::SESSION_KEY.'.questionnaire_version_id');
+
+        return $versionId === null ? null : $this->assessmentService->questionnaireVersion((int) $versionId);
     }
 
     /**

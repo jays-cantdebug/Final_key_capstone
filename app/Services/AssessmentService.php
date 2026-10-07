@@ -7,6 +7,7 @@ namespace App\Services;
 use App\AI\DTOs\AssessmentPayload;
 use App\AI\Services\AIService;
 use App\Exceptions\DuplicateStudentException;
+use App\Exceptions\QuestionnaireVersionMismatchException;
 use App\Models\Assessment;
 use App\Models\Course;
 use App\Models\DassResult;
@@ -92,6 +93,15 @@ class AssessmentService
     }
 
     /**
+     * A version by id, with its questions, whatever its status: the
+     * wizard's pinned version stays usable after another one is activated.
+     */
+    public function questionnaireVersion(int $versionId): ?QuestionnaireVersion
+    {
+        return QuestionnaireVersion::query()->with('questions')->find($versionId);
+    }
+
+    /**
      * Compute the DASS-21 scores and AI classification for a set of
      * responses, for the Psychometrician to review at Step 3 — before
      * anything is persisted. Pure computation: no database writes happen
@@ -107,7 +117,8 @@ class AssessmentService
      * @return array{
      *     scores: array{depression_raw_score: int, anxiety_raw_score: int, stress_raw_score: int, depression_final_score: int, anxiety_final_score: int, stress_final_score: int},
      *     depression_level: string, anxiety_level: string, stress_level: string,
-     *     ai_provider: string, used_non_official_thresholds: bool
+     *     ai_provider: string, used_non_official_thresholds: bool,
+     *     questionnaire_version_id: int
      * }
      */
     public function reviewAssessment(QuestionnaireVersion $version, array $responses): array
@@ -127,6 +138,7 @@ class AssessmentService
             'stress_level' => $classification->stressLevel,
             'ai_provider' => $classification->provider,
             'used_non_official_thresholds' => $this->thresholdService->isOverridden(),
+            'questionnaire_version_id' => $version->id,
         ];
     }
 
@@ -184,7 +196,14 @@ class AssessmentService
      * @param  array<string, mixed>  $feedbackData  Validated `PredictionFeedbackFormRequest` data.
      * @param  array<int, int>  $acknowledgedArchivedIds  Archived students confirmed at Step 1.
      *
+     * `$version` is the version pinned at Step 2. Before anything is
+     * written, every response must belong to one of its questions, every
+     * required question must be answered, and `$review` must have been
+     * computed for it; otherwise QuestionnaireVersionMismatchException is
+     * thrown and nothing is saved. The assessment is saved under `$version`.
+     *
      * @throws DuplicateStudentException if an active student with the same name already exists.
+     * @throws QuestionnaireVersionMismatchException if the responses or review don't belong to `$version`.
      */
     public function save(
         array $studentData,
@@ -197,6 +216,8 @@ class AssessmentService
         ?\DateTimeInterface $privacyConsentAt = null,
         array $acknowledgedArchivedIds = [],
     ): Assessment {
+        $this->assertBelongsToVersion($version, $responses, $review);
+
         return $this->database->transaction(function () use ($studentData, $version, $psychometrician, $responses, $review, $feedbackData, $existingStudent, $privacyConsentAt, $acknowledgedArchivedIds): Assessment {
             $student = $existingStudent ?? $this->registerNewStudent($studentData, $acknowledgedArchivedIds);
 
@@ -240,6 +261,27 @@ class AssessmentService
 
             return $assessment->refresh();
         });
+    }
+
+    /**
+     * @param  array<int, int>  $responses
+     * @param  array<string, mixed>  $review
+     *
+     * @throws QuestionnaireVersionMismatchException
+     */
+    private function assertBelongsToVersion(QuestionnaireVersion $version, array $responses, array $review): void
+    {
+        $questionIds = $version->questions->modelKeys();
+        $requiredIds = $version->questions->where('is_required', true)->modelKeys();
+        $answeredIds = array_map('intval', array_keys($responses));
+
+        if (
+            ($review['questionnaire_version_id'] ?? null) !== $version->id
+            || array_diff($answeredIds, $questionIds) !== []
+            || array_diff($requiredIds, $answeredIds) !== []
+        ) {
+            throw new QuestionnaireVersionMismatchException;
+        }
     }
 
     /**

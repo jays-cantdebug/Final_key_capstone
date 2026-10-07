@@ -92,19 +92,26 @@ class QuestionnaireVersionService
      * anywhere in the system, then marks the given version Active.
      *
      * Applies equally to a Draft and to a previously Archived version
-     * being reactivated.
+     * being reactivated. The version's questionnaire must itself be Active.
      *
-     * @throws QuestionnaireVersionLockedException if the version is not a valid DASS-21 layout.
+     * The previously Active version is archived through the model, one by
+     * one, so the audit log records it exactly like a manual archive
+     * (module "Questionnaire Management", action "Update", status Active ->
+     * Archived) before the "Questionnaire Activation" entry for the new one.
+     *
+     * @throws QuestionnaireVersionLockedException if the questionnaire is not Active or the version is not a valid DASS-21 layout.
      */
     public function activate(QuestionnaireVersion $version): QuestionnaireVersion
     {
+        $this->assertQuestionnaireIsActive($version);
         $this->assertValidDass21Layout($version);
 
         return $this->database->transaction(function () use ($version): QuestionnaireVersion {
             QuestionnaireVersion::query()
                 ->where('status', QuestionnaireVersion::STATUS_ACTIVE)
-                ->where('id', '!=', $version->id)
-                ->update(['status' => QuestionnaireVersion::STATUS_ARCHIVED]);
+                ->whereKeyNot($version->id)
+                ->get()
+                ->each(fn (QuestionnaireVersion $active) => $active->update(['status' => QuestionnaireVersion::STATUS_ARCHIVED]));
 
             $version->update(['status' => QuestionnaireVersion::STATUS_ACTIVE]);
 
@@ -134,15 +141,34 @@ class QuestionnaireVersionService
     }
 
     /**
+     * @throws QuestionnaireVersionLockedException if the questionnaire is Inactive or Archived.
+     */
+    private function assertQuestionnaireIsActive(QuestionnaireVersion $version): void
+    {
+        $status = $version->questionnaire()->value('status');
+
+        if ($status !== Questionnaire::STATUS_ACTIVE) {
+            throw new QuestionnaireVersionLockedException(sprintf(
+                'This version cannot be activated because its questionnaire is %s. Set the questionnaire to Active first.',
+                $status
+            ));
+        }
+    }
+
+    /**
      * DASS-21 scoring (raw sum x 2, see DassScoringService) and the official
      * classification_thresholds (top band ending at 42) are only valid for
-     * exactly 7 questions per subscale, every one of them answered. Fewer
-     * questions silently cap the score below Severe (so a student can never
-     * be flagged); more can exceed 42 and match no threshold band; an
-     * optional question left blank fails scoring. Only activation is
-     * guarded — a Draft may hold any layout while it is being built.
+     * the official DASS-21 layout, every question answered: exactly 7
+     * questions per subscale, items numbered 1-21 with no duplicates, and
+     * each item on its official subscale (DassQuestion::
+     * OFFICIAL_SUBSCALE_BY_ITEM). Fewer questions silently cap the score
+     * below Severe (so a student can never be flagged); more can exceed 42
+     * and match no threshold band; a mis-tagged item counts toward the
+     * wrong subscale with no error; an optional question left blank fails
+     * scoring. Only activation is guarded — a Draft may hold any layout
+     * while it is being built.
      *
-     * @throws QuestionnaireVersionLockedException naming each wrong subscale and its count.
+     * @throws QuestionnaireVersionLockedException naming every problem found.
      */
     private function assertValidDass21Layout(QuestionnaireVersion $version): void
     {
@@ -163,6 +189,33 @@ class QuestionnaireVersionService
             }
         }
 
+        $itemCounts = $questions->countBy('item_number');
+        $officialItems = array_keys(DassQuestion::OFFICIAL_SUBSCALE_BY_ITEM);
+
+        $missingItems = array_values(array_filter($officialItems, fn (int $itemNumber): bool => ! $itemCounts->has($itemNumber)));
+
+        if ($missingItems !== []) {
+            $problems[] = count($missingItems) === 1
+                ? "Item {$missingItems[0]} is missing."
+                : 'Items '.implode(', ', array_slice($missingItems, 0, -1)).' and '.end($missingItems).' are missing.';
+        }
+
+        foreach ($itemCounts->sortKeys() as $itemNumber => $count) {
+            if (! in_array($itemNumber, $officialItems, true)) {
+                $problems[] = "Item {$itemNumber} is not a DASS-21 item; items must be numbered 1 to 21.";
+            } elseif ($count > 1) {
+                $problems[] = "Item {$itemNumber} appears {$count} times.";
+            }
+        }
+
+        foreach ($questions->sortBy('item_number') as $question) {
+            $official = DassQuestion::OFFICIAL_SUBSCALE_BY_ITEM[$question->item_number] ?? null;
+
+            if ($official !== null && $question->subscale !== $official) {
+                $problems[] = "Item {$question->item_number} must be {$official}, but is {$question->subscale}.";
+            }
+        }
+
         $optionalItems = $questions->where('is_required', false)->pluck('item_number')->sort()->values();
 
         if ($optionalItems->isNotEmpty()) {
@@ -172,8 +225,9 @@ class QuestionnaireVersionService
         }
 
         if ($problems !== []) {
+            // A duplicated, mis-tagged item would otherwise be named twice.
             throw new QuestionnaireVersionLockedException(
-                'This version cannot be activated. '.implode(' ', $problems)
+                'This version cannot be activated. '.implode(' ', array_unique($problems))
             );
         }
     }

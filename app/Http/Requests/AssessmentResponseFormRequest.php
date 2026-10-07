@@ -5,10 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Models\QuestionnaireVersion;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
 class AssessmentResponseFormRequest extends FormRequest
 {
+    public const QUESTIONNAIRE_CHANGED_MESSAGE = 'The active questionnaire changed while you were answering. Please answer the questions below.';
+
+    private ?QuestionnaireVersion $activeVersion = null;
+
+    private bool $activeVersionLoaded = false;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -31,14 +38,27 @@ class AssessmentResponseFormRequest extends FormRequest
      * retake, so this step doubles as the consent screen instead. The
      * regular flow never has that session key, so it never sees this rule.
      *
+     * The form carries the id of the version it was built from
+     * (`questionnaire_version_id`). If another version has been activated
+     * since, the answers belong to the old version's questions, so instead
+     * of one "required" error per new question the request fails with a
+     * single QUESTIONNAIRE_CHANGED_MESSAGE. A form without the field (a
+     * page rendered before it existed) is validated against the active
+     * version as before.
+     *
      * @return array<string, array<int, mixed>>
      */
     public function rules(): array
     {
-        $version = QuestionnaireVersion::query()
-            ->where('status', QuestionnaireVersion::STATUS_ACTIVE)
-            ->with('questions')
-            ->first();
+        $version = $this->questionnaireVersion();
+
+        if ($this->questionnaireChanged()) {
+            return [
+                'questionnaire_version_id' => [
+                    fn (string $attribute, mixed $value, Closure $fail) => $fail(self::QUESTIONNAIRE_CHANGED_MESSAGE),
+                ],
+            ];
+        }
 
         $rules = [
             'responses' => ['required', 'array'],
@@ -57,6 +77,31 @@ class AssessmentResponseFormRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    /**
+     * The version this request validates against: the one Active when the
+     * request arrived. The wizard pins exactly this version at Step 2, so
+     * the answers saved in session always match the version pinned.
+     */
+    public function questionnaireVersion(): ?QuestionnaireVersion
+    {
+        if (! $this->activeVersionLoaded) {
+            $this->activeVersion = QuestionnaireVersion::query()
+                ->where('status', QuestionnaireVersion::STATUS_ACTIVE)
+                ->with('questions')
+                ->first();
+            $this->activeVersionLoaded = true;
+        }
+
+        return $this->activeVersion;
+    }
+
+    private function questionnaireChanged(): bool
+    {
+        $submitted = $this->input('questionnaire_version_id');
+
+        return filled($submitted) && (int) $submitted !== $this->questionnaireVersion()?->id;
     }
 
     /**

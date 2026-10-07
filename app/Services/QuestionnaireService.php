@@ -38,9 +38,23 @@ class QuestionnaireService
 
     /**
      * @param  array<string, mixed>  $data
+     *
+     * @throws LookupRecordInUseException if it would leave the Active version under an Inactive/Archived questionnaire.
      */
     public function update(Questionnaire $questionnaire, array $data): Questionnaire
     {
+        // The New Assessment wizard always uses the one Active version, so
+        // its questionnaire can't be made Inactive/Archived underneath it
+        // (activation refuses the reverse; see QuestionnaireVersionService).
+        if (
+            ($data['status'] ?? Questionnaire::STATUS_ACTIVE) !== Questionnaire::STATUS_ACTIVE
+            && $questionnaire->versions()->where('status', QuestionnaireVersion::STATUS_ACTIVE)->exists()
+        ) {
+            throw new LookupRecordInUseException(
+                'This questionnaire has the Active version, so it must stay Active. Activate a version of another questionnaire first, then change this status.'
+            );
+        }
+
         return $this->database->transaction(function () use ($questionnaire, $data): Questionnaire {
             $questionnaire->update($data);
 

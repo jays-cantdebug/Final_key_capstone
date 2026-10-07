@@ -60,35 +60,41 @@ trait InteractsWithDomainData
     }
 
     /**
-     * Add required questions to a version, numbered sequentially, with the
-     * given count per subscale. Defaults to the valid DASS-21 layout
-     * (7/7/7) that QuestionnaireVersionService::activate() requires.
+     * Add required questions to a version with the given count per
+     * subscale, on their official DASS-21 item numbers
+     * (DassQuestion::OFFICIAL_SUBSCALE_BY_ITEM): the first N of that
+     * subscale's items, so the default 7/7/7 is the official layout that
+     * QuestionnaireVersionService::activate() requires. Questions beyond a
+     * subscale's 7 take item numbers 22 and up. display_order follows the
+     * item number.
      */
     protected function addDassQuestions(QuestionnaireVersion $version, int $depression = 7, int $anxiety = 7, int $stress = 7): void
     {
-        $itemNumber = 1;
-        $displayOrder = 1;
-
         $counts = [
             DassQuestion::SUBSCALE_DEPRESSION => $depression,
             DassQuestion::SUBSCALE_ANXIETY => $anxiety,
             DassQuestion::SUBSCALE_STRESS => $stress,
         ];
 
+        $nextExtraItem = count(DassQuestion::OFFICIAL_SUBSCALE_BY_ITEM) + 1;
+
         // Created directly rather than via DassQuestionFactory: its
         // definition draws item_number from faker->unique() over 1-21 even
         // when overridden, which runs out once a test needs more than 21.
         foreach ($counts as $subscale => $count) {
+            $officialItems = array_keys(DassQuestion::OFFICIAL_SUBSCALE_BY_ITEM, $subscale, true);
+
             for ($i = 0; $i < $count; $i++) {
+                $itemNumber = $officialItems[$i] ?? $nextExtraItem++;
+
                 $version->questions()->create([
                     'item_number' => $itemNumber,
                     'question_text' => "{$subscale} question {$itemNumber}",
                     'question_type' => DassQuestion::TYPE_LIKERT_SCALE,
                     'subscale' => $subscale,
-                    'display_order' => $displayOrder++,
+                    'display_order' => $itemNumber,
                     'is_required' => true,
                 ]);
-                $itemNumber++;
             }
         }
     }

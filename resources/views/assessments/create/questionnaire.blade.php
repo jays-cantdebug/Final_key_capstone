@@ -17,6 +17,16 @@
         </x-alert>
     @endif
 
+    @if ($errors->has('questionnaire') || $errors->has('questionnaire_version_id'))
+        <x-alert type="warning" class="mb-6">
+            {{ $errors->first('questionnaire') ?: $errors->first('questionnaire_version_id') }}
+        </x-alert>
+    @elseif ($questionnaireChanged)
+        <x-alert type="warning" class="mb-6">
+            The active questionnaire has changed since these questions were answered. Please answer the questions below; your review will use this version.
+        </x-alert>
+    @endif
+
     @include('assessments.create._response-scale')
 
     <style>
@@ -151,6 +161,7 @@
         x-init="$nextTick(() => { const first = $el.querySelector('[data-field-invalid]'); if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); first.focus(); } })"
     >
         @csrf
+        <input type="hidden" name="questionnaire_version_id" value="{{ $version->id }}" />
 
         <div
             x-show="submitting"

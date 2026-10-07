@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\Assessment;
+use App\Models\AuditLog;
 use App\Models\DassQuestion;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireVersion;
+use Database\Seeders\DassQuestionSeeder;
+use Database\Seeders\QuestionnaireSeeder;
+use Database\Seeders\QuestionnaireVersionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\InteractsWithDomainData;
 use Tests\TestCase;
@@ -96,6 +100,154 @@ class QuestionnaireManagementTest extends TestCase
         $this->assertSame(QuestionnaireVersion::STATUS_ACTIVE, $archived->fresh()->status);
     }
 
+    public function test_a_swapped_subscale_tag_blocks_activation_and_names_every_wrong_item(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->create();
+        $this->addDassQuestions($version);
+        // Still 7/7/7, but item 2 (Anxiety) and item 3 (Depression) swapped.
+        $version->questions()->where('item_number', 2)->update(['subscale' => DassQuestion::SUBSCALE_DEPRESSION]);
+        $version->questions()->where('item_number', 3)->update(['subscale' => DassQuestion::SUBSCALE_ANXIETY]);
+
+        $response = $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.activate', [$version->questionnaire, $version])
+        );
+
+        $response->assertSessionHasErrors([
+            'activation' => 'This version cannot be activated. Item 2 must be Anxiety, but is Depression. Item 3 must be Depression, but is Anxiety.',
+        ]);
+        $this->assertSame(QuestionnaireVersion::STATUS_DRAFT, $version->fresh()->status);
+    }
+
+    public function test_a_missing_item_number_blocks_activation(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $version = QuestionnaireVersion::factory()->create();
+        $this->addDassQuestions($version);
+        // Still 7/7/7 and every tag "valid", but numbered 1-20 and 25.
+        $version->questions()->where('item_number', 21)->update(['item_number' => 25]);
+
+        $response = $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.activate', [$version->questionnaire, $version])
+        );
+
+        $response->assertSessionHasErrors([
+            'activation' => 'This version cannot be activated. Item 21 is missing. Item 25 is not a DASS-21 item; items must be numbered 1 to 21.',
+        ]);
+        $this->assertSame(QuestionnaireVersion::STATUS_DRAFT, $version->fresh()->status);
+    }
+
+    public function test_a_translated_version_with_the_official_mapping_activates(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $current = $this->createActiveQuestionnaireVersion();
+        $translated = QuestionnaireVersion::factory()->create([
+            'questionnaire_id' => Questionnaire::factory()->create(['title' => 'DASS-21 (Filipino)'])->id,
+        ]);
+        $this->addDassQuestions($translated);
+        $translated->questions()->each(fn (DassQuestion $question) => $question->update(['question_text' => "Pahayag {$question->item_number}"]));
+
+        $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.activate', [$translated->questionnaire, $translated])
+        )->assertSessionHasNoErrors();
+
+        $this->assertSame(QuestionnaireVersion::STATUS_ACTIVE, $translated->fresh()->status);
+        $this->assertSame(QuestionnaireVersion::STATUS_ARCHIVED, $current->fresh()->status);
+    }
+
+    public function test_the_seeded_dass21_matches_the_official_mapping_and_passes_activation(): void
+    {
+        $this->seed([QuestionnaireSeeder::class, QuestionnaireVersionSeeder::class, DassQuestionSeeder::class]);
+        $seeded = QuestionnaireVersion::query()->with('questions')->sole();
+
+        $this->assertSame(
+            DassQuestion::OFFICIAL_SUBSCALE_BY_ITEM,
+            $seeded->questions->sortBy('item_number')->pluck('subscale', 'item_number')->all()
+        );
+
+        $this->actingAs($this->psychometrician())->patch(
+            route('questionnaires.versions.activate', [$seeded->questionnaire, $seeded])
+        )->assertSessionHasNoErrors();
+        $this->assertSame(QuestionnaireVersion::STATUS_ACTIVE, $seeded->fresh()->status);
+    }
+
+    public function test_a_version_of_an_inactive_or_archived_questionnaire_cannot_be_activated(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $current = $this->createActiveQuestionnaireVersion();
+
+        foreach ([Questionnaire::STATUS_INACTIVE, Questionnaire::STATUS_ARCHIVED] as $status) {
+            $version = QuestionnaireVersion::factory()->create([
+                'questionnaire_id' => Questionnaire::factory()->create(['status' => $status])->id,
+            ]);
+            $this->addDassQuestions($version);
+
+            $response = $this->actingAs($psychometrician)->patch(
+                route('questionnaires.versions.activate', [$version->questionnaire, $version])
+            );
+
+            $response->assertSessionHasErrors([
+                'activation' => "This version cannot be activated because its questionnaire is {$status}. Set the questionnaire to Active first.",
+            ]);
+            $this->assertSame(QuestionnaireVersion::STATUS_DRAFT, $version->fresh()->status);
+            $this->assertSame(QuestionnaireVersion::STATUS_ACTIVE, $current->fresh()->status);
+        }
+    }
+
+    public function test_the_questionnaire_with_the_active_version_cannot_be_made_inactive_or_archived(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $active = $this->createActiveQuestionnaireVersion();
+        $questionnaire = $active->questionnaire;
+
+        foreach ([Questionnaire::STATUS_INACTIVE, Questionnaire::STATUS_ARCHIVED] as $status) {
+            $response = $this->actingAs($psychometrician)->put(route('questionnaires.update', $questionnaire), [
+                'title' => $questionnaire->title,
+                'description' => $questionnaire->description,
+                'status' => $status,
+            ]);
+
+            $response->assertSessionHasErrors([
+                'status' => 'This questionnaire has the Active version, so it must stay Active. Activate a version of another questionnaire first, then change this status.',
+            ]);
+            $this->assertSame(Questionnaire::STATUS_ACTIVE, $questionnaire->fresh()->status);
+        }
+
+        // Without an Active version, the status can change freely.
+        $other = Questionnaire::factory()->create();
+        $this->put(route('questionnaires.update', $other), [
+            'title' => $other->title,
+            'description' => $other->description,
+            'status' => Questionnaire::STATUS_INACTIVE,
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(Questionnaire::STATUS_INACTIVE, $other->fresh()->status);
+    }
+
+    public function test_activating_a_version_audits_the_version_it_archives(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $current = $this->createActiveQuestionnaireVersion();
+        $newVersion = QuestionnaireVersion::factory()->create(['version_number' => 2]);
+        $this->addDassQuestions($newVersion);
+        $before = (int) AuditLog::query()->max('id');
+
+        $this->actingAs($psychometrician)->patch(
+            route('questionnaires.versions.activate', [$newVersion->questionnaire, $newVersion])
+        )->assertSessionHasNoErrors();
+
+        $entries = AuditLog::query()->where('id', '>', $before)->orderBy('id')->get();
+
+        $this->assertSame(
+            [[$current->id, 'Update'], [$newVersion->id, 'Questionnaire Activation']],
+            $entries->map(fn (AuditLog $entry): array => [$entry->record_id, $entry->action])->all()
+        );
+        $archive = $entries->first();
+        $this->assertSame('Questionnaire Management', $archive->module);
+        $this->assertSame($psychometrician->id, $archive->user_id);
+        $this->assertSame(QuestionnaireVersion::STATUS_ACTIVE, $archive->old_values['status']);
+        $this->assertSame(QuestionnaireVersion::STATUS_ARCHIVED, $archive->new_values['status']);
+    }
+
     public function test_a_version_with_exactly_seven_required_questions_per_subscale_activates(): void
     {
         $psychometrician = $this->psychometrician();
@@ -121,7 +273,7 @@ class QuestionnaireManagementTest extends TestCase
         );
 
         $response->assertSessionHasErrors([
-            'activation' => 'This version cannot be activated. Depression has 6 questions; it needs exactly 7.',
+            'activation' => 'This version cannot be activated. Depression has 6 questions; it needs exactly 7. Item 21 is missing.',
         ]);
         $this->assertSame(QuestionnaireVersion::STATUS_DRAFT, $version->fresh()->status);
     }
@@ -137,7 +289,7 @@ class QuestionnaireManagementTest extends TestCase
         );
 
         $response->assertSessionHasErrors([
-            'activation' => 'This version cannot be activated. Stress has 8 questions; it needs exactly 7.',
+            'activation' => 'This version cannot be activated. Stress has 8 questions; it needs exactly 7. Item 22 is not a DASS-21 item; items must be numbered 1 to 21.',
         ]);
         $this->assertSame(QuestionnaireVersion::STATUS_DRAFT, $version->fresh()->status);
     }
@@ -153,7 +305,7 @@ class QuestionnaireManagementTest extends TestCase
         );
 
         $response->assertSessionHasErrors([
-            'activation' => 'This version cannot be activated. Depression has 5 questions; it needs exactly 7. Stress has 1 question; it needs exactly 7.',
+            'activation' => 'This version cannot be activated. Depression has 5 questions; it needs exactly 7. Stress has 1 question; it needs exactly 7. Items 6, 8, 11, 12, 14, 17, 18 and 21 are missing.',
         ]);
     }
 
@@ -244,7 +396,7 @@ class QuestionnaireManagementTest extends TestCase
         $psychometrician = $this->psychometrician();
         $version = QuestionnaireVersion::factory()->create();
         $this->addDassQuestions($version, depression: 2, anxiety: 0, stress: 0);
-        $question = $version->questions()->where('item_number', 1)->firstOrFail();
+        $question = $version->questions()->orderBy('item_number')->firstOrFail();
 
         $response = $this->actingAs($psychometrician)->put(
             route('questionnaires.versions.questions.update', [$version->questionnaire, $version, $question]),

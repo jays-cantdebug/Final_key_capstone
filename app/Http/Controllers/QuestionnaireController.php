@@ -60,7 +60,11 @@ class QuestionnaireController extends Controller
 
     public function update(QuestionnaireFormRequest $request, Questionnaire $questionnaire): RedirectResponse
     {
-        $this->questionnaireService->update($questionnaire, $request->validated());
+        try {
+            $this->questionnaireService->update($questionnaire, $request->validated());
+        } catch (LookupRecordInUseException $exception) {
+            return back()->withInput()->withErrors(['status' => $exception->getMessage()]);
+        }
 
         return redirect()->route('questionnaires.show', $questionnaire)
             ->with('status', 'Questionnaire updated successfully.');
