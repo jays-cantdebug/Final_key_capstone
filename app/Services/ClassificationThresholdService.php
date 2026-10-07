@@ -49,6 +49,114 @@ class ClassificationThresholdService
     }
 
     /**
+     * Why an Override Mode edit would leave some score with no severity
+     * level, or with two. With the submitted rows applied over the current
+     * ones, each subscale's bands, in severity order, must start at 0,
+     * follow on from each other with no gap or overlap, and end at
+     * ClassificationThreshold::MAX_FINAL_SCORE (the stored cap of the
+     * open-ended top band). Empty when the edit is valid.
+     *
+     * @param  array<int, array{id: int|string, min_score: int|string, max_score: int|string}>  $rows
+     * @return array<int, string>
+     */
+    public function coverageProblems(array $rows): array
+    {
+        $submitted = [];
+        foreach ($rows as $row) {
+            $submitted[(int) $row['id']] = [
+                'min_score' => (int) $row['min_score'],
+                'max_score' => (int) $row['max_score'],
+            ];
+        }
+
+        $problems = [];
+
+        foreach (ClassificationThreshold::all()->groupBy('subscale') as $subscale => $thresholds) {
+            $bands = [];
+            foreach ($thresholds as $threshold) {
+                $bands[$threshold->severity_level] = $submitted[$threshold->id]
+                    ?? ['min_score' => $threshold->min_score, 'max_score' => $threshold->max_score];
+            }
+
+            $previousLevel = null;
+
+            foreach (ClassificationThreshold::severityOrder() as $level) {
+                if (! isset($bands[$level])) {
+                    $problems[] = sprintf('%s has no %s band.', $subscale, $level);
+
+                    continue;
+                }
+
+                $band = $bands[$level];
+
+                if ($previousLevel === null) {
+                    if ($band['min_score'] !== 0) {
+                        $problems[] = sprintf(
+                            '%s: %s must start at 0, not %d — as entered, %s would have no severity level.',
+                            $subscale, $level, $band['min_score'], $this->scoreRange(0, $band['min_score'] - 1)
+                        );
+                    }
+                } else {
+                    $previous = $bands[$previousLevel];
+                    $expectedMin = $previous['max_score'] + 1;
+
+                    if ($band['min_score'] !== $expectedMin) {
+                        $problems[] = sprintf(
+                            '%s: %s must start at %d, right after %s ends at %d, not at %d — as entered, %s.',
+                            $subscale, $level, $expectedMin, $previousLevel, $previous['max_score'], $band['min_score'],
+                            $this->joinProblem($previousLevel, $previous, $level, $band)
+                        );
+                    }
+                }
+
+                $previousLevel = $level;
+            }
+
+            if ($previousLevel !== null && $bands[$previousLevel]['max_score'] !== ClassificationThreshold::MAX_FINAL_SCORE) {
+                $max = $bands[$previousLevel]['max_score'];
+
+                $problems[] = sprintf(
+                    '%s: %s must end at %d, the highest possible score (it covers every score from its minimum up), not at %d%s.',
+                    $subscale, $previousLevel, ClassificationThreshold::MAX_FINAL_SCORE, $max,
+                    $max < ClassificationThreshold::MAX_FINAL_SCORE
+                        ? sprintf(' — as entered, %s would have no severity level', $this->scoreRange($max + 1, ClassificationThreshold::MAX_FINAL_SCORE))
+                        : ''
+                );
+            }
+        }
+
+        return $problems;
+    }
+
+    /**
+     * What goes wrong where one band doesn't start right after the
+     * previous one ends: a gap, an overlap, or bands out of order.
+     *
+     * @param  array{min_score: int, max_score: int}  $previous
+     * @param  array{min_score: int, max_score: int}  $band
+     */
+    private function joinProblem(string $previousLevel, array $previous, string $level, array $band): string
+    {
+        if ($band['min_score'] > $previous['max_score']) {
+            return sprintf('%s would have no severity level', $this->scoreRange($previous['max_score'] + 1, $band['min_score'] - 1));
+        }
+
+        $overlapFrom = max($band['min_score'], $previous['min_score']);
+        $overlapTo = min($band['max_score'], $previous['max_score']);
+
+        if ($overlapFrom <= $overlapTo) {
+            return sprintf('%s would fall in both %s and %s', $this->scoreRange($overlapFrom, $overlapTo), $previousLevel, $level);
+        }
+
+        return sprintf('%s comes before %s', $level, $previousLevel);
+    }
+
+    private function scoreRange(int $from, int $to): string
+    {
+        return $from === $to ? "score {$from}" : "scores {$from} to {$to}";
+    }
+
+    /**
      * Save an Override Mode edit: updates every row's min/max score and
      * records a single "Classification Threshold Override" audit entry
      * containing only the rows that actually changed. No entry is

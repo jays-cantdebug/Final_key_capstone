@@ -224,7 +224,9 @@ class AssessmentWizardController extends Controller
      * anything is saved. Scores and classification are computed once and
      * cached in session (`.review`) rather than recomputed on every
      * visit — this means the AI provider (billed, for the Claude
-     * provider) is only ever invoked once per set of responses, and that
+     * provider) is invoked once per Step 2 submission (storeResponses()
+     * clears the cache, so resubmitting identical answers calls it
+     * again), not on every refresh, and that
      * what the Psychometrician actually reviews here is exactly what
      * `submit()` persists, unaffected by anything that changes between
      * viewing this page and clicking Confirm/Correct & Save.
@@ -265,9 +267,10 @@ class AssessmentWizardController extends Controller
     /**
      * STEP 3 (POST): Confirm & Save / Correct & Save. This is the only
      * action in the whole wizard that writes to the database — it
-     * validates the Confirm/Correct decision (the same
-     * `PredictionFeedbackFormRequest` shape the standalone post-save
-     * Feedback Loop uses), then persists the student, assessment,
+     * validates the Confirm/Correct decision
+     * (`PredictionFeedbackFormRequest`; this is the only place a review
+     * decision is made — there is no post-save Feedback Loop), then
+     * persists the student, assessment,
      * responses, the AI's raw classification exactly as reviewed, the
      * review decision itself, and — evaluated against the *reviewed*
      * severity, never the AI's raw output — any differentiated flagged

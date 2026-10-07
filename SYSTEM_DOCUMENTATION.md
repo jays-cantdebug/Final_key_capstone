@@ -159,7 +159,7 @@ This is the core workflow: a 3-step guided process — **Student Information →
 
 ### Why nothing is saved until the very end
 
-Nothing is written to the database until the Psychometrician reaches the final step and clicks **Confirm & Save** or **Correct & Save**. Everything in between — the student's name/course/section, their answers to all 21 questions, even the AI's computed classification — lives only in the browser session (server-side temporary storage tied to that login session), not the database.
+Nothing is written to the database until the Psychometrician reaches the final step and clicks **Confirm & Save** or **Correct & Save**. Everything in between — the student's name/course/section, their answers to all 21 questions, even the AI's computed classification — lives only in the login session, not in any of the assessment tables. Sessions are stored server-side in the database's `sessions` table, so this data does sit there, in that session's row, until it is saved, cleared or expires (see [Data Encryption & Privacy](#data-encryption--privacy-ra-10173)).
 
 **Why build it this way?** An earlier version of this system *did* save the student record as soon as Step 1 was submitted — but that meant every time a Psychometrician started a wizard and then closed the tab, got interrupted, or made a mistake and restarted, a half-finished "student" record was permanently left behind in the database with no actual assessment attached to it. Dozens of these orphan records accumulated. Deferring all saving to the final step means an abandoned wizard — at any point, for any reason — leaves **zero trace** in the database.
 
@@ -207,6 +207,8 @@ This is the step that makes the AI safe to use in a clinical context. Before any
 1. Scores the 21 answers into three subscale scores (see [DASS-21 Scoring](#the-ai-classification-system-full-detail) below).
 2. Sends those scores to the active AI Classification provider.
 3. Shows the Psychometrician exactly what the AI concluded for Depression, Anxiety, and Stress.
+
+The result is kept in the session, so refreshing Step 3, or going back to Step 2 and returning without resubmitting, shows the same classification without calling the AI again. The AI is called once per Step 2 submission: submitting Step 2 always clears the kept result, so resubmitting the same answers calls the AI again.
 
 The Psychometrician must then either:
 - **Confirm** — accept the AI's classification as correct, or
@@ -317,9 +319,9 @@ This is the literal text sent as the `system` parameter of the API call — it's
 
 **Why include DASS-21 background at all?** So the model understands what the numbers *are* — final, already-doubled subscale scores on a 0–42 scale, with five named tiers — and treats its output as a screening result rather than a diagnosis. The background deliberately contains **no cutoff numbers**: every tier boundary still comes only from the `official_thresholds` JSON, built from the database on each request, so an administrator's threshold change in Settings still takes effect without touching the prompt. It also explicitly forbids recomputing the scores, since knowing about the "× 2" could otherwise tempt the model to halve them before the lookup.
 
-### The forced tool-use JSON Schema (guaranteeing structured output)
+### The forced tool-use JSON Schema (requesting structured output)
 
-Rather than just *asking* Claude to reply in JSON (which can still occasionally produce malformed or explanatory text around the JSON), the request uses Claude's **tool use** feature: it defines a "tool" (essentially a function signature) and forces Claude to call it, with `tool_choice` explicitly set to require exactly that tool. Claude's API then guarantees the reply arrives as structured data matching this schema, not as prose:
+Rather than just *asking* Claude to reply in JSON (which can still occasionally produce malformed or explanatory text around the JSON), the request uses Claude's **tool use** feature: it defines a "tool" (essentially a function signature) and forces Claude to call it, with `tool_choice` explicitly set to require exactly that tool, so Claude replies with structured data shaped by this schema rather than prose. The request sets no `strict` mode, so the app does not rely on the API to enforce the schema — its own check of every reply (see "Valid values, checked by the app" below) is what enforces it:
 
 ```json
 {
@@ -355,9 +357,9 @@ which tells Claude it is *not allowed* to answer in any other way — it must ca
 ### Why JSON was used instead of plain text
 
 - **Unambiguous parsing.** A plain-text reply like *"The depression score of 8 falls in the Mild range"* would need to be parsed with guesswork (what if the wording varies slightly? what if it says "mild" in lowercase, or "10-13" instead of "Mild"?). A JSON object with an `enum`-constrained field has exactly one valid shape — the code either finds a valid value or it doesn't, with no ambiguity in between.
-- **Guaranteed valid values.** The `enum` list in the schema means Claude is structurally prevented from returning anything other than one of the five real severity tier names — no typos, no synonyms, no made-up tier.
+- **Valid values, checked by the app.** The schema's `enum` lists the five real severity tier names, but what actually enforces them is the app's own check of the reply (`ClaudeAIProvider::extractToolInput()`), not the API: the reply must contain a `classify_dass_subscales` tool call with all three fields present, each exactly one of the five Title Case names (`Severe` passes; `severe` or `Critical` does not). The request sets no `strict` mode. Any reply that fails the check is treated as a failed call, logged, and replaced by the rule-based result.
 - **Industry best practice for AI-to-system integration.** Whenever an AI's output needs to be consumed by another program (rather than read by a human), forcing structured output is the standard, recommended approach specifically because it removes the need for fragile text-parsing logic, which is one of the most common sources of bugs in AI-integrated systems.
-- **Machine-checkable.** Because the shape is guaranteed, the response can be validated with simple code (checking three fields exist and are one of five valid strings) rather than complex text-pattern matching that could silently misinterpret a reply.
+- **Machine-checkable.** Because the expected shape is fixed, the response can be validated with simple code (checking three fields exist and are one of five valid strings) rather than complex text-pattern matching that could silently misinterpret a reply.
 
 ### The accuracy safeguard: cross-checking against the rule-based engine
 
@@ -366,6 +368,10 @@ Because the rule-based lookup is deterministic and always correct by definition 
 - **If they agree** on all three subscales → the Claude result is used, and `dass_results.ai_provider` is recorded as `"claude"`.
 - **If they disagree on even one subscale** → the discrepancy (including both results and the input scores) is written to the application log for review, and the system silently falls back to the rule-based result instead. `ai_provider` is recorded as `"rule_based"`.
 - **If the Claude API call fails outright** (network error, timeout, malformed/missing tool call, API error) → the same fallback happens, also logged.
+
+These warnings go to the application log (`storage/logs/laravel.log`). Their `assessment_id` is always empty, because classification runs before the assessment is saved; a log entry can be matched to an assessment by its time and scores.
+
+The rule-based lookup itself runs first, outside this fallback. If a score falls in no threshold band, it stops with an error rather than guessing, in either mode: Step 3 shows a server error page and nothing is saved. Override Mode refuses any change that would leave such a gap (see [Classification Thresholds & Settings](#classification-thresholds--settings)), so this can only happen if the table is edited directly in the database.
 
 **Why this matters:** it means an incorrect AI classification can *never* actually reach the Psychometrician's review screen or be saved to the database — the worst thing a Claude malfunction can do is silently fall back to the (always-correct) rule-based answer. The `ai_provider` column on every saved result is a truthful record of which engine's answer was *actually used*, which matters both for transparency and because a capstone/thesis needs to be able to demonstrate this safeguard is real, not just claimed.
 
@@ -391,6 +397,7 @@ The Guidance Counselor works from the **reviewed** classification, not the AI's 
 - **Notification text.** Each notification names the reviewed level of the subscale that raised the flag (e.g. "… was assessed with Severe Stress …").
 - **A "Corrected by Psychometrician" badge** appears in the inbox, on the Flagged Cases list, and at the top of the assessment page when the Psychometrician really changed the AI's classification: the review was a Correct and at least one subscale was set to a level different from the AI's. A Confirm, a Correct whose picks all equal the AI's levels, or an older Confirm that happens to have corrections stored, shows no badge. The badge marks the whole assessment; it never says which subscale changed, what the AI's level was, or whether the level went up or down.
 - **Scores stay visible.** The numeric DASS-21 scores are still shown to the Counselor. Because the AI's classification is a direct lookup of each score against the published cutoffs, someone who knows the cutoff table could work out the AI's level for a corrected subscale from its score.
+- **"Classified by" and the Non-Official Thresholds badge.** The assessment page's scores card shows both roles which engine produced the saved classification ("Classified by: claude" or "rule_based") and, when it applies, the "⚠ Non-Official Thresholds" badge. Neither reveals the AI's level.
 - **The Prediction Feedback card** on the assessment page is shown to both roles as before: "Confirmed" or "Corrected" by the Psychometrician, the corrected level for each changed subscale, and any notes. It does not list the AI's levels.
 
 **What stays the same for the Psychometrician:** every Psychometrician screen — the Psychometrician Dashboard and its counts and charts, the student profile, Assessment History, the assessment page and both reports — still shows the AI's raw levels, alongside the review in the Prediction Feedback card. The **Assessment Summary Report** (both roles) counts each subscale's severity breakdown on a different basis per role, and says so on the report, on screen and in its print/PDF: the Guidance Counselor's copy counts the **reviewed** levels ("Counts use the reviewed classification…"), so its Severe/Extremely Severe counts agree with its Counseling Endorsement and Awareness Notification totals; the Psychometrician's copy keeps counting the **AI's** levels ("Severity counts use the AI's classification before review…"), so those counts can differ from the flag totals where a level was corrected. The flag totals themselves always come from the flags, which follow the reviewed levels.
@@ -582,6 +589,8 @@ Lets the Psychometrician view and, if necessary, override the official DASS-21 s
 
 **Why allow overriding official, published clinical cutoffs at all?** It doesn't happen casually — every change is captured as a single, consolidated Audit Log entry showing exactly which rows changed and their old vs. new values, and the system displays a persistent warning banner anywhere thresholds are in effect that don't match the official values, so it's never silently forgotten that non-standard cutoffs are active. The override capability exists for edge cases (e.g., a future, revised, officially-published DASS-21 cutoff table) without needing a code deployment to update it — but the constant visible warning and full audit trail mean it can never be changed by accident or without a permanent record of who changed what.
 
+**Every score must have exactly one level.** Saving in Override Mode is refused, with a message naming the subscale, the bands and the scores affected, unless each subscale's five bands, in severity order (Normal → Extremely Severe), start at 0, follow on from each other with no gap and no overlap, and the top band (Extremely Severe) ends at 42, the highest possible score. The top band still covers every score from its minimum up: 42 is only the stored cap, and the Claude provider still reports it as open-ended. Rows not included in a submission are checked at their current values. Without this rule a gap (e.g. Severe ending at 29 while Extremely Severe starts at 34) would leave scores 30 to 33 with no level, and Step 3 of a New Assessment would fail with a server error for any student scoring there. Restore Official Values and the official values themselves are unchanged.
+
 The Settings area also manages the lookup tables everything else depends on: Courses, Year Levels, and Sections (each independently archivable, blocked from archiving if a student record still references it — the same "in use, can't delete" guard pattern used for Questionnaires).
 
 ---
@@ -614,7 +623,7 @@ Because NORMI handles student mental health data — sensitive personal informat
 
 ### What is encrypted at rest
 
-Using Laravel's built-in `encrypted` Eloquent cast (AES-256-CBC, authenticated with an HMAC so tampering is detectable), the following columns are encrypted transparently — the model API is unchanged; Eloquent decrypts on read and encrypts on write automatically:
+The following columns are encrypted transparently with AES-256-CBC, authenticated with an HMAC so tampering is detectable, using the app's `APP_KEY` — the model API is unchanged; Eloquent decrypts on read and encrypts on write automatically. The answer and score columns use a small custom cast, `App\Casts\EncryptedInteger`, built on the same primitive as Laravel's built-in `encrypted` cast (`Crypt::encryptString()`), which decrypts back to an integer rather than a string; `session_notes` uses Laravel's built-in `encrypted` cast:
 
 | Table | Column(s) | Why this one |
 |---|---|---|
@@ -640,6 +649,7 @@ For the fields above that stay in plain text at the column level (and as defense
 
 - Because AES ciphertext runs several times longer than the plain value it replaces, the encrypted columns above were widened to `TEXT` (they held `INTEGER`/`TINYINT` values before).
 - Encryption and decryption both depend on the app's `APP_KEY`. If that key is ever lost, every encrypted value becomes permanently unrecoverable — `APP_KEY` must be backed up securely and never committed to version control.
+- **Wizard data in the `sessions` table.** Sessions are stored in the database (`SESSION_DRIVER=database`). While a New Assessment is in progress, its data — the student's name, course and section, the 21 answers, the scores and the AI's proposed levels — is kept in that session's row in the `sessions` table, not in the encrypted columns above, until it is saved, cleared (e.g. by starting over or logging out) or the session expires (`SESSION_LIFETIME`, 120 minutes). With `SESSION_ENCRYPT=false` (the current setting) that session payload is base64-encoded, not encrypted. Turning `SESSION_ENCRYPT` on would encrypt it with `APP_KEY`.
 - A one-time backfill command (`php artisan security:encrypt-sensitive-data`) encrypts any rows that were written before this feature was added; it's idempotent (safe to re-run) and writes directly via the query builder rather than through Eloquent, specifically so it doesn't flood the Audit Logs with thousands of "Update" entries for what is a one-off maintenance operation.
 
 ---

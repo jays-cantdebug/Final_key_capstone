@@ -12,11 +12,13 @@ namespace App\AI\DTOs;
  * no computation itself and has no dependency on Eloquent, Controllers,
  * HTTP Requests, or Blade Views.
  *
- * `assessmentId` is nullable — classification now happens at Step 3
- * review time, before an `Assessment` row exists (see
- * `AssessmentService::reviewAssessment()`), so there is no real ID to
- * carry yet. It is only ever used for log correlation in a provider's
- * error/disagreement logging, never for classification logic itself.
+ * `assessmentId` is nullable — classification happens at Step 3 review
+ * time, before an `Assessment` row exists (see
+ * `AssessmentService::reviewAssessment()`, the only caller, which never
+ * sets it), so in practice it is always null, including in the
+ * `assessment_id` of ClaudeAIProvider's disagreement/failure log entries;
+ * those can only be matched to an assessment by time and scores. It is
+ * never used for classification logic, nor sent to the Claude API.
  */
 final class AssessmentPayload
 {

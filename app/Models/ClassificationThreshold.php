@@ -35,6 +35,13 @@ class ClassificationThreshold extends Model
     public const SEVERITY_EXTREMELY_SEVERE = 'Extremely Severe';
 
     /**
+     * The highest possible DASS-21 final subscale score (7 items x 3 x 2).
+     * The top band stores it as its max_score: a practical cap for range
+     * queries on what is officially an open-ended band.
+     */
+    public const MAX_FINAL_SCORE = 42;
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
