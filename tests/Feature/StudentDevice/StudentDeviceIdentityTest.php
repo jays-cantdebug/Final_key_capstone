@@ -63,7 +63,8 @@ class StudentDeviceIdentityTest extends TestCase
         $this->studentRequest('GET', route('student-device.show'), device: $device)
             ->assertOk()
             ->assertSee(__('student_device.consent_heading'))
-            ->assertDontSee('data-student-device="identity"', false);
+            ->assertDontSee('data-student-device-details', false)
+            ->assertDontSee('data-question=', false);
 
         // Details sent before the notice is acknowledged are not taken.
         $this->sendDetailsOnDevice($device, $this->details());
@@ -74,29 +75,120 @@ class StudentDeviceIdentityTest extends TestCase
             ->assertStatus(409)->assertExactJson(['state' => 'consent']);
     }
 
-    public function test_after_the_notice_the_details_form_comes_before_any_question(): void
+    public function test_after_the_notice_one_page_has_the_details_form_above_locked_questions(): void
     {
-        ['draft' => $draft, 'short_code' => $shortCode] = $this->createRemoteDraft(collectsIdentity: true);
-        $device = $this->claimWithCode($shortCode);
-        $this->consentOnDevice($device);
+        $device = $this->deviceAtDetailsForm();
 
-        $form = $this->studentRequest('GET', route('student-device.show'), device: $device)->assertOk();
-        $form->assertSee('data-student-device="identity"', false)
-            ->assertSee('action="'.route('student-device.identity').'"', false)
-            ->assertDontSee('data-student-device="questionnaire"', false);
+        $page = $this->studentRequest('GET', route('student-device.show'), device: $device)->assertOk();
+        $body = (string) $page->getContent();
+        $form = $this->openDetailsForm($body);
+        $this->assertNotNull($form, 'No open details form.');
+        $this->assertStringContainsString('action="'.route('student-device.identity').'"', $form);
         foreach (['first_name', 'middle_name', 'last_name', 'gender', 'course_id', 'year_level_id', 'section_id'] as $field) {
-            $form->assertSee('name="'.$field.'"', false);
+            $this->assertStringContainsString('name="'.$field.'"', $form);
         }
+        $page->assertSee(__('student_device.identity_submit'));
 
+        // The form comes first, then the questions — all of them, locked.
+        $this->assertLessThan(strpos($body, 'data-question='), strpos($body, 'data-student-device-details'));
+        foreach ($this->version->questions as $question) {
+            $page->assertSee($question->item_number.'. '.$question->question_text);
+        }
+        $this->assertSame(1, preg_match('#<fieldset\b([^>]*)\bdata-questions\b#', $body, $outer));
+        $this->assertMatchesRegularExpression('#\bdisabled\b#', $outer[1]);
+        $this->assertStringContainsString('aria-describedby="questions-locked"', $outer[1]);
+        $page->assertSee('id="questions-locked"', false)->assertSee(__('student_device.questions_locked'));
+        $this->assertStringContainsString('data-locked="1"', $body);
+        $this->assertSame(84, preg_match_all('#<input\s+type="radio"#', $body));
+        $this->assertSame(0, preg_match('#<input\b[^>]*\schecked\b#', $body), 'An answer is checked.');
+        $this->assertMatchesRegularExpression('#<button\b[^>]*\bdata-done\b[^>]*\bdisabled\b#s', $body);
+        $page->assertSee(__('student_device.counter', ['answered' => 0, 'total' => 21]))
+            ->assertSee(__('student_device.identity_not_saved'))
+            ->assertDontSee('data-details-saved', false);
+    }
+
+    public function test_the_server_refuses_answers_and_done_until_the_details_are_saved(): void
+    {
+        $device = $this->deviceAtDetailsForm();
+        $draft = RemoteAssessmentDraft::query()->sole();
+        $question = $this->version->questions->first();
+
+        // A valid answer posted straight to the endpoint, as a script that
+        // ignores the disabled page would.
+        foreach ([0, 3] as $value) {
+            $this->studentRequest('POST', route('student-device.answer'), ['question_id' => $question->id, 'value' => $value, 'version' => $this->version->id], $device, json: true)
+                ->assertStatus(409)->assertExactJson(['state' => 'identity']);
+        }
+        $this->studentRequest('POST', route('student-device.done'), ['version' => $this->version->id], $device, json: true)
+            ->assertStatus(409)->assertExactJson(['state' => 'identity']);
         $this->studentRequest('GET', route('student-device.state'), device: $device, json: true)->assertOk()->assertExactJson(['state' => 'identity']);
-        $this->studentRequest('POST', route('student-device.answer'), ['question_id' => $this->version->questions->first()->id, 'value' => 1], $device, json: true)
-            ->assertStatus(409)->assertExactJson(['state' => 'identity']);
-        $this->studentRequest('POST', route('student-device.done'), [], $device, json: true)
-            ->assertStatus(409)->assertExactJson(['state' => 'identity']);
         $this->assertNull($draft->fresh()->responses);
+        $this->assertSame(RemoteAssessmentDraft::STATUS_ANSWERING, $draft->fresh()->status);
 
         $this->sendDetailsOnDevice($device, $this->details());
-        $this->studentRequest('GET', route('student-device.show'), device: $device)->assertOk()->assertSee('data-student-device="questionnaire"', false);
+        $this->studentRequest('POST', route('student-device.answer'), ['question_id' => $question->id, 'value' => 3, 'version' => $this->version->id], $device, json: true)
+            ->assertOk()->assertExactJson(['state' => 'answering', 'answered' => 1]);
+    }
+
+    public function test_after_saving_the_page_shows_only_details_saved_and_unlocks_the_questions(): void
+    {
+        $device = $this->deviceAtDetailsForm();
+        $this->sendDetailsOnDevice($device, $this->details('Zacarias', 'Q.', 'Pangilinan'));
+
+        $page = $this->studentRequest('GET', route('student-device.show'), device: $device)->assertOk();
+        $body = (string) $page->getContent();
+
+        $this->assertNull($this->openDetailsForm($body));
+        $page->assertSee('data-details-saved', false)
+            ->assertSee(__('student_device.identity_saved'))
+            ->assertSee('id="questions"', false);
+        $this->assertSame(0, preg_match('#<(form|select|textarea)\b#', $body), 'The saved page has a form control for the details.');
+        $this->assertSame(0, preg_match('#<input\b(?![^>]*type="radio")#', $body), 'The saved page has a non-answer input.');
+        foreach (['Zacarias', 'Pangilinan', 'Q.', 'Female', 'BSPS', 'Plain Studies', 'First Year', 'Rizal', 'first_name', 'course_id'] as $value) {
+            $this->assertStringNotContainsString($value, $body, "The saved page shows \"{$value}\".");
+        }
+        $this->assertStringContainsString('data-locked="0"', $body);
+        $this->assertSame(1, preg_match('#<fieldset\b([^>]*)\bdata-questions\b#', $body, $outer));
+        $this->assertDoesNotMatchRegularExpression('#\bdisabled\b#', $outer[1]);
+        $page->assertDontSee('id="questions-locked"', false);
+    }
+
+    public function test_the_details_can_never_be_edited_or_reopened_after_saving(): void
+    {
+        $device = $this->deviceAtDetailsForm();
+        $this->sendDetailsOnDevice($device, $this->details('Zacarias', 'Q.', 'Pangilinan'));
+        $draft = RemoteAssessmentDraft::query()->sole();
+        $service = app(RemoteAssessmentService::class);
+
+        $assertClosed = function (string $device, string $when): void {
+            $body = (string) $this->studentRequest('GET', route('student-device.show'), device: $device)->getContent();
+            $this->assertNull($this->openDetailsForm($body), "The details form reopened {$when}.");
+            $this->assertStringNotContainsString('Pangilinan', $body, "The details were shown {$when}.");
+        };
+
+        // A reload, and a second submission (which changes nothing).
+        $assertClosed($device, 'on a reload');
+        $this->sendDetailsOnDevice($device, $this->details('Someone', 'E.', 'Else'));
+        $this->assertSame('Pangilinan', $draft->fresh()->identity['last_name']);
+        $assertClosed($device, 'after a second submission');
+
+        // Return to student, after Done.
+        $this->answerAllOnDevice($device, $this->version);
+        $this->studentRequest('POST', route('student-device.done'), [], $device, json: true)->assertOk();
+        $this->assertTrue($service->returnToStudent($draft->fresh()));
+        $assertClosed($device, 'after Return to student');
+
+        // New code, on another device.
+        ['short_code' => $newCode] = $service->reissue($draft->fresh());
+        $assertClosed($this->claimWithCode($newCode), 'after New code');
+
+        // A held draft released by a correction.
+        $this->existingStudent('Cara', 'D.', 'Evangelista');
+        $held = $this->deviceAtDetailsForm();
+        $this->sendDetailsOnDevice($held, $this->details('Cara', 'D.', 'Evangelista'));
+        $heldDraft = RemoteAssessmentDraft::query()->latest('id')->firstOrFail();
+        $service->correctIdentity($heldDraft, [...$heldDraft->identity, 'last_name' => 'Pangilinan'], matchesActiveStudent: false);
+        $assertClosed($held, 'after a released hold');
     }
 
     public function test_the_form_lists_exactly_the_active_lookups_and_turns_autocomplete_off(): void
@@ -110,7 +202,8 @@ class StudentDeviceIdentityTest extends TestCase
         $secondCourse = Course::factory()->create(['course_code' => 'BSAB', 'course_name' => 'Bachelor of Another Bit']);
 
         $device = $this->deviceAtDetailsForm();
-        $body = (string) $this->studentRequest('GET', route('student-device.show'), device: $device)->assertOk()->getContent();
+        // The details form only: the questions below it have radios of their own.
+        $body = (string) $this->openDetailsForm((string) $this->studentRequest('GET', route('student-device.show'), device: $device)->assertOk()->getContent());
 
         $this->assertSame(
             ['' => 'Select a course', $secondCourse->id => 'BSAB - Bachelor of Another Bit', $this->course->id => 'BSPS - Bachelor of Plain Studies'],
@@ -126,9 +219,9 @@ class StudentDeviceIdentityTest extends TestCase
         foreach ($controls[0] as $control) {
             $this->assertStringContainsString('autocomplete="off"', $control);
         }
-        // Nothing pre-filled, nothing selected.
-        preg_match_all('#<input\b[^>]*\bvalue="([^"]*)"#', $body, $values);
-        $this->assertSame(['', '', ''], $values[1]);
+        // Nothing pre-filled (Step 1's inputs have no value attribute until
+        // there is old input), nothing selected.
+        $this->assertSame(0, preg_match_all('#<input\b[^>]*\bvalue="[^"]+"#', $body));
         $this->assertStringNotContainsString('selected', $body);
     }
 
@@ -228,6 +321,40 @@ class StudentDeviceIdentityTest extends TestCase
         }
     }
 
+    public function test_a_failed_save_focuses_the_first_invalid_field_and_keeps_the_questions_locked(): void
+    {
+        $device = $this->deviceAtDetailsForm();
+
+        // Middle name and course invalid; first and last name fine.
+        $response = $this->studentRequest('POST', route('student-device.identity'), $this->details('Typedfirst', 'bad', 'Typedlast', ['course_id' => 999999]), $device)
+            ->assertStatus(422);
+        $body = (string) $response->getContent();
+        $form = (string) $this->openDetailsForm($body);
+
+        // Step 1's form has no error summary: each message sits under its
+        // own field, which is marked invalid (data-field-invalid) and points
+        // at the message (aria-describedby).
+        $this->assertSame(1, preg_match_all('#\sautofocus=#', $body), 'Exactly one field gets autofocus.');
+        $this->assertMatchesRegularExpression('#<input\b[^>]*\bid="middle_name"[^>]*\sautofocus=#s', $form);
+        foreach (['middle_name', 'course_id'] as $invalid) {
+            $this->assertMatchesRegularExpression('#<(input|select)\b[^>]*\bdata-field-invalid\b[^>]*\bid="'.$invalid.'"[^>]*\baria-describedby="'.$invalid.'-error"#s', $form, $invalid);
+            $this->assertMatchesRegularExpression('#<div\s+id="'.$invalid.'-error"#', $form, "{$invalid}: no message element with that id.");
+        }
+        $response->assertSee('Middle Name must be a single letter followed by a period, e.g., &#039;P.&#039;', false)
+            ->assertSee('Please select a Course.');
+        foreach (['first_name', 'last_name'] as $valid) {
+            $this->assertDoesNotMatchRegularExpression('#\bid="'.$valid.'"[^>]*aria-describedby#', $form, $valid);
+            $this->assertStringNotContainsString('id="'.$valid.'-error"', $form);
+        }
+        // The student's own input stays; the questions stay locked.
+        $this->assertStringContainsString('value="Typedfirst"', $form);
+        $this->assertStringContainsString('value="Typedlast"', $form);
+        $this->assertStringContainsString('<option value="'.$this->yearLevel->id.'" selected', $form);
+        $this->assertStringContainsString('data-locked="1"', $body);
+        $this->assertMatchesRegularExpression('#<fieldset\b[^>]*\bdisabled\b[^>]*\bdata-questions\b#', $body);
+        $this->assertMatchesRegularExpression('#<button\b[^>]*\bdata-done\b[^>]*\bdisabled\b#s', $body);
+    }
+
     public function test_a_matching_name_changes_nothing_on_the_device_but_the_generic_message(): void
     {
         $active = $this->existingStudent('Cara', 'D.', 'Evangelista');
@@ -263,7 +390,10 @@ class StudentDeviceIdentityTest extends TestCase
 
         // No match and an archived match: straight on to the questionnaire.
         foreach (['none', 'archived'] as $case) {
-            $this->studentRequest('GET', route('student-device.show'), device: $devices[$case])->assertOk()->assertSee('data-student-device="questionnaire"', false);
+            $this->studentRequest('GET', route('student-device.show'), device: $devices[$case])->assertOk()
+                ->assertSee('data-student-device="questionnaire"', false)
+                ->assertSee('data-locked="0"', false)
+                ->assertSee('data-details-saved', false);
             $this->studentRequest('GET', route('student-device.state'), device: $devices[$case], json: true)->assertOk()->assertExactJson(['state' => 'answering']);
         }
 
@@ -280,7 +410,15 @@ class StudentDeviceIdentityTest extends TestCase
         ] as $term) {
             $this->assertStringNotContainsStringIgnoringCase($term, $body, "The held page contains \"{$term}\".");
         }
-        $this->assertSame(0, preg_match_all('#<(form|input|select|button|a)\b#', $body), 'The held page has a control or a link.');
+        $this->assertSame(0, preg_match_all('#<(form|input|select|button|a|fieldset|legend|template|noscript)\b#', $body), 'The held page has a control, a link or part of the questionnaire.');
+        foreach (['data-question', 'data-questions', 'data-details', 'data-student-device-details', 'id="questions"', 'question 1', 'Response Scale', __('student_device.identity_saved'), __('student_device.questions_locked'), __('student_device.identity_heading')] as $term) {
+            $this->assertStringNotContainsString($term, $body, "The held page contains \"{$term}\".");
+        }
+        // The whole page is the generic one: the same elements, plus only
+        // the wrapper that polls for a release.
+        $expectedTags = [...$this->mainTags($generic), 'div'];
+        sort($expectedTags);
+        $this->assertSame($expectedTags, $this->mainTags($held));
 
         $this->studentRequest('GET', route('student-device.state'), device: $devices['active'], json: true)->assertOk()->assertExactJson(['state' => 'help']);
         $question = $this->version->questions->first();
@@ -476,6 +614,21 @@ class StudentDeviceIdentityTest extends TestCase
         ksort($headers);
 
         return ['status' => $response->getStatusCode(), 'headers' => $headers, 'body' => (string) $response->getContent()];
+    }
+
+    /**
+     * The element names inside <main>, sorted.
+     *
+     * @return array<int, string>
+     */
+    private function mainTags(TestResponse $response): array
+    {
+        $this->assertSame(1, preg_match('#<main[^>]*>(.*)</main>#s', (string) $response->getContent(), $main));
+        preg_match_all('#<([a-z][a-z0-9]*)\b#', $main[1], $tags);
+        $names = $tags[1];
+        sort($names);
+
+        return $names;
     }
 
     private function visibleText(TestResponse $response): string

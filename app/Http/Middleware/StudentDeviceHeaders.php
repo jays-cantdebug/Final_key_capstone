@@ -40,6 +40,13 @@ class StudentDeviceHeaders
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
         $response->headers->set('Content-Security-Policy', self::contentSecurityPolicy());
         $response->headers->remove('X-Powered-By');
+        // The rate limiter's counters say nothing a device needs, and their
+        // presence on some 404s (a code that passed the limiter) and not on
+        // others (an address refused before it) would hint at the
+        // allowlist. Retry-After on a 429 stays.
+        $response->headers->remove('X-RateLimit-Limit');
+        $response->headers->remove('X-RateLimit-Remaining');
+        $response->headers->remove('X-RateLimit-Reset');
 
         // Redirects carry Symfony's fallback "Redirecting to <a href…>"
         // page; browsers follow the Location header and never show it.

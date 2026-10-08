@@ -8,24 +8,26 @@ use App\Exceptions\RemoteDraftStateException;
 use App\Models\QuestionnaireVersion;
 use App\Models\RemoteAssessmentDraft;
 use App\Models\User;
-use BaconQrCode\Renderer\Image\SvgImageBackEnd;
-use BaconQrCode\Renderer\ImageRenderer;
-use BaconQrCode\Renderer\RendererStyle\RendererStyle;
-use BaconQrCode\Writer;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Drafts for a questionnaire answered on a separate student device.
+ * Drafts for a questionnaire answered on a separate student device: a PC
+ * provided by the guidance office, where the student types a short code or
+ * opens a link the Psychometrician copied from the live page.
  *
- * Credentials: a 256-bit QR token and an 8-character short code (Crockford
- * base32, about 40 bits), both handed out once and stored only as
+ * Credentials: an 8-character short code (Crockford base32, about 40 bits)
+ * and a 256-bit link token, both handed out once and stored only as
  * HMAC-SHA256 digests keyed by APP_KEY, so a leaked table can't be brute-
- * forced offline. Using either one claims the draft for one device: an
- * atomic update binds a fresh random device secret (kept in an HttpOnly
+ * forced offline. Using either one claims the draft for one device:
+ * an atomic update binds a fresh random device secret (kept in an HttpOnly
  * cookie on that device, stored here as a digest), and from then on every
- * other device is refused and counted in `refused_device_attempts`.
+ * other device — by code or by link — is refused and counted in
+ * `refused_device_attempts`. Opening the link only shows the Begin page;
+ * only its POST claims, so a link preview or scanner can't use it up.
+ * (The link token was removed and restored on 2026-10-08; see the
+ * 130000/140000 token_hash migrations. There is no QR code.)
  *
  * Every lookup checks `expires_at` itself rather than relying on pruning.
  */
@@ -42,8 +44,8 @@ class RemoteAssessmentService
 
     /**
      * Start a draft for this Psychometrician on `$version`, replacing any
-     * draft they already had. Returns the plain token and short code; only
-     * their digests are stored.
+     * draft they already had. Returns the plain link token and short code;
+     * only their digests are stored.
      *
      * `$collectsIdentity`: the student also types their own Step 1 details
      * on the device. The privacy notice is then always shown first,
@@ -87,7 +89,7 @@ class RemoteAssessmentService
     }
 
     /**
-     * The unclaimed, unexpired draft for a QR token, for the "Begin" page.
+     * The unclaimed, unexpired draft for a link token, for the "Begin" page.
      */
     public function pendingDraftForToken(string $token): ?RemoteAssessmentDraft
     {
@@ -100,8 +102,9 @@ class RemoteAssessmentService
     }
 
     /**
-     * Claim by QR token. Returns the device secret for the cookie, or null
-     * when the token is invalid, expired, or already claimed.
+     * Claim by link token (the Begin page's POST). Returns the device secret
+     * for the cookie, or null when the token is invalid, expired, or already
+     * claimed (by link or by code).
      */
     public function claimWithToken(string $token): ?string
     {
@@ -110,6 +113,8 @@ class RemoteAssessmentService
 
     /**
      * Claim by typed short code (normalized first; see normalizeShortCode()).
+     * Returns the device secret for the cookie, or null when the code is
+     * invalid, expired, or already claimed (by code or by link).
      */
     public function claimWithShortCode(string $input): ?string
     {
@@ -143,7 +148,7 @@ class RemoteAssessmentService
     }
 
     /**
-     * Whether a QR token belongs to the draft this device already holds
+     * Whether a link token belongs to the draft this device already holds
      * (reopening the link on the same device resumes instead of refusing).
      */
     public function tokenBelongsTo(RemoteAssessmentDraft $draft, string $token): bool
@@ -400,9 +405,10 @@ class RemoteAssessmentService
     }
 
     /**
-     * "New code": a fresh token and short code, the device unbound (its
-     * cookie stops working), answers, consent and the original expiry kept.
-     * The next device to use the new code continues where the old one was.
+     * "New code": a fresh link token and short code, the device unbound (its
+     * cookie stops working; the old link and code too), answers, consent and
+     * the original expiry kept. The next device to use the new code or link
+     * continues where the old one was.
      *
      * @return array{token: string, short_code: string}
      *
@@ -579,6 +585,11 @@ class RemoteAssessmentService
         return $this->baseUrl().'/s';
     }
 
+    /**
+     * The link with the token, for the live page's Copy link button only:
+     * never rendered as text or as a link, never sent to the student device
+     * in any page, never logged by NORMI.
+     */
     public function studentTokenUrl(string $token): string
     {
         return $this->baseUrl().'/s/t/'.$token;
@@ -594,17 +605,6 @@ class RemoteAssessmentService
 
         return $host === '' || $host === 'localhost' || str_ends_with($host, '.localhost')
             || $host === '::1' || $host === '0.0.0.0' || str_starts_with($host, '127.');
-    }
-
-    /**
-     * An inline SVG QR code, generated locally (bacon/bacon-qr-code): the
-     * token is never sent to an online QR service.
-     */
-    public function qrSvg(string $url): string
-    {
-        $writer = new Writer(new ImageRenderer(new RendererStyle(220, 1), new SvgImageBackEnd));
-
-        return (string) preg_replace('/^<\?xml[^>]*>\s*/', '', $writer->writeString($url));
     }
 
     /**
@@ -650,8 +650,8 @@ class RemoteAssessmentService
     }
 
     /**
-     * HMAC-SHA256 keyed by APP_KEY, with a purpose prefix so a token, a
-     * code and a device secret never share a digest space.
+     * HMAC-SHA256 keyed by APP_KEY, with a purpose prefix so a link token,
+     * a code and a device secret never share a digest space.
      */
     public function hash(string $purpose, string $value): string
     {

@@ -22,8 +22,10 @@ use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The student device: a session-less, login-less questionnaire reached by
- * a typed short code or a QR link (routes/student-device.php). It only
+ * The student device — a PC provided by the guidance office: a
+ * session-less, login-less questionnaire reached by a typed short code or
+ * a link (routes/student-device.php), optionally only from listed addresses
+ * (RestrictStudentDeviceNetwork). It only
  * ever shows the privacy notice (when enabled, and always before the
  * details form), the student's own details form (when the Psychometrician
  * chose that the student fills in Step 1), the instructions and rating
@@ -71,8 +73,11 @@ class StudentDeviceController extends Controller
     }
 
     /**
-     * GET /s/t/{token} — the "Begin" page. Opening the link claims
-     * nothing, so a link previewer or scanner can't use up the token.
+     * GET /s/t/{token} — the "Begin" page for a link from the live page's
+     * Copy link. Opening the link claims nothing, so a link preview or a
+     * safe-browsing scanner can't use up the token; only Begin (the POST)
+     * claims. The page's form posts back to its own address (no action
+     * attribute), so the token appears in none of the HTML.
      */
     public function begin(Request $request, string $token): Response
     {
@@ -90,11 +95,11 @@ class StudentDeviceController extends Controller
             return $this->failedEntry($request);
         }
 
-        return response()->view('student-device.begin', ['token' => $token]);
+        return response()->view('student-device.begin');
     }
 
     /**
-     * POST /s/t/{token} — claim a draft by QR token.
+     * POST /s/t/{token} — Begin: claim the draft by link token.
      */
     public function claim(Request $request, string $token): Response
     {
@@ -113,7 +118,11 @@ class StudentDeviceController extends Controller
 
     /**
      * GET /s/q — whichever screen the draft is on: the privacy notice, the
-     * questionnaire, or the thank-you message once locked.
+     * questionnaire, or the thank-you message once locked. When the student
+     * fills in their own details, the questionnaire page carries them too:
+     * the open details form above locked questions until the details are
+     * saved, then only "Details saved" (never the values) above the
+     * questions.
      */
     public function show(Request $request): Response
     {
@@ -125,7 +134,7 @@ class StudentDeviceController extends Controller
 
         return match ($this->remoteAssessments->stateOf($draft)) {
             'consent' => response()->view('student-device.consent'),
-            'identity' => $this->identityForm(),
+            'identity' => $this->detailsAndQuestionnaire($draft),
             'answering' => response()->view('student-device.questionnaire', $this->questionnaireData($draft)),
             // Held: the generic message, word for word, whatever the reason.
             'help' => response()->view('student-device.held'),
@@ -141,9 +150,10 @@ class StudentDeviceController extends Controller
      * Whether the name matches an existing student changes nothing in this
      * reply: the same validation, the same duplicate query and the same
      * single update run either way, and the answer is always the same
-     * empty 303 to /s/q. Only that page differs — a held draft shows the
-     * generic message — and the Psychometrician's live page shows the match.
-     * A draft not waiting for details gets the same 303 too.
+     * empty 303 to /s/q#questions. Only that page differs — a held draft
+     * shows the generic message (which has no #questions) — and the
+     * Psychometrician's live page shows the match. A draft not waiting for
+     * details gets the same 303 too.
      */
     public function identity(Request $request): Response
     {
@@ -154,7 +164,7 @@ class StudentDeviceController extends Controller
         }
 
         if (! $draft->awaitingIdentity()) {
-            return $this->toQuestionnaire();
+            return $this->toQuestions();
         }
 
         $input = $request->only(AssessmentStudentRequest::IDENTITY_FIELDS);
@@ -166,7 +176,7 @@ class StudentDeviceController extends Controller
 
         if ($validator->fails()) {
             // Only what was typed on this device, back into its own form.
-            return $this->identityForm($validator->getData(), $validator->errors(), Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->detailsAndQuestionnaire($draft, $validator->getData(), $validator->errors(), Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $identity = $validator->validated();
@@ -175,13 +185,14 @@ class StudentDeviceController extends Controller
         }
 
         $matches = $this->duplicateService->findMatches($identity['first_name'], $identity['middle_name'], $identity['last_name']);
+
         try {
             $this->remoteAssessments->saveIdentity($draft, $identity, held: $matches['active']->isNotEmpty());
         } catch (RemoteDraftStateException) {
             // Already sent (a double click): show where it is.
         }
 
-        return $this->toQuestionnaire();
+        return $this->toQuestions();
     }
 
     /**
@@ -341,7 +352,7 @@ class StudentDeviceController extends Controller
     }
 
     /**
-     * The per-IP limit on FAILED code/token attempts (invalid, expired or
+     * The per-IP limit on FAILED code/link attempts (invalid, expired or
      * already used). Successful claims never count, so a whole class
      * behind one school NAT can claim their devices.
      */
@@ -371,26 +382,34 @@ class StudentDeviceController extends Controller
     }
 
     /**
-     * The details form. Its lists come from the lookup tables only (Active
-     * courses, year levels and sections — the same queries as Step 1), never
-     * from a student record. `$old` and `$errors` are only ever the input
-     * this device just sent.
+     * The one page while the details are awaited: the open details form,
+     * then the questions, locked (`<fieldset disabled>`; the server refuses
+     * answers until the details are saved anyway). The form's lists come
+     * from the lookup tables only (Active courses, year levels and sections —
+     * the same queries as Step 1), never from a student record. `$old` and
+     * `$errors` are only ever the input this device just sent.
      *
      * @param  array<string, mixed>  $old
      */
-    private function identityForm(array $old = [], ?MessageBag $errors = null, int $status = Response::HTTP_OK): Response
+    private function detailsAndQuestionnaire(RemoteAssessmentDraft $draft, array $old = [], ?MessageBag $errors = null, int $status = Response::HTTP_OK): Response
     {
-        return response()->view('student-device.identity', [
+        return response()->view('student-device.questionnaire', [
+            ...$this->questionnaireData($draft),
+            'details' => 'open',
             'courses' => $this->assessmentService->activeCourses(),
             'yearLevels' => $this->assessmentService->activeYearLevels(),
             'sections' => $this->assessmentService->activeSections(),
-            'genders' => AssessmentStudentRequest::GENDERS,
             'old' => array_map(fn (mixed $value): string => is_scalar($value) ? (string) $value : '', $old),
             'fieldErrors' => $errors ?? new MessageBag,
         ], $status);
     }
 
     /**
+     * `details`: null when the Psychometrician typed Step 1 (no details
+     * section at all), `saved` once the student's details are in — the
+     * page then says only "Details saved", never the values, so a reload,
+     * New code, Return to student or a released hold never shows them.
+     *
      * @return array<string, mixed>
      */
     private function questionnaireData(RemoteAssessmentDraft $draft): array
@@ -404,6 +423,7 @@ class StudentDeviceController extends Controller
             'responses' => $responses,
             'answered' => $questions->filter(fn ($question): bool => array_key_exists($question->id, $responses))->count(),
             'required' => $questions->where('is_required', true)->count(),
+            'details' => $draft->collects_identity ? 'saved' : null,
         ];
     }
 
@@ -418,6 +438,16 @@ class StudentDeviceController extends Controller
     private function toQuestionnaire(): RedirectResponse
     {
         return redirect()->route('student-device.show', status: Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * After the details form: the same page, scrolled to (and focusing) the
+     * questions. One Location for every outcome; a held page has no
+     * #questions, so the fragment is simply ignored there.
+     */
+    private function toQuestions(): RedirectResponse
+    {
+        return redirect()->to(route('student-device.show').'#questions', Response::HTTP_SEE_OTHER);
     }
 
     private function unavailableAndForgetDevice(Request $request): Response

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Responses;
 
+use App\Http\Middleware\RestrictStudentDeviceNetwork;
 use App\Http\Middleware\StudentDeviceHeaders;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -66,8 +67,10 @@ class StudentDeviceResponse
      * Exception rendering for student-device paths (bootstrap/app.php):
      * every error — including 404s for unknown /s paths, 429s and 500s,
      * with APP_DEBUG on — becomes the generic response, never a stack
-     * trace or Laravel's error page. Rate-limit headers (Retry-After) are
-     * kept. Null for any other path.
+     * trace or Laravel's error page. Retry-After (on a 429) is kept. An
+     * address the allowlist refuses always gets the plain generic 404, even
+     * for a wrong method (no 405 revealing a route). Null for any other
+     * path.
      */
     public static function forException(Throwable $exception, Request $request): ?Response
     {
@@ -75,9 +78,13 @@ class StudentDeviceResponse
             return null;
         }
 
+        if (! RestrictStudentDeviceNetwork::allows($request)) {
+            return self::unavailable($request);
+        }
+
         if ($exception instanceof HttpExceptionInterface) {
             $status = $exception->getStatusCode();
-            $headers = array_intersect_key($exception->getHeaders(), array_flip(['Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset']));
+            $headers = array_intersect_key($exception->getHeaders(), array_flip(['Retry-After']));
 
             return self::unavailable($request, $status, $headers);
         }

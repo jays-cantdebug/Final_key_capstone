@@ -5,17 +5,17 @@
 | Remote (student device) assessment
 |--------------------------------------------------------------------------
 |
-| The questionnaire can be answered on a separate student device, reached
-| with a short typed code or a QR link, while the Psychometrician watches
-| on their own PC. See RemoteAssessmentService.
+| The questionnaire can be answered on a separate student device — a PC
+| provided by the guidance office — reached with a short typed code, while
+| the Psychometrician watches on their own PC. See RemoteAssessmentService.
 |
 */
 
 return [
 
-    // The address the student device uses (shown as text and in the QR
-    // code). It must be reachable from the student PC — a LAN IP or a
-    // domain, never 127.0.0.1/localhost. Falls back to APP_URL.
+    // The address the student PC opens (shown on the live page). It must be
+    // reachable from the student PC — the server's LAN IP or a domain,
+    // never 127.0.0.1/localhost. Falls back to APP_URL.
     'url' => env('REMOTE_ASSESSMENT_URL') ?: env('APP_URL', 'http://localhost'),
 
     // Fixed lifetime of a draft from the moment it is created. Not extended
@@ -35,11 +35,20 @@ return [
     // shows the notice first, whatever this says.
     'student_consent' => (bool) env('REMOTE_ASSESSMENT_STUDENT_CONSENT', true),
 
+    // Optional: only these addresses may open the student device (/s) —
+    // the guidance office's student PC(s). Comma-separated IPv4/IPv6
+    // addresses or CIDR ranges, e.g. "192.168.1.20,192.168.1.21" or
+    // "192.168.1.16/28". Empty: no restriction. Any other address gets the
+    // same generic 404 as an invalid code. An entry that isn't a valid
+    // address or range matches nothing (fails closed). Uses the request IP
+    // as trustProxies resolves it: never trust "*" proxies with this set.
+    'allowed_ips' => array_values(array_filter(array_map('trim', explode(',', (string) env('REMOTE_ASSESSMENT_ALLOWED_IPS', ''))), fn (string $entry): bool => $entry !== '')),
+
     // How often the Psychometrician's live page polls, in milliseconds.
     'poll_interval_ms' => (int) env('REMOTE_ASSESSMENT_POLL_INTERVAL_MS', 1500),
 
     // Rate limits, per minute. A whole class behind one school NAT shares an
-    // IP, so the per-IP code/token limit counts only FAILED attempts: a
+    // IP, so the per-IP code limit counts only FAILED attempts: a
     // successful claim never uses it up.
     'limits' => [
         'failed_entry_per_ip' => (int) env('REMOTE_ASSESSMENT_FAILED_ENTRY_PER_MINUTE', 10),

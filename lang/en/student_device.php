@@ -46,22 +46,20 @@ return [
     'consent_decline' => 'I do not agree',
 
     // The student's own details (only when the staff member chose that the
-    // student fills them in). Nothing here may come from a student record.
+    // student fills them in). The fields, labels, placeholders and options
+    // are Step 1's own (assessments/create/_student-fields). Nothing here
+    // may come from a student record.
     'identity_heading' => 'Your details',
-    'identity_help' => 'Please type your own details. The staff member will check them with you.',
-    'identity_first_name' => 'First Name',
-    'identity_middle_name' => 'Middle Name',
-    'identity_middle_name_help' => 'Your middle initial only, with a period, e.g., P.',
-    'identity_last_name' => 'Last Name',
-    'identity_gender' => 'Gender',
-    'identity_gender_placeholder' => 'Select gender',
-    'identity_course' => 'Course',
-    'identity_course_placeholder' => 'Select a course',
-    'identity_year_level' => 'Year Level',
-    'identity_year_level_placeholder' => 'Select a year level',
-    'identity_section' => 'Section',
-    'identity_section_placeholder' => 'Select a section',
-    'identity_submit' => 'Continue',
+    'identity_submit' => 'Save details',
+    // Once saved, the page says only this: never the values.
+    'identity_saved' => 'Details saved ✓',
+    'identity_not_saved' => 'Details not saved yet',
+
+    // The one page with the details form above the questionnaire.
+    'combined_heading' => 'Your details and the questionnaire',
+    'questions_heading' => 'Questionnaire',
+    'questions_locked' => 'Complete your details first.',
+    'statements_legend' => 'Statements',
 
     'counter' => ':answered of :total answered',
     'done' => 'Done',

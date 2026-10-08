@@ -20,8 +20,9 @@ class AssessmentWizardStaging
     public const SESSION_KEY = 'assessment_wizard';
 
     /**
-     * A live student-device draft: its id, and the plain QR token and short
-     * code shown on the live page (only their hashes are in the database).
+     * A live student-device draft: its id, and the plain link token (for the
+     * live page's Copy link button) and short code (only their hashes are in
+     * the database).
      */
     public const REMOTE_KEYS = ['remote_draft_id', 'remote_token', 'remote_short_code'];
 

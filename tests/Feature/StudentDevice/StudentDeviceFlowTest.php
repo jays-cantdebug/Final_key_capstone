@@ -16,7 +16,7 @@ use Tests\Concerns\InteractsWithStudentDevice;
 use Tests\TestCase;
 
 /**
- * The student device's own flow: claiming by short code or QR token (one
+ * The student device's own flow: claiming by short code or link token (one
  * device only), the on-device privacy notice, autosave, Done and the lock,
  * expiry and pruning, the same-origin rule, rate limits, and the
  * staff-browser refusal.
@@ -112,14 +112,16 @@ class StudentDeviceFlowTest extends TestCase
         $this->assertSame($draft->fresh()->expires_at->getTimestamp(), $cookie->getExpiresTime());
     }
 
-    public function test_opening_the_qr_link_shows_begin_and_claims_nothing(): void
+    public function test_opening_the_link_shows_begin_and_claims_nothing(): void
     {
         ['draft' => $draft, 'token' => $token] = $this->createRemoteDraft();
 
         $this->studentRequest('GET', route('student-device.begin', $token))
             ->assertOk()
             ->assertSee(__('student_device.begin_submit'))
-            ->assertSee('action="'.route('student-device.claim', $token).'"', false);
+            // The form posts back to its own address: no action, no token in the HTML.
+            ->assertSee('<form method="POST" class=', false)
+            ->assertDontSee($token, false);
 
         $this->assertSame(RemoteAssessmentDraft::STATUS_PENDING, $draft->fresh()->status);
         $this->assertNull($draft->fresh()->device_hash);
@@ -488,7 +490,7 @@ class StudentDeviceFlowTest extends TestCase
             if ($i % 2 === 0) {
                 $this->claimWithCode($shortCode);
             } else {
-                // Opening a valid QR link and pressing Begin don't count either.
+                // Opening a valid link and pressing Begin don't count either.
                 $this->studentRequest('GET', route('student-device.begin', $token))->assertOk();
                 $this->studentRequest('POST', route('student-device.claim', $token))->assertStatus(303);
             }

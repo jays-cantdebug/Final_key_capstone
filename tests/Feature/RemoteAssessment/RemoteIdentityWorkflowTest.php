@@ -443,6 +443,7 @@ class RemoteIdentityWorkflowTest extends TestCase
         $this->assertNull($row->identity);
         $this->assertNull($row->responses);
         $this->assertNull($row->token_hash);
+        $this->assertNull($row->short_code_hash);
     }
 
     public function test_the_duplicate_conflict_at_save_starts_over_with_nothing_saved(): void

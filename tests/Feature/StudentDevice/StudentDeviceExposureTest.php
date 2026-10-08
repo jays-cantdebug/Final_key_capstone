@@ -217,21 +217,35 @@ class StudentDeviceExposureTest extends TestCase
             'Depression', 'Anxiety', 'Stress',
             'score', 'severity', 'level', 'flag', 'classif', 'counsel', 'assessment', 'dashboard',
             'notification', 'Female', 'csrf', 'XSRF', 'laravel_session',
+            // The staff attestation stays on the Psychometrician's side.
+            'The student has acknowledged the data privacy consent notice', 'privacy_consent',
             // Debug output.
             'Exception', 'Stack trace', 'vendor', 'Ignition', 'Whoops',
+            // Every link token handed out — and the 15-character start of
+            // each (what a PHP stack trace keeps of a long string argument)
+            // — even on the Begin page itself, whose form posts back to its
+            // own address.
+            ...$this->issuedTokens,
+            ...array_map(fn (string $token): string => substr($token, 0, 15), $this->issuedTokens),
+            '/s/t/',
         ];
+        $this->assertGreaterThanOrEqual(4, count($this->issuedTokens));
 
         $identityForms = 0;
 
         foreach ($this->studentResponses as ['label' => $label, 'response' => $response]) {
             $haystack = (string) $response->getContent()."\n".$response->headers;
 
-            // The details form's own label and field name and its fixed
-            // gender options are the only places "Year Level" and "Female"
-            // may appear (its lists are checked in StudentDeviceIdentityTest).
-            if (str_contains($haystack, 'data-student-device="identity"')) {
+            // The open details form's own label, field name and fixed gender
+            // options are the only places "Year Level" and "Female" may
+            // appear, and only inside that <form> element: the rest of the
+            // page (the questions below it) gets the full ban. Its lists are
+            // checked in StudentDeviceIdentityTest; the marker itself is
+            // checked in test_the_details_marker_and_its_allowance_appear_on_no_other_page.
+            $form = $this->openDetailsForm($haystack);
+            if ($form !== null) {
                 $identityForms++;
-                $haystack = str_ireplace(['Year Level', 'year_level_id', 'Female'], '', $haystack);
+                $haystack = str_replace($form, str_ireplace(['Year Level', 'year_level_id', 'Female'], '', $form), $haystack);
             }
 
             foreach ($forbidden as $term) {
@@ -243,6 +257,59 @@ class StudentDeviceExposureTest extends TestCase
 
         // The form itself and its 422 re-render.
         $this->assertSame(2, $identityForms);
+    }
+
+    /**
+     * The leak test lets "Year Level", year_level_id and "Female" through
+     * only inside the form marked data-student-device-details="open". That
+     * marker must only ever be on the open details form — a page whose
+     * questions are still locked — and neither it nor those words may
+     * appear on any other page: the questionnaire after saving, the held
+     * page, the thank-you page, error pages, or JSON.
+     */
+    public function test_the_details_marker_and_its_allowance_appear_on_no_other_page(): void
+    {
+        $this->seedSensitiveData();
+        $this->runWholeStudentFlow();
+        $this->collectErrorResponses();
+
+        $seen = ['open form' => 0, 'questionnaire after saving' => 0, 'held' => 0, 'thank-you' => 0, 'error page' => 0, 'json' => 0];
+
+        foreach ($this->studentResponses as ['label' => $label, 'response' => $response]) {
+            $body = (string) $response->getContent();
+            $isJson = str_contains((string) $response->headers->get('Content-Type'), 'json');
+            $form = $isJson ? null : $this->openDetailsForm($body);
+
+            if ($form !== null) {
+                $seen['open form']++;
+                $this->assertMatchesRegularExpression('#^(GET|POST) '.preg_quote($this->studentOrigin(), '#').'/s/(q|identity)$#', $label, "{$label} has the open details form.");
+                $this->assertContains($response->getStatusCode(), [200, 422], $label);
+                $this->assertStringContainsString('data-locked="1"', $body, "{$label}: an open form with unlocked questions.");
+                $this->assertMatchesRegularExpression('#<fieldset\b[^>]*\bdisabled\b[^>]*\bdata-questions\b#', $body, "{$label}: questions not disabled under the open form.");
+
+                continue;
+            }
+
+            $kind = match (true) {
+                $isJson => 'json',
+                str_contains($body, 'data-details-saved') => 'questionnaire after saving',
+                str_contains($body, 'data-student-device="held"') => 'held',
+                str_contains($body, 'data-student-device="locked"') => 'thank-you',
+                $response->getStatusCode() >= 400 => 'error page',
+                default => null,
+            };
+            if ($kind !== null) {
+                $seen[$kind]++;
+            }
+
+            foreach (['data-student-device-details', 'Year Level', 'year_level_id', 'Female', 'name="first_name"', 'name="course_id"'] as $term) {
+                $this->assertStringNotContainsStringIgnoringCase($term, $body."\n".$response->headers, "{$label} contains \"{$term}\".");
+            }
+        }
+
+        foreach ($seen as $kind => $count) {
+            $this->assertGreaterThan(0, $count, "No {$kind} response was checked.");
+        }
     }
 
     public function test_student_device_json_never_has_more_than_state_answered_and_missing(): void
@@ -328,6 +395,14 @@ class StudentDeviceExposureTest extends TestCase
         $this->studentRequest('GET', route('student-device.entry'), device: $device)->assertStatus(303);
         $this->studentRequest('GET', route('student-device.begin', $token), device: $device)->assertStatus(303);
 
+        // A device claiming by the link instead.
+        ['token' => $linkToken] = $this->createRemoteDraft($this->psychometrician(), $version);
+        $this->studentRequest('GET', route('student-device.begin', $linkToken))->assertOk();
+        $linked = $this->studentRequest('POST', route('student-device.claim', $linkToken))->assertStatus(303);
+        $linkedDevice = (string) $linked->getCookie(RemoteAssessmentService::DEVICE_COOKIE)->getValue();
+        $this->studentRequest('GET', route('student-device.show'), device: $linkedDevice)->assertOk();
+        $this->studentRequest('POST', route('student-device.claim', $linkToken))->assertNotFound();
+
         // A second device, and a declined draft.
         $this->studentRequest('POST', route('student-device.code'), ['code' => $shortCode])->assertNotFound();
         ['short_code' => $declineCode] = $this->createRemoteDraft($this->psychometrician(), $version);
@@ -378,14 +453,21 @@ class StudentDeviceExposureTest extends TestCase
 
     /**
      * Error responses: unknown path, invalid token, refused origin, staff
-     * browser, expired, rate-limited, and an unexpected exception with
-     * APP_DEBUG on whose message carries `$exceptionMessage`.
+     * browser, expired, rate-limited, an address the allowlist refuses, and
+     * an unexpected exception with APP_DEBUG on whose message carries
+     * `$exceptionMessage`.
      */
     private function collectErrorResponses(string $exceptionMessage = 'boom'): void
     {
         $this->studentRequest('GET', '/s/does-not-exist')->assertNotFound();
         $this->studentRequest('GET', '/s/does-not-exist', json: true)->assertNotFound();
         $this->studentRequest('GET', route('student-device.begin', str_repeat('x', 43)))->assertNotFound();
+        $this->studentRequest('POST', route('student-device.claim', str_repeat('x', 43)))->assertNotFound();
+        config(['remote_assessment.allowed_ips' => ['192.0.2.1']]);
+        $this->studentRequest('GET', route('student-device.entry'))->assertNotFound();
+        $this->studentRequest('GET', route('student-device.begin', str_repeat('y', 43)))->assertNotFound();
+        $this->studentRequest('PUT', route('student-device.answer'), [], json: true)->assertNotFound();
+        config(['remote_assessment.allowed_ips' => []]);
         $this->studentRequest('POST', route('student-device.code'), ['code' => 'AAAA-AAAA'], sameOrigin: false)->assertForbidden();
         $this->studentRequest('POST', route('student-device.answer'), [], 'no-such-device', json: true, sameOrigin: false)->assertForbidden();
         $this->studentRequest('PUT', route('student-device.answer'), [], json: true)->assertStatus(405);

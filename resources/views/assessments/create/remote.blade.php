@@ -67,18 +67,44 @@
         <div class="grid gap-6 lg:grid-cols-3">
             {{-- How the student device gets in: shown until the code is used. --}}
             <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 lg:col-span-2" x-show="state === 'pending'" {{ $cloakUnless($state === 'pending') }}>
-                <p class="text-sm font-semibold text-body dark:text-slate-100">On the student device</p>
-                <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-400">
-                    <li>Open <span class="font-mono font-semibold text-body dark:text-slate-100" data-student-address>{{ $studentEntryUrl }}</span></li>
-                    <li>Type this code:</li>
-                </ol>
-                <p class="mt-3 font-mono text-4xl font-bold tracking-[0.2em] text-primary dark:text-primary-soft" data-short-code>{{ $shortCode }}</p>
-                @if ($qrSvg)
-                    <div class="mt-4 flex items-center gap-4">
-                        <div class="w-40 shrink-0 rounded-md bg-white p-2" data-qr>{!! $qrSvg !!}</div>
-                        <p class="text-sm text-slate-600 dark:text-slate-400">Or scan this QR code on a tablet or phone, then press Begin.</p>
+                <p class="text-sm font-semibold text-body dark:text-slate-100">On the student PC</p>
+                <p class="mt-1 text-sm text-slate-600 dark:text-slate-400" data-student-instructions>On the student PC, open this address in Chrome (or use the desktop shortcut), then type the code. Or copy the link below and open it on the student PC.</p>
+
+                <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Address</p>
+                <p class="mt-1 break-all font-mono text-2xl font-semibold text-body dark:text-slate-100" data-student-address>{{ $studentEntryUrl }}</p>
+
+                <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Code</p>
+                <p class="mt-1 font-mono text-5xl font-bold tracking-[0.2em] text-primary dark:text-primary-soft" data-short-code>{{ $shortCode }}</p>
+
+                @if ($studentLink)
+                    {{-- The link with the token: only in this button's data-link (staff only), never shown as text or as a link. --}}
+                    <div class="mt-5" x-data="copyLink" data-copy-link-panel>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <x-secondary-button type="button" x-ref="button" data-link="{{ $studentLink }}" @click="copy()">{{ __('Copy link') }}</x-secondary-button>
+                            <span class="text-sm font-medium text-primary dark:text-primary-soft" x-show="copied" x-cloak role="status">Link copied.</span>
+                        </div>
+                        <div x-show="failed" x-cloak class="mt-2">
+                            <p class="text-xs text-slate-600 dark:text-slate-400">Couldn’t copy automatically — select the link and press Ctrl+C.</p>
+                            <input type="text" readonly x-ref="manual" :value="manualLink" @focus="$event.target.select()" class="mt-1 block w-full rounded-md border-gray-300 font-mono text-xs shadow-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" aria-label="Link to the student device">
+                        </div>
+                        <p class="mt-2 text-xs text-gold" data-copy-link-warning>
+                            Don’t paste the link into a public chat. It works once and expires with this session. Typing the code avoids passing the link through a messaging service.
+                        </p>
                     </div>
                 @endif
+
+                @if ($allowedIps !== [])
+                    {{-- Staff only: never shown on the student device. --}}
+                    <p class="mt-4 text-xs text-slate-500 dark:text-slate-400" data-allowed-ips>
+                        Only these student PCs can open the address: <span class="font-mono">{{ implode(', ', $allowedIps) }}</span>. Any other PC sees “This page is not available.”
+                    </p>
+                @endif
+                @if ($invalidAllowedIps !== [])
+                    <p class="mt-2 text-xs font-medium text-red-600 dark:text-red-400" data-invalid-allowed-ips>
+                        Not valid IP addresses or ranges, so they match no PC: <span class="font-mono">{{ implode(', ', $invalidAllowedIps) }}</span>. Check REMOTE_ASSESSMENT_ALLOWED_IPS.
+                    </p>
+                @endif
+
                 <p class="mt-4 text-xs text-slate-500 dark:text-slate-400" data-browser-advice>
                     On a shared student PC, open the address in a guest or private browser window, so nothing the student types is kept in the browser. Outside a private LAN demo, serve the app over HTTPS: otherwise the student’s answers{{ $collectsIdentity ? ' and details' : '' }} cross the network unencrypted.
                 </p>

@@ -40,63 +40,16 @@
                 @csrf
                 @method('PUT')
 
-                <div class="grid gap-4 sm:grid-cols-3">
-                    @foreach (['first_name' => 'First Name', 'middle_name' => 'Middle Name', 'last_name' => 'Last Name'] as $field => $label)
-                        <div class="relative" x-data="{ show: {{ $identityErrors->has($field) ? 'true' : 'false' }} }">
-                            <x-input-label :for="'identity_'.$field" :value="$label" />
-                            <x-text-input :id="'identity_'.$field" :name="$field" type="text" class="mt-1 block w-full" :value="$identityValue($field)" :invalid="$identityErrors->has($field)" autocomplete="off" @input="show = false" />
-                            <x-field-error-tooltip :message="$identityErrors->first($field)" />
-                        </div>
-                    @endforeach
-                </div>
+                {{-- The same fields as Step 1 and the student device. --}}
+                @include('assessments.create._student-fields', [
+                    'fieldValue' => $identityValue,
+                    'fieldErrors' => $identityErrors,
+                    'idPrefix' => 'identity_',
+                    'autofocusField' => null,
+                    'autocompleteOff' => true,
+                ])
 
-                <div class="mt-4 grid gap-4 sm:grid-cols-2">
-                    <div class="relative" x-data="{ show: {{ $identityErrors->has('gender') ? 'true' : 'false' }} }">
-                        <x-input-label for="identity_gender" :value="__('Gender')" />
-                        <x-select id="identity_gender" name="gender" class="mt-1 block w-full" :invalid="$identityErrors->has('gender')" @change="show = false">
-                            <option value="">Select gender</option>
-                            @foreach (\App\Http\Requests\AssessmentStudentRequest::GENDERS as $genderOption)
-                                <option value="{{ $genderOption }}" @selected($identityValue('gender') === $genderOption)>{{ $genderOption }}</option>
-                            @endforeach
-                        </x-select>
-                        <x-field-error-tooltip :message="$identityErrors->first('gender')" />
-                    </div>
-
-                    <div class="relative" x-data="{ show: {{ $identityErrors->has('course_id') ? 'true' : 'false' }} }">
-                        <x-input-label for="identity_course_id" :value="__('Course')" />
-                        <x-select id="identity_course_id" name="course_id" class="mt-1 block w-full" :invalid="$identityErrors->has('course_id')" @change="show = false">
-                            <option value="">Select a course</option>
-                            @foreach ($courses as $course)
-                                <option value="{{ $course->id }}" @selected($identityValue('course_id') === (string) $course->id)>{{ $course->course_code }} - {{ $course->course_name }}</option>
-                            @endforeach
-                        </x-select>
-                        <x-field-error-tooltip :message="$identityErrors->first('course_id')" />
-                    </div>
-
-                    <div class="relative" x-data="{ show: {{ $identityErrors->has('year_level_id') ? 'true' : 'false' }} }">
-                        <x-input-label for="identity_year_level_id" :value="__('Year Level')" />
-                        <x-select id="identity_year_level_id" name="year_level_id" class="mt-1 block w-full" :invalid="$identityErrors->has('year_level_id')" @change="show = false">
-                            <option value="">Select a year level</option>
-                            @foreach ($yearLevels as $yearLevel)
-                                <option value="{{ $yearLevel->id }}" @selected($identityValue('year_level_id') === (string) $yearLevel->id)>{{ $yearLevel->label }}</option>
-                            @endforeach
-                        </x-select>
-                        <x-field-error-tooltip :message="$identityErrors->first('year_level_id')" />
-                    </div>
-
-                    <div class="relative" x-data="{ show: {{ $identityErrors->has('section_id') ? 'true' : 'false' }} }">
-                        <x-input-label for="identity_section_id" :value="__('Section')" />
-                        <x-select id="identity_section_id" name="section_id" class="mt-1 block w-full" :invalid="$identityErrors->has('section_id')" @change="show = false">
-                            <option value="">Select a section</option>
-                            @foreach ($sections as $section)
-                                <option value="{{ $section->id }}" @selected($identityValue('section_id') === (string) $section->id)>{{ $section->section_name }}</option>
-                            @endforeach
-                        </x-select>
-                        <x-field-error-tooltip :message="$identityErrors->first('section_id')" />
-                    </div>
-                </div>
-
-                <div class="mt-4">
+                <div class="mt-6">
                     <x-secondary-button type="submit">{{ __('Save corrections') }}</x-secondary-button>
                 </div>
             </form>

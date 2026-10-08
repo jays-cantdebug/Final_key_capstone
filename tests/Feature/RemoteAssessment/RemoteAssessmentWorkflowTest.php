@@ -77,7 +77,7 @@ class RemoteAssessmentWorkflowTest extends TestCase
         $this->assertNotSame('', $token);
     }
 
-    public function test_the_live_page_shows_the_code_qr_address_and_countdown(): void
+    public function test_the_live_page_shows_the_code_address_note_and_countdown(): void
     {
         $this->freezeSecond();
         $this->submitStepOne('Mara', 'Lagdameo');
@@ -86,22 +86,65 @@ class RemoteAssessmentWorkflowTest extends TestCase
         $this->get(route('assessments.create.remote'))
             ->assertOk()
             ->assertSee('Mara S. Lagdameo')
-            ->assertSee($shortCode)
-            ->assertSee('http://192.168.1.10/s')
-            ->assertSee('<svg', false)
+            ->assertSeeInOrder(['data-student-address', 'http://192.168.1.10/s', 'data-short-code', $shortCode], false)
+            ->assertSee('On the student PC, open this address in Chrome (or use the desktop shortcut), then type the code.')
             ->assertSee('60:00')
             ->assertSee('Waiting for the student device')
             ->assertDontSee('data-loopback-warning', false)
-            ->assertDontSee('data-duplicate-warning', false);
+            ->assertDontSee('data-duplicate-warning', false)
+            ->assertDontSee('data-allowed-ips', false);
     }
 
-    public function test_the_qr_code_is_generated_locally_for_the_token_link(): void
+    public function test_the_live_page_has_no_qr_code_and_no_scan_wording(): void
     {
-        $service = app(RemoteAssessmentService::class);
-        $svg = $service->qrSvg('http://192.168.1.10/s/t/'.str_repeat('a', 43));
+        $this->submitStepOne();
+        $this->sendToStudentDevice();
 
-        $this->assertStringStartsWith('<svg', $svg);
-        $this->assertStringNotContainsString('http', preg_replace('#xmlns(:\w+)?="[^"]+"#', '', $svg));
+        $page = (string) $this->get(route('assessments.create.remote'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('data-qr', $page);
+        $this->assertSame(1, preg_match('#<div[^>]*x-show="state === \'pending\'".*?data-browser-advice.*?</p>#s', $page, $panel));
+        $this->assertStringNotContainsString('<svg', $panel[0], 'The code panel has an image.');
+        foreach (['scan', 'QR', 'tablet', 'phone', 'Begin'] as $word) {
+            $this->assertDoesNotMatchRegularExpression('#\b'.$word.'\b#i', strip_tags($page), "The live page says \"{$word}\".");
+        }
+        $this->assertFalse(method_exists(RemoteAssessmentService::class, 'qrSvg'));
+        $this->assertFalse(class_exists('BaconQrCode\Writer'));
+    }
+
+    public function test_copy_link_puts_the_link_only_in_the_buttons_data_attribute_with_the_warning(): void
+    {
+        $this->submitStepOne();
+        ['token' => $token] = $this->sendToStudentDevice();
+        $link = 'http://192.168.1.10/s/t/'.$token;
+
+        $page = (string) $this->get(route('assessments.create.remote'))->assertOk()->getContent();
+
+        // Exactly once, as the Copy link button's data-link — never as text,
+        // never as an <a>, never anywhere else on the page.
+        $this->assertSame(1, substr_count($page, $token));
+        $this->assertMatchesRegularExpression('#<button\b[^>]*\bx-ref="button"[^>]*\bdata-link="'.preg_quote($link, '#').'"[^>]*>\s*Copy link\s*</button>#', $page);
+        $this->assertStringNotContainsString($token, strip_tags($page));
+        $this->assertDoesNotMatchRegularExpression('#<a\b[^>]*'.preg_quote($token, '#').'#', $page);
+        $this->assertStringContainsString('Don’t paste the link into a public chat. It works once and expires with this session. Typing the code avoids passing the link through a messaging service.', $page);
+
+        // Not in the polling JSON either.
+        $this->assertStringNotContainsString($token, (string) $this->getJson(route('assessments.create.remote.status'))->assertOk()->getContent());
+
+        // New code: a new link; the old one is dead on the student device.
+        $this->post(route('assessments.create.remote.new-code'))->assertRedirect(route('assessments.create.remote'));
+        $newToken = (string) session('assessment_wizard.remote_token');
+        $this->assertNotSame($token, $newToken);
+        $this->get(route('assessments.create.remote'))->assertOk()->assertSee('/s/t/'.$newToken, false)->assertDontSee($token, false);
+        $this->studentRequest('GET', route('student-device.begin', $token))->assertNotFound();
+        $this->studentRequest('GET', route('student-device.begin', $newToken))->assertOk();
+
+        // Once a device has the draft, the link isn't on the page at all.
+        $this->studentRequest('POST', route('student-device.claim', $newToken))->assertStatus(303);
+        $this->actingAs($this->psychometrician);
+        $this->get(route('assessments.create.remote'))->assertOk()
+            ->assertDontSee($newToken, false)
+            ->assertDontSee('data-copy-link-panel', false);
     }
 
     public function test_a_loopback_address_shows_a_warning(): void
@@ -330,7 +373,7 @@ class RemoteAssessmentWorkflowTest extends TestCase
     public function test_new_code_keeps_the_answers_and_unbinds_the_device(): void
     {
         $this->submitStepOne();
-        ['draft' => $draft, 'short_code' => $oldCode, 'token' => $oldToken] = $this->sendToStudentDevice();
+        ['draft' => $draft, 'short_code' => $oldCode] = $this->sendToStudentDevice();
         $oldDevice = $this->claimWithCode($oldCode);
         $this->consentOnDevice($oldDevice);
         $question = $this->version->questions->first();
@@ -343,7 +386,6 @@ class RemoteAssessmentWorkflowTest extends TestCase
 
         $this->studentRequest('GET', route('student-device.show'), device: $oldDevice)->assertNotFound();
         $this->studentRequest('POST', route('student-device.code'), ['code' => $oldCode])->assertNotFound();
-        $this->studentRequest('GET', route('student-device.begin', $oldToken))->assertNotFound();
 
         $newDevice = $this->claimWithCode($newCode);
         // Same student, consent already given: straight to the questions, answer kept.

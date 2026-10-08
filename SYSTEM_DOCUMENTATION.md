@@ -2,7 +2,7 @@
 
 **NORMI** (Web-Based Student Depression, Anxiety and Stress Assessment) is a school guidance and psychometric records portal built for Northern Mindanao Colleges, Inc. It lets school staff run the DASS-21 mental health screening on students, get an AI-assisted severity classification, route serious cases to the guidance office, and keep proper records for reporting and audits.
 
-> **Scope change (2026-10-08): student device assessment.** NORMI was built as a closed staff system with no student-facing access. It now has one deliberate exception: the Psychometrician can send the questionnaire to a separate **student device**, where the student answers it on their own screen, reached with a short code or QR link and **no login**. That student page shows only the privacy notice, the questions and a thank-you message; everything else (scoring, the AI, the review, saving) still happens on the Psychometrician's side. See [Student Device Assessment](#student-device-assessment-scope-change). Statements elsewhere in this document about a closed staff system now carry this exception.
+> **Scope change (2026-10-08): student device assessment.** NORMI was built as a closed staff system with no student-facing access. It now has one deliberate exception: the Psychometrician can send the questionnaire to a separate **student device**, where the student answers it on their own screen, reached with a typed short code (or a link the Psychometrician copies from the live page) and **no login**. The student device is a **PC provided by the guidance office**, never a phone or tablet. That student page shows only the privacy notice, the questions and a thank-you message; everything else (scoring, the AI, the review, saving) still happens on the Psychometrician's side. See [Student Device Assessment](#student-device-assessment-scope-change). Statements elsewhere in this document about a closed staff system now carry this exception.
 >
 > **Second approved exception (2026-10-08): the student can fill in Step 1 too.** At the adviser's request, the Psychometrician can instead let the student type their **own details** (name, gender, course, year level, section) on the student device, after the privacy notice and before the questionnaire. The device still never shows any record that already exists in the system. See [When the student fills in Step 1 too](#when-the-student-fills-in-step-1-too), including the one remaining "tell" for the adviser and the DPO to decide on.
 
@@ -68,7 +68,6 @@ Students are **not** users: they have no account and never log in. Since the 202
 | **Vite** | The build tool that compiles and bundles the CSS/JS files into what the browser actually loads. | Laravel's official, recommended asset bundler — fast rebuilds during development, small optimized output for production. |
 | **Claude API (Anthropic)** | The AI service used for one of the two interchangeable "AI Classification" strategies — reads the three DASS-21 scores and classifies their severity. | Provides a second, independent classification pathway that can be cross-checked against the system's own deterministic rule engine (see the [AI Classification](#the-ai-classification-system-full-detail) section) — chosen specifically because its "tool use" feature can force a reply into a strict, guaranteed JSON structure rather than free-form text. |
 | **barryvdh/laravel-dompdf** | A PHP library that turns an HTML page into a downloadable PDF. | Used for every printable/downloadable Report — lets the reports reuse the exact same Blade templates already built for on-screen viewing, instead of building PDFs by hand. |
-| **bacon/bacon-qr-code** | A pure-PHP library that draws QR codes as SVG images. | Draws the QR code on the student device live page on the server itself. No online QR service is used, so the one-time link is never sent to a third party, and it works on a school network with no internet access. |
 | **Laravel Breeze** | A starter kit for login, password reset, and account security scaffolding. | Rather than writing password hashing, session handling, and login throttling from scratch (and risking security mistakes), Breeze provides Laravel's own official, security-reviewed implementation as a starting point, which was then customized (e.g. registration removed, roles added, styling replaced). |
 | **PHPUnit** | The testing framework used to write and run the automated test suite. | Comes standard with Laravel; lets the system verify — automatically, every time something changes — that DASS scoring, flagging rules, role permissions, and every workflow still behave correctly. |
 
@@ -276,7 +275,9 @@ There are two ways to start. This part describes the first, where only the quest
 1. **Step 1** is unchanged. The Psychometrician enters the student's details and ticks the privacy consent box, which is now the *staff attestation* that the notice was explained.
 2. **Step 2: Send to student device.** Instead of answering on her own PC, the Psychometrician presses **Send to student device**. This creates a temporary draft pinned to the Active questionnaire version. It also runs one extra duplicate check, which only warns: if an active student with the same name was registered since Step 1, the live page says so, and the final save will still refuse a second record as always.
 3. **The live page** (Psychometrician only) shows:
-   - the student address (e.g. `http://192.168.1.10/s`), a short code like `2T29-MN1P` and a QR code;
+   - the student address (e.g. `http://192.168.1.10/s`) and a short code like `2T29-MN1P`, both large, with one line: "On the student PC, open this address in Chrome (or use the desktop shortcut), then type the code. Or copy the link below and open it on the student PC." There is no QR code (removed on 2026-10-08: the student device is a guidance-office PC, never a phone or tablet);
+   - a **Copy link** button that copies the link with its one-time token (`http://192.168.1.10/s/t/…`), next to the warning "Don't paste the link into a public chat. It works once and expires with this session. Typing the code avoids passing the link through a messaging service." (see [The link: what it is and what to watch](#the-link-what-it-is-and-what-to-watch));
+   - when an allowlist is set (see [Only the guidance office's PC](#only-the-guidance-offices-pc-the-ip-allowlist)), which student PCs may open the address, and any invalid entries — on this page only, never on the student device;
    - a countdown;
    - the device status: waiting, connected and waiting for the privacy notice, answering, Done, or declined;
    - a warning when **another device tried to use the code**, and when the device was last seen;
@@ -284,7 +285,7 @@ There are two ways to start. This part describes the first, where only the quest
    - the student's answers, **read-only**, updated live.
 
    The page checks for changes every 1.5 seconds; when nothing changed, the server sends only a few small fields.
-4. **On the student device** the student opens the address and types the code, or scans the QR code on a tablet or phone and presses **Begin**. They then acknowledge the privacy notice (when that screen is on), answer the questionnaire (every tap is saved immediately) and press **Done**. The page then shows only "Thank you … please hand the device back" and is locked: the student can't go back and change answers.
+4. **On the student PC** the student opens the address (or the desktop shortcut opens it) and types the code — or opens the link the Psychometrician copied and presses **Begin**. They then acknowledge the privacy notice (when that screen is on), answer the questionnaire (every tap is saved immediately) and press **Done**. The page then shows only "Thank you … please hand the device back" and is locked: the student can't go back and change answers.
 5. **The Psychometrician's actions:**
    - **Submit** works only once the student pressed Done. On a shared student PC, the live page recommends a guest or private browser window, and HTTPS outside a private LAN demo.
    - **Return to student** unlocks the answers so the student can edit them again.
@@ -298,7 +299,7 @@ There are two ways to start. This part describes the first, where only the quest
 It shows only:
 
 - the privacy notice, with Accept and Decline;
-- when the student fills in Step 1 too: the details form (First, Middle and Last Name, Gender, and the Course, Year Level and Section lists), showing back only what the student typed on that device, and only when it needs correcting;
+- when the student fills in Step 1 too: the details form (First, Middle and Last Name, Gender, and the Course, Year Level and Section lists) at the top of the questionnaire page, with the statements locked below it until the details are saved, then only "Details saved ✓". It shows back only what the student typed on that device, and only when it needs correcting;
 - the instructions and rating scale;
 - each statement with its item number and four answer buttons;
 - a small "*n* of 21 answered" counter;
@@ -323,11 +324,11 @@ It uses its own minimal page layout. Anything wrong — an invalid, used, expire
 |---|---|---|
 | `GET /s` | anyone | the code form (or straight back to the questionnaire for a device that already has one) |
 | `POST /s` | anyone, same-origin only | uses the code: binds this device and opens the questionnaire, or the generic message |
-| `GET /s/t/{token}` | anyone | the **Begin** page for a QR link (opening the link uses nothing up), or the generic message |
+| `GET /s/t/{token}` | anyone | the **Begin** page for the link (opening it uses nothing up, so a link preview can't spend it), or the generic message |
 | `POST /s/t/{token}` | anyone, same-origin only | Begin: binds this device and opens the questionnaire, or the generic message |
-| `GET /s/q` | the bound device | the privacy notice, the details form (when the student fills in Step 1), the questionnaire, the thank-you message, or — when held — the generic message |
+| `GET /s/q` | the bound device | the privacy notice; the questionnaire (when the student fills in Step 1: with the details form on top and the statements locked until it is saved, then "Details saved ✓"); the thank-you message; or — when held — the generic message, replacing the whole page |
 | `POST /s/consent`, `POST /s/decline` | the bound device | records the acknowledgment / ends the draft |
-| `POST /s/identity` | the bound device, same-origin only | takes the student's own details once: always an empty redirect to `/s/q`, whether or not the name matches anyone; or the form again (422) with what was typed and a message per field |
+| `POST /s/identity` | the bound device, same-origin only | takes the student's own details once: always an empty redirect to `/s/q#questions`, whether or not the name matches anyone; or the same page again (422) with what was typed, a message per field and the statements still locked |
 | `POST /s/answer`, `POST /s/done` | the bound device | saves one answer / locks the answers (or lists the item numbers still missing) |
 | `GET /s/state` | the bound device | `{"state": …}` and nothing else: `consent`, `identity`, `answering`, `help` (held), `locked`, `reload` or `unavailable` |
 
@@ -336,19 +337,25 @@ It uses its own minimal page layout. Anything wrong — an invalid, used, expire
 ### Why the student device can't reach anything else
 
 - **No login and no session at all.** These routes run outside Laravel's normal `web` layer: no session, no CSRF token, no authentication. A request to `/s` therefore can never carry a staff identity, and it never creates a row in the `sessions` table.
-- **Codes are secrets.** The QR link carries a 256-bit token; the short code is 8 characters. Both are stored only as HMAC-SHA256 digests keyed by `APP_KEY`, so even the database doesn't hold a usable code.
+- **Codes are secrets.** The short code is 8 characters and the link carries a 256-bit token; both are stored only as HMAC-SHA256 digests keyed by `APP_KEY`, so even the database doesn't hold a usable code or link. (The link was removed and then restored on 2026-10-08, with the QR code staying removed; see [The link](#the-link-what-it-is-and-what-to-watch) for the two migrations.)
+- **Optionally, only listed PCs.** With an allowlist set, every other address gets the generic 404 before anything else runs (see [Only the guidance office's PC](#only-the-guidance-offices-pc-the-ip-allowlist)).
 - **One device per code.** The first device to use a code is bound to it through a random secret in an HttpOnly, SameSite=Strict cookie limited to `/s`. Every other device is refused, and the live page counts the attempt.
 - **Same-origin only.** Every POST must come from the page itself (the browser's `Sec-Fetch-Site`/`Origin`), which blocks cross-site requests.
 - **Locked-down responses.** Every response, error pages included, is sent with `Cache-Control: no-store` (nothing is kept by the browser or a shared PC's cache), a strict Content-Security-Policy (no inline or foreign scripts), no framing (`X-Frame-Options: DENY`), `Referrer-Policy: same-origin`, `X-Robots-Tag: noindex` and `nosniff`.
 - **Staff browsers are refused.** If the browser is signed in to a staff account (a live session or a "Remember me" cookie), the student page refuses to start and asks for a sign-out or a private window. A student could otherwise type a staff address into that browser.
 - **Proven by tests.** Automated tests check that:
-  - this is the exact list of student routes, none of them with session, CSRF or login middleware;
+  - this is the exact list of student routes (eleven, with the two link pages), none of them with session, CSRF or login middleware;
+  - opening the link never claims, even many times with link-preview and safe-browsing user agents; Begin claims once; whichever of the link and the code is used first wins and the other gets the generic 404; expired, revoked (New code), declined and cancelled links get the generic 404; a refused address gets the identical 404 on the link pages too; the token appears in no student-facing response (not even the Begin page) and nowhere in `storage/logs`, even when the link pages fail with a server error; and the restore migration works whether or not the drop ran;
+  - with an allowlist, a listed address, range or IPv6 address gets in; any other address gets a 404 identical to an invalid code's (HTML and JSON, a wrong method included) before any database query or rate-limit count; a forged `X-Forwarded-For` doesn't get in; invalid entries fail closed; the list shows on the live page only; with an empty list nothing changes; and the typed code works end to end from a listed PC;
+  - the live page has no QR code and no "scan" wording, and the link appears on it only in the Copy link button's data, never as text or as a link, and only until a device has the draft;
   - every other route needs a login, except the login, password-reset and health-check pages;
   - a device holding only its cookie is sent to the login page by every staff route;
   - no student response sets a session cookie or creates a session row;
   - every response carries the headers above;
   - no student response — page source, JSON, error pages (including a forced server error with debug output on) or headers — contains a student's name, number, course, year level, section, a score, a level, a flag or a link into the app. This includes a run where the student types the name of an already registered student: the saved student's course, year level and section are made inactive in that test, so if they appeared anywhere it would be a leak;
-  - the details form lists exactly the Active course, year level and section rows, and a typed name that matches an active student, an archived student or nobody gets byte-for-byte the same reply, with the same number of database queries.
+  - the details form lists exactly the Active course, year level and section rows, and a typed name that matches an active student, an archived student or nobody gets byte-for-byte the same reply, with the same number of database queries;
+  - "Year Level" and "Female" are allowed only inside the open details form itself (one marked `<form>`, on a page whose statements are locked); a test fails if that marker or those words appear anywhere else — the questionnaire after saving, the held page, the thank-you page, error pages or JSON;
+  - the server refuses answers and Done before the details are saved, the details can't be edited or reopened after saving (reload, New code, Return to student, a released hold), and a held page contains nothing of the questionnaire or the form.
 
 ### Privacy consent on the student's own screen (RA 10173)
 
@@ -365,13 +372,19 @@ It uses its own minimal page layout. Anything wrong — an invalid, used, expire
 **The flow:**
 
 1. **Start from Step 1.** Above the Step 1 form, the Psychometrician presses **Let the student fill this in on their device**. This starts the wizard over, exactly like submitting Step 1: anything staged before and any earlier student-device draft are discarded. The live page opens with the code and QR code. Nothing about the student is kept in the Psychometrician's session: until Submit, the details exist only in the draft, encrypted.
-2. **On the student device**, in this order: the code or QR link, the **privacy notice** (always, see above), the **details form**, the questionnaire, Done, and the thank-you message. The server refuses details before the notice is acknowledged, and refuses answers before the details are in.
+2. **On the student device**, in this order: the code, the **privacy notice** (always, see above, its own screen), then **one page** with the details form on top and the questionnaire below it, then Done and the thank-you message. The server refuses details before the notice is acknowledged, and refuses answers and Done before the details are saved.
+   - **Before the details are saved**, the page shows the details form with **Save details**, and below it every statement, but **locked**: all 21 sit in one disabled group (`<fieldset disabled>`), so nothing can be tapped or tabbed to. The group is dimmed, with the message "Complete your details first." (linked to it for screen readers). The bottom bar says "0 of 21 answered" and "Details not saved yet", and Done is disabled. The answer-saving script doesn't start; it only watches whether the session ends. Saving the details works without JavaScript, as a normal form.
+   - **Save details** sends the form and comes back to the same page at `/s/q#questions`, scrolled to and focused on the Questionnaire heading. The details section then shows **only "Details saved ✓"**, with no fields and no values, the statements unlock, and the bar says "Details saved ✓". That is all the page ever shows of them again: after a reload, New code, Return to student or a released hold.
+   - **The form is exactly Step 1's.** The fields come from the one partial that Step 1 and the live page's correction form also use (`assessments/create/_student-fields.blade.php`), so the fields, their order (First Name, Middle Name, Last Name, Gender, Course, Year Level, Section), labels, dropdown placeholders and options, and styling can't drift apart; a test compares all three. The only differences: a "Your details" heading, the button says **Save details**, and the staff checkbox "The student has acknowledged the data privacy consent notice for this assessment." is not there (it stays on the Psychometrician's Submit form; a test checks it appears nowhere on the student device). Autocomplete is off on the device's fields.
+   - **A failed save** comes back as the same page (status 422) with what the student typed, Step 1's red message under each wrong field (each field points at its message with `aria-describedby`, on Step 1 too), and the **first wrong field focused** (`autofocus`, no script needed). There is no summary, as on Step 1. Without Alpine on the device, a message stays visible until the next save (on Step 1 it hides as soon as you type). The statements stay locked.
+   - **For a screen reader** the page reads: the page heading, "Your details" with its labelled fields and Save details, then "Questionnaire" with the lock message and each statement as its own group (announced as unavailable while locked). The save status line is announced politely. There are no links on the page, so no skip link; the `#questions` return does that job.
+   - **Screen sizes:** the existing responsive layout is unchanged. The student device is a PC provided by the guidance office. A field the browser scrolls to stays clear of the fixed bottom bar.
 3. **The details form** has the same fields, rules and tidying as Step 1: First, Middle and Last Name, Gender, Course, Year Level and Section. The middle initial must be a letter (A–Z or Ñ) and a period; it is uppercased, a two-part Ñ is combined, and extra spaces are removed. The error messages are the same too.
    - **Lists:** the Course, Year Level and Section lists come only from the lookup tables managed in Course, Year Level and Section Management, never from a student record: the Active, unarchived rows, the same lists Step 1 shows (`code - name` for courses, the label for year levels, the name for sections). Gender has the three fixed choices. An inactive, archived or made-up id gets exactly the same reply as an empty choice ("Please select a Course."), so the form reveals nothing about other rows.
    - **Shared PCs:** autocomplete is off on the form and on every field.
-   - **Once only:** the details are accepted once per draft. After that the device never shows them again, not even after New code, Return to student or a reload.
+   - **Once only:** the details are accepted once per draft. After that the device never shows them again, only "Details saved ✓", not even after New code, Return to student, a released hold or a reload.
 4. **The live page** says "Waiting for the student to enter their details" until they arrive. Then it shows them, with the time they were entered, and a **Save corrections** form with Step 1's rules, so the Psychometrician can fix a typo with the student. The answers stay read-only: the correction form only ever sends the Step 1 fields, and anything else in it is ignored. The page's polling carries only "details received" and "held" flags, never the details themselves; the page reloads to show them.
-5. **The duplicate check, without telling the student.** When the student sends the form, the server runs the same check as Step 1. Whatever the result, the device gets exactly the same reply: an empty redirect to its own page, with the same headers, after the same database work. Tests check that the reply and the number of database queries are identical for an active match, an archived match and no match.
+5. **The duplicate check, without telling the student.** When the student sends the form, the server runs the same check as Step 1. Whatever the result, the device gets exactly the same reply: an empty redirect to its own page (`/s/q#questions`), with the same headers, after the same database work. The duplicate check runs here, when the details are saved, never at Done, so a student never answers 21 questions before a match is found. Tests check that the reply and the number of database queries are identical for an active match, an archived match and no match.
    - **No match, or only an archived student:** the questionnaire follows as usual. An archived match is handled at Submit, as at Step 1: the archived-student warning appears on the live page, the Submit form gets the box "I understand. Create a new student record.", and the confirmation is recorded as "Archived Match Confirmed" at the final save.
    - **An active student has the name:** the draft is **held**. The device shows only the generic message, "This page is not available. Please ask the staff member for help." — word for word the same as for any other failure — and refuses answers and Done. The live page says "Stopped: the name the student entered matches an existing active student", and shows the same panel as Step 1, with the student's record, number, course and assessment count, and Take Again.
    - **Then:** the Psychometrician either uses **Take Again** from the panel, or **corrects the name** if it was mistyped. Take Again discards this draft, so the device keeps showing the generic message; the retake is sent to the device again with a **new code**, and shows only the notice and the questionnaire. After a correction, if no active student has the corrected name, the device continues by itself within a few seconds.
@@ -381,7 +394,7 @@ It uses its own minimal page layout. Anything wrong — an invalid, used, expire
 
 #### The one remaining "tell" (for the adviser and the DPO to decide)
 
-A held screen tells the person at the device that **the name they typed belongs to a registered, active student**. The words are the generic ones, but stopping right after the details form, instead of continuing to the questions, is itself the signal. Nothing else leaks: not which student, their number, course or history, nor whether an archived student has the name. To someone reading the network traffic in the browser's developer tools, the held page also differs slightly from a dead code: it returns 200 rather than 404, and its state reads `help`.
+A held screen tells the person at the device that **the name they typed belongs to a registered, active student**. The words are the generic ones, but the whole page turning into that message right after Save details, instead of unlocking the questions, is itself the signal. Nothing else leaks: not which student, their number, course or history, nor whether an archived student has the name. To someone reading the network traffic in the browser's developer tools, the held page also differs slightly from a dead code: it returns 200 rather than 404, and its state reads `help`.
 
 **It is limited to one probe per staff-issued code.** The details are accepted once per draft; a second try with another name changes nothing and gets the same reply. Each code is handed out in person by the Psychometrician, and every hold shows on their live page. Trying more names means asking the staff for more codes.
 
@@ -413,9 +426,10 @@ A held screen tells the person at the device that **the name they typed belongs 
 
 ### Rate limits (and a class behind one school NAT)
 
-- Failed code or link attempts are limited to **10 per minute per IP** (`REMOTE_ASSESSMENT_FAILED_ENTRY_PER_MINUTE`). **Successful claims don't count**, so a whole class whose PCs share one public IP behind the school's NAT is never locked out by its own successful logins.
+- Failed code attempts are limited to **10 per minute per IP** (`REMOTE_ASSESSMENT_FAILED_ENTRY_PER_MINUTE`). **Successful claims don't count**, so a whole class whose PCs share one public IP behind the school's NAT is never locked out by its own successful logins.
 - Page loads and actions are limited **per device**, not per IP (60 page loads and 180 actions a minute; a browser without a device cookie gets 300 page loads a minute per IP). The live page's checks are limited per Psychometrician (120 a minute).
 - All limits are configurable in `.env` (see `.env.example`).
+- The limiter's counters (`X-RateLimit-*` headers) are never sent to the student device; a `429` still carries `Retry-After`. Addresses refused by an allowlist never reach the limiters.
 
 ### Network requirements
 
@@ -425,13 +439,60 @@ The student PC must be able to reach the server over the network:
 - **On a school LAN:**
   - the server must listen on its LAN address, not only on `127.0.0.1`;
   - Windows Firewall needs an inbound rule for the web server's port;
-  - the server needs a **fixed IP** (a static address or a DHCP reservation), or the address and QR code change;
+  - the server needs a **fixed IP** (a static address or a DHCP reservation), or the address changes;
   - many school Wi-Fi networks use **client isolation**, which stops two Wi-Fi devices from reaching each other; use a wired connection or ask IT to allow the server.
   - Herd's `*.test` names only work on the server PC itself, so use the IP address.
 - **Use HTTPS** even on a LAN if possible (e.g. a locally trusted certificate). Over plain HTTP the student's answers cross the network unencrypted, and on HTTPS the device cookie is also marked Secure.
 - **Build the assets** with `npm run build`. Never use `npm run dev` for a student device: the dev server's files are served from `localhost:5173`, which the student PC can't reach.
 - **`APP_DEBUG` must be `false`** on any server another device can reach. With debug on, Laravel's debug tool (Ignition) has its own routes without a login.
 - **On a deployed (internet) server** the student page works from anywhere over HTTPS. It is then the system's only page reachable without a login, so the rate limits above matter more. `trustProxies` must match the real proxy, so that per-IP limits see the real address.
+
+### The link: what it is and what to watch
+
+Besides the typed code, the Psychometrician can send the student PC a **link**: the live page's **Copy link** button copies `REMOTE_ASSESSMENT_URL/s/t/<token>`, where the token is a fresh 256-bit random value (stored only as a digest).
+
+- **Opening the link uses nothing up.** It only shows a **Begin** page. Only pressing Begin (a form POST) claims the draft for that PC. A link preview (a chat app showing a preview card) or a safe-browsing scanner that merely opens the link can't spend it; tests open it many times with such user agents.
+- **One device, whichever comes first.** The code and the link belong to the same draft: whichever is used first claims it, and the other then gets the generic message (and the live page counts "another device tried"). They share one expiry and one cleanup; **New code** replaces both, and the old link stops working.
+- **Where the link appears.** On the staff live page only, inside the Copy link button (never as visible text or as a clickable link), only until a device has the draft, never in the page's background checks, and never on the student device: the Begin page's form posts back to its own address, so the token is in none of its HTML. On the student PC it is visible only in the address bar of the Begin page, and that page redirects away from it as soon as Begin is pressed.
+- **Copying on plain HTTP.** Browsers only allow the modern clipboard on HTTPS (or `localhost`). Over `http://` on the LAN the button falls back to the older copy command; if that fails too, it shows the link in a read-only field to copy with Ctrl+C.
+- **The risk of sending it.** A link pasted into a third-party messaging service (Messenger, Viber, email…) **passes the token through that service**: it is stored on their servers, may be previewed, and may be scanned. **The typed code avoids this entirely**, because the code is read off the screen and typed, never sent. If the link is used, send it through an internal channel, only just before the student begins, and never in a public or group chat. It works once and expires with the session.
+- **Scanners that press buttons.** A rare security scanner that also submits forms could press Begin before the student. The student would then see the generic message and the live page would show a device as connected: press **New code** and use the code. The allowlist (below) stops scanners from outside the school entirely.
+- **What NORMI never logs, and what the web server does.** NORMI's own logs (`storage/logs`) never contain the token: exception stack traces are written without function arguments (`zend.exception_ignore_args`, set in `AppServiceProvider`; a test forces errors on the link pages and searches `storage/logs`). But two things outside NORMI do see it:
+  - **The web server's own access log** — `php -S` output, Apache, nginx or IIS — records every request line, including `/s/t/<token>`.
+  - **The same-origin `Referer`.** The Begin page's own requests (its stylesheet and script) carry the Begin address, token included, in their `Referer` header to the same server, so they appear in that access log too.
+
+  So **the server's access log must not be shared** (keep it readable by the administrator only). A token in an access log is useless once its link has been used or has expired.
+- **Its column.** The link's `token_hash` column was dropped by migration `2026_10_08_130000_drop_token_hash_…` when the link was briefly removed, and re-added by `2026_10_08_140000_restore_token_hash_…`. The drop is left untouched, because it may already have run somewhere. The restore is guarded with `Schema::hasColumn`: it adds the column only when missing, and its rollback removes the column whenever present. Tested on databases where the drop had and had not run: `migrate` always ends with the column present and unique; one rollback leaves the state after the drop, and a second brings the original column back. The drop migration itself can't be guarded without editing it; it needs no guard in normal order, but a manual, out-of-order rollback of the drop alone (while the restore is still applied) would fail with a "duplicate column" error.
+
+### Only the guidance office's PC: the IP allowlist
+
+The student device is a PC provided by the guidance office, never a phone or tablet, and never the Psychometrician's own PC. To make the student page open only there, set **`REMOTE_ASSESSMENT_ALLOWED_IPS`** in `.env`: comma-separated IPv4 or IPv6 addresses or CIDR ranges, e.g. `192.168.1.20` or `192.168.1.20,192.168.1.21` or `192.168.1.16/28`. Empty (the default) means no restriction, exactly as before.
+
+- **How it refuses.** Every request to `/s` is checked first, before anything else runs: no cookie is read, no staff-browser check, no rate limiter, no database query. An address not on the list gets exactly the reply an invalid code gets: the same 404 status, headers and generic page ("This page is not available. Please ask the staff member for help."), or `{"state":"unavailable"}` for the page's background requests. Even a wrong-method request or an unknown `/s` path gets that 404. Nothing in the reply hints that an allowlist exists (this is also why no student-device response carries `X-RateLimit-*` headers any more). Tests check all of this.
+- **Only the request's real address counts — never the browser's "user agent"**, which anyone can change. The address is the one the server sees directly. Only a reverse proxy on the server itself (`127.0.0.1`, `trustProxies` in `bootstrap/app.php`) may say who the client is; an `X-Forwarded-For` or similar header from anywhere else is ignored (tested). **`trustProxies` must never be set to `*` while an allowlist is used**: anyone could then claim to be the student PC.
+- **Typos fail closed.** An entry that isn't a valid address or range matches nothing; a list of only typos locks every PC out. The live page lists the allowed addresses and any invalid entries, for the Psychometrician only.
+- **Rate limits.** A refused address uses up nothing (it never reaches the limiters); listed PCs are limited as before.
+- **NAT.** On the school LAN the server sees each PC's own private address, so the list can name one PC. If NORMI were hosted on the internet, every school PC would share the school's one public address, and the list could only say "from the school".
+- **If the PC's address changes** (DHCP), that PC gets the generic page everywhere, and the live page stays at "Waiting for the student device". Give the student PC a **fixed IP or a DHCP reservation**. If Windows connects over IPv6, list that address too. After changing `.env`, run `php artisan config:clear` (or `config:cache` again if the config is cached).
+- **Testing on one PC.** Opening the student address on the server PC itself through its LAN address (e.g. `http://192.168.1.10/s`) makes the request come from that **LAN address, not `127.0.0.1`**: list the server's own LAN IP for such a test, or leave the list empty.
+- **What it is, and what it isn't.** "Guidance-provided PC only" is enforced by **this allowlist plus the office's procedure**, not by the browser. It identifies a **machine, not a student**: who sits at that PC is still checked in person by the Psychometrician, who ticks the attestation on Submit.
+
+### Setting up the guidance office (checklist)
+
+**The server (the Psychometrician's PC, or the PC that runs NORMI):**
+- The web server listens on all addresses (`0.0.0.0`) or on its LAN address, not only on `127.0.0.1`.
+- A Windows Firewall inbound rule allows the web server's port on the **Private** profile only, and the school network is set to Private on that PC. For example, in an administrator PowerShell: `New-NetFirewallRule -DisplayName "NORMI web" -Direction Inbound -Protocol TCP -LocalPort 80 -Action Allow -Profile Private` (use 443 for HTTPS).
+- `.env`: `REMOTE_ASSESSMENT_URL=http://<server LAN IP>` (e.g. `http://192.168.1.10`), `APP_DEBUG=false`, and `REMOTE_ASSESSMENT_ALLOWED_IPS=<student PC IP>`.
+- **HTTPS is recommended**, with a locally trusted certificate (e.g. made with mkcert, its root certificate installed on the student PC). Over plain HTTP the student's details and answers cross the network unencrypted, and the Copy link button falls back to the older copy method.
+- **Keep the web server's access log private.** `php -S` output, and Apache, nginx or IIS access logs, record the link's token when a link is opened (also via the same-origin `Referer` of the Begin page's own requests). Don't share or publish that log; it only matters until the link is used or expires.
+- `npm run build` has been run (never `npm run dev` for the student PC), and the scheduler task runs `php artisan schedule:run` every minute (see Expiry and cleanup).
+
+**The student PC (provided by the guidance office):**
+- A **fixed IP or a DHCP reservation**, the one listed in `REMOTE_ASSESSMENT_ALLOWED_IPS`.
+- A desktop shortcut that opens the student address in a private, full-screen window, e.g. target: `"C:\Program Files\Google\Chrome\Application\chrome.exe" --incognito --kiosk http://192.168.1.10/s`. The student then only types the code. **Close it with Alt+F4** (kiosk mode has no close button).
+- **Prefer the typed code to the link.** If the link is used, get it to the student PC through an internal channel (never a public or group chat, never a third-party messaging app if it can be avoided), only just before the student begins; open it in the incognito window; the student presses Begin.
+- **Between students:** close the window and open the shortcut again. Closing an incognito window throws away its cookies and everything typed in it; a student who closes it mid-way needs **New code**. If the PC's browser is ever used without incognito, clear its browsing data (Ctrl+Shift+Delete → cookies and site data, autofill form data) before the next student.
+- No staff account is signed in on that browser (the student page refuses a browser signed in to staff, and incognito avoids it).
 
 ### What happens when…
 
@@ -442,10 +503,13 @@ The student PC must be able to reach the server over the network:
 - **…two devices try the same code:** the first wins; the second gets the generic message, and the live page shows "Another device tried to open this code".
 - **…the student PC is shared:** nothing is cached, the answers are removed from the page after Done, and Back shows only the thank-you message. Once the draft ends, the cookie is useless. A browser signed in to a staff account is refused. A kiosk or private browser profile on the student PC is still recommended.
 - **…the network drops:** the answer stays on screen, the status line says "Not saved — reconnecting…", it is retried automatically, and Done stays disabled until everything is saved. The live page shows when the device was last seen.
+- **…another PC, or the Psychometrician's own PC, opens the address while an allowlist is set:** it gets the generic message, the same as for an invalid code.
+- **…the student PC's address changed:** it gets the generic message everywhere; fix the DHCP reservation or `REMOTE_ASSESSMENT_ALLOWED_IPS` (see the allowlist section).
 - **…the student taps an answer before the page has finished loading:** the page sends that answer as soon as its script starts, so it isn't lost.
 - **…the student mistypes their name:** the Psychometrician corrects it on the live page before submitting; the answers are kept as they are.
 - **…the student types a name that is already registered:** the device stops with the generic message, and the live page shows the record with Take Again (see [When the student fills in Step 1 too](#when-the-student-fills-in-step-1-too)).
-- **…the student presses Back after sending the details:** nothing is cached, so the page is fetched again, and the server now shows the questionnaire, not the form. (Checked in Chrome only.)
+- **…the student presses Back or reloads after saving the details:** nothing is cached, so the page is fetched again, and the server shows only "Details saved ✓" above the questions, never the form. (Checked in Chrome only.)
+- **…the student tries to answer before saving the details:** the statements are disabled and nothing is sent; even a request sent by hand is refused by the server.
 
 ---
 
@@ -872,7 +936,7 @@ The following columns are encrypted transparently with AES-256-CBC, authenticate
 | `counseling_sessions` | `session_notes` | Free-text clinical notes from a counseling session. |
 | `remote_assessment_drafts` | `responses`, `identity` | *(Scope change, 2026-10-08.)* A student-device questionnaire's answers while it is being answered, and — when the student fills in Step 1 on the device — the details they typed (name, gender, course, year level, section), both stored with Laravel's built-in `encrypted:array` cast. The row holds no student number and no link to a student record, and is deleted on submit, cancel, every wizard exit or expiry (see [Student Device Assessment](#student-device-assessment-scope-change)). |
 
-The draft's one-time code, QR token and device secret are not stored at all, only as HMAC-SHA256 digests keyed by `APP_KEY`.
+The draft's one-time code, link token and device secret are not stored at all, only as HMAC-SHA256 digests keyed by `APP_KEY`.
 
 ### What is intentionally left unencrypted, and why
 
@@ -896,7 +960,7 @@ For the fields above that stay in plain text at the column level (and as defense
   - **What stays readable:** only the payload is encrypted. The row's `id`, `user_id`, `ip_address`, `user_agent` and `last_activity` stay plain. The one-session-per-account check at login, the per-request check that ends a second session (e.g. one that came back through "Remember me"), and the administrator's Force Logout (which deletes that user's rows) use only `user_id` and `last_activity`, so they work the same either way.
   - **Turning it on:** sessions created before the switch can't be decrypted. Each one is logged out on its next request, losing any New Assessment in progress, and its row is then rewritten encrypted and without a user. Until that request happens, or until the session expires (`SESSION_LIFETIME`), it still counts as that user's active session, so a login from a different browser is refused. Switch while nobody is signed in, or clear the `sessions` table at the same moment (or use Force Logout for anyone affected).
   - **Cost:** about 0.1 ms to decrypt and 0.1 ms to encrypt per request, and the stored payload grows about 2.5×, e.g. ~3 KB of wizard data becomes ~7 KB in the column.
-  - **Student device:** the student device never gets a session at all, so it adds no rows here. While a questionnaire is out on a student device, the Psychometrician's session holds the plain one-time code and QR token (shown on the live page) until the draft ends — one more reason for `SESSION_ENCRYPT=true` in production.
+  - **Student device:** the student device never gets a session at all, so it adds no rows here. While a questionnaire is out on a student device, the Psychometrician's session holds the plain one-time code and link token (for the live page) until the draft ends — one more reason for `SESSION_ENCRYPT=true` in production.
 - **The Audit Log never stores encrypted fields** — it writes `[changed]` in their place (see [Audit Logs](#audit-logs)). Before 2026-10-08 it did not: Create and Delete entries for counseling sessions stored the notes' ciphertext (or the plaintext, for entries written before the notes were encrypted), and every Update entry stored the session's previous notes in **plaintext**, because the observer read them through `getOriginal()`, which decrypts. Those older entries have not been changed or redacted; redacting them is a separate, deliberate decision, to be taken after a database backup.
 - A one-time backfill command (`php artisan security:encrypt-sensitive-data`) encrypts any rows that were written before this feature was added; it's idempotent (safe to re-run) and writes directly via the query builder rather than through Eloquent, specifically so it doesn't flood the Audit Logs with thousands of "Update" entries for what is a one-off maintenance operation.
 

@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureSingleActiveSession;
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\RestrictStudentDeviceNetwork;
 use App\Http\Middleware\StudentDeviceHeaders;
 use App\Http\Responses\StudentDeviceResponse;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -31,6 +32,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'single-session' => EnsureSingleActiveSession::class,
         ]);
         $middleware->group('student-device', [
+            // First: an address not on REMOTE_ASSESSMENT_ALLOWED_IPS (when
+            // set) gets the generic 404 before anything else runs.
+            RestrictStudentDeviceNetwork::class,
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StudentDeviceHeaders::class,

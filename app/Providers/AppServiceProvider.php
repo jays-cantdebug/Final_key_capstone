@@ -37,6 +37,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // No function arguments in exception stack traces, so an error never
+        // writes a link token (StudentDeviceController::begin()/claim()) or a
+        // student's details into storage/logs. PHP's production php.ini
+        // default; Herd's development php.ini has it off.
+        ini_set('zend.exception_ignore_args', '1');
+
         Gate::policy(Student::class, StudentPolicy::class);
         Gate::policy(SystemNotification::class, SystemNotificationPolicy::class);
         Gate::policy(CounselingSession::class, CounselingSessionPolicy::class);
@@ -55,7 +61,7 @@ class AppServiceProvider extends ServiceProvider
      * config/remote_assessment.php). Student-device requests are keyed by
      * the device cookie when there is one, so a class behind one school NAT
      * doesn't share a budget; without a cookie they fall back to the IP,
-     * with a higher limit. Failed code/token attempts have their own per-IP
+     * with a higher limit. Failed code attempts have their own per-IP
      * limit, counted in StudentDeviceController (successes don't count).
      */
     private function configureStudentDeviceRateLimits(): void

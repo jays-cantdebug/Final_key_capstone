@@ -27,15 +27,26 @@ trait InteractsWithStudentDevice
     protected array $studentResponses = [];
 
     /**
+     * Every link token handed out through these helpers, so leak tests can
+     * check none of them ever reaches a student-facing response.
+     *
+     * @var array<int, string>
+     */
+    protected array $issuedTokens = [];
+
+    /**
      * @return array{draft: RemoteAssessmentDraft, token: string, short_code: string}
      */
     protected function createRemoteDraft(?User $psychometrician = null, ?QuestionnaireVersion $version = null, bool $collectsIdentity = false): array
     {
-        return app(RemoteAssessmentService::class)->create(
+        $created = app(RemoteAssessmentService::class)->create(
             $psychometrician ?? $this->psychometrician(),
             $version ?? QuestionnaireVersion::query()->where('status', QuestionnaireVersion::STATUS_ACTIVE)->firstOrFail(),
             $collectsIdentity,
         );
+        $this->issuedTokens[] = $created['token'];
+
+        return $created;
     }
 
     protected function studentOrigin(): string
@@ -149,11 +160,7 @@ trait InteractsWithStudentDevice
     {
         $this->post(route('assessments.create.remote.store'))->assertRedirect(route('assessments.create.remote'));
 
-        return [
-            'draft' => RemoteAssessmentDraft::query()->findOrFail(session('assessment_wizard.remote_draft_id')),
-            'token' => (string) session('assessment_wizard.remote_token'),
-            'short_code' => (string) session('assessment_wizard.remote_short_code'),
-        ];
+        return $this->liveDraftFromSession();
     }
 
     /**
@@ -166,9 +173,20 @@ trait InteractsWithStudentDevice
     {
         $this->post(route('assessments.create.remote.store-student'))->assertRedirect(route('assessments.create.remote'));
 
+        return $this->liveDraftFromSession();
+    }
+
+    /**
+     * @return array{draft: RemoteAssessmentDraft, token: string, short_code: string}
+     */
+    protected function liveDraftFromSession(): array
+    {
+        $token = (string) session('assessment_wizard.remote_token');
+        $this->issuedTokens[] = $token;
+
         return [
             'draft' => RemoteAssessmentDraft::query()->findOrFail(session('assessment_wizard.remote_draft_id')),
-            'token' => (string) session('assessment_wizard.remote_token'),
+            'token' => $token,
             'short_code' => (string) session('assessment_wizard.remote_short_code'),
         ];
     }
@@ -195,8 +213,8 @@ trait InteractsWithStudentDevice
     }
 
     /**
-     * Student side: send the details form; always an empty 303 to /s/q
-     * when they pass validation.
+     * Student side: send the details form; always an empty 303 to
+     * /s/q#questions when they pass validation.
      *
      * @param  array<string, mixed>  $details
      */
@@ -204,7 +222,26 @@ trait InteractsWithStudentDevice
     {
         return $this->studentRequest('POST', route('student-device.identity'), $details, $device)
             ->assertStatus(303)
-            ->assertRedirect(route('student-device.show'));
+            ->assertRedirect(route('student-device.show').'#questions');
+    }
+
+    /**
+     * The open details form's markup (the one element marked
+     * data-student-device-details="open"), or null when the page has none.
+     * Fails when the marker appears more than once, or anywhere but on a
+     * <form> element.
+     */
+    protected function openDetailsForm(string $body): ?string
+    {
+        $markers = substr_count($body, 'data-student-device-details');
+        if ($markers === 0) {
+            return null;
+        }
+
+        $this->assertSame(1, $markers, 'The details marker appears more than once.');
+        $this->assertSame(1, preg_match('#<form\b[^>]*\bdata-student-device-details="open"[^>]*>.*?</form>#s', $body, $form), 'The details marker is not on a <form>.');
+
+        return $form[0];
     }
 
     /**

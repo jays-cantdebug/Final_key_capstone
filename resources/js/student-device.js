@@ -12,7 +12,10 @@
  *   held): when the draft is gone the page shows the generic message; when
  *   staff return a locked questionnaire, or let a held one continue, the
  *   page reloads.
- * - The details form (identity) is a plain HTML form and needs no script.
+ * - The details form at the top of the page (when the student fills in
+ *   their own details) is a plain HTML form and needs no script. Until it
+ *   is saved the questions are locked (data-locked="1"): autosave doesn't
+ *   start, and the state is only watched.
  * - A page restored from the back/forward cache is reloaded, so it always
  *   reflects the server's state.
  */
@@ -29,7 +32,24 @@ window.addEventListener('pageshow', (event) => {
 
 const root = document.querySelector('[data-student-device]');
 
-if (root?.dataset.studentDevice === 'questionnaire') {
+if (root?.dataset.studentDevice === 'questionnaire' && root.dataset.locked === '1') {
+    // Details not saved yet: the questions are disabled and nothing is
+    // autosaved. Only watch for the draft ending (the generic message) or
+    // moving on (reload).
+    pollState(root.dataset.stateUrl, ANSWERING_POLL_MS, (state) => {
+        if (state === 'identity') {
+            return true;
+        }
+
+        if (state === 'unavailable') {
+            root.replaceChildren(root.querySelector('[data-unavailable-template]').content.cloneNode(true));
+        } else {
+            window.location.replace(root.dataset.pageUrl);
+        }
+
+        return false;
+    });
+} else if (root?.dataset.studentDevice === 'questionnaire') {
     initQuestionnaire(root);
 } else if (root?.dataset.studentDevice === 'held') {
     // Held: reopen the page once the Psychometrician lets it continue (or

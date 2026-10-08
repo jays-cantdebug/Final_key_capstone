@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Exceptions\RemoteDraftStateException;
+use App\Http\Middleware\RestrictStudentDeviceNetwork;
 use App\Http\Requests\AssessmentResponseFormRequest;
 use App\Http\Requests\AssessmentStudentRequest;
 use App\Models\Assessment;
@@ -168,8 +169,16 @@ class RemoteAssessmentController extends Controller
             'questions' => $draft->questionnaireVersion->questions,
             'shortCode' => $request->session()->get(self::SESSION_KEY.'.remote_short_code'),
             'studentEntryUrl' => $this->remoteAssessments->studentEntryUrl(),
-            'qrSvg' => is_string($token) ? $this->remoteAssessments->qrSvg($this->remoteAssessments->studentTokenUrl($token)) : null,
+            // For the Copy link button only (a data attribute on this staff
+            // page; never text, never an <a>, never in the poll JSON), and
+            // only while no device has the draft yet.
+            'studentLink' => is_string($token) && $draft->status === RemoteAssessmentDraft::STATUS_PENDING
+                ? $this->remoteAssessments->studentTokenUrl($token)
+                : null,
             'loopback' => $this->remoteAssessments->baseUrlIsLoopback(),
+            // Staff only: which student PCs may open the address (never shown on the device).
+            'allowedIps' => RestrictStudentDeviceNetwork::entries(),
+            'invalidAllowedIps' => RestrictStudentDeviceNetwork::invalidEntries(),
             'duplicateWarning' => (bool) $request->session()->get('remote_duplicate_warning'),
             'monitor' => $this->remoteAssessments->monitorData($draft, $this->assessmentService->activeQuestionnaireVersion()),
             'pollIntervalMs' => (int) config('remote_assessment.poll_interval_ms'),
@@ -202,7 +211,7 @@ class RemoteAssessmentController extends Controller
     }
 
     /**
-     * POST: new token and code, the device unbound, answers kept.
+     * POST: a new code and link, the device unbound, answers kept.
      */
     public function newCode(Request $request): RedirectResponse
     {
@@ -219,7 +228,7 @@ class RemoteAssessmentController extends Controller
             self::SESSION_KEY.'.remote_short_code' => $shortCode,
         ]);
 
-        return redirect()->route('assessments.create.remote')->with('status', 'A new code was created. The previous code and device no longer work.');
+        return redirect()->route('assessments.create.remote')->with('status', 'A new code and link were created. The previous code, link and device no longer work.');
     }
 
     /**

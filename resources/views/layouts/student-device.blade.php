@@ -5,7 +5,8 @@
     student-device script runs (resources/js/student-device.js), not app.js.
 --}}
 <!DOCTYPE html>
-<html lang="en">
+{{-- scroll-pb-32: a field the browser scrolls to (autofocus, Tab) stays clear of the questionnaire's fixed bottom bar. --}}
+<html lang="en" class="scroll-pb-32">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
