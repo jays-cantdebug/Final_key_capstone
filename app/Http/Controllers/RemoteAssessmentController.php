@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\RemoteDraftStateException;
 use App\Http\Requests\AssessmentResponseFormRequest;
+use App\Http\Requests\AssessmentStudentRequest;
 use App\Models\Assessment;
 use App\Models\RemoteAssessmentDraft;
 use App\Models\Student;
@@ -13,18 +14,22 @@ use App\Services\AssessmentService;
 use App\Services\AssessmentWizardStaging;
 use App\Services\RemoteAssessmentService;
 use App\Services\StudentDuplicateService;
+use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
 
 /**
  * The Psychometrician's side of a student-device assessment (New
- * Assessment Step 2, "Send to student device"): creating the draft, the
- * live page and its polling, New code / Return to student / Restart on the
- * new version / Cancel, and Submit, which stages the answers exactly like
- * Step 2's own submit (AssessmentWizardStaging) and continues into the
+ * Assessment Step 2, "Send to student device", or Step 1, "Let the student
+ * fill this in on their device"): creating the draft, the live page and its
+ * polling, correcting the details the student typed, New code / Return to
+ * student / Restart on the new version / Cancel, and Submit, which re-runs
+ * Step 1's checks on typed details, stages the answers exactly like Step
+ * 2's own submit (AssessmentWizardStaging) and continues into the
  * unchanged Step 3 review and final save.
  *
  * Every action works only on the draft id held in this Psychometrician's
@@ -39,6 +44,12 @@ class RemoteAssessmentController extends Controller
     public const NOT_LOCKED_MESSAGE = 'The student hasn’t pressed Done yet.';
 
     public const VERSION_CHANGED_MESSAGE = 'The active questionnaire changed while the student was answering. Restart on the new version to have it answered again.';
+
+    public const NO_DETAILS_MESSAGE = 'The student hasn’t sent their details yet.';
+
+    public const ACTIVE_MATCH_MESSAGE = 'An active student with this name already exists, so a second record can’t be created. Use Take Again for that student, or correct the details if they were mistyped.';
+
+    public const INVALID_DETAILS_MESSAGE = 'Please correct the student’s details before submitting.';
 
     public function __construct(
         private readonly RemoteAssessmentService $remoteAssessments,
@@ -98,16 +109,61 @@ class RemoteAssessmentController extends Controller
     }
 
     /**
-     * GET: the live page.
+     * POST (from Step 1): the student fills in Step 1 themselves on the
+     * device, then answers the questionnaire. Starts the wizard over like a
+     * Step 1 POST (clears it and discards any earlier draft) and starts a
+     * draft that collects the details. Nothing about the student is held
+     * in this session until Submit; until then the details exist only in
+     * the encrypted draft.
+     */
+    public function storeForStudent(Request $request): RedirectResponse
+    {
+        $this->remoteAssessments->discardFor($request->user());
+        $request->session()->forget(self::SESSION_KEY);
+
+        $version = $this->assessmentService->activeQuestionnaireVersion();
+
+        if ($version === null) {
+            return redirect()->route('assessments.create')
+                ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
+        }
+
+        ['draft' => $draft, 'token' => $token, 'short_code' => $shortCode] = $this->remoteAssessments->create($request->user(), $version, collectsIdentity: true);
+
+        $request->session()->put([
+            self::SESSION_KEY.'.remote_draft_id' => $draft->id,
+            self::SESSION_KEY.'.remote_token' => $token,
+            self::SESSION_KEY.'.remote_short_code' => $shortCode,
+        ]);
+
+        return redirect()->route('assessments.create.remote');
+    }
+
+    /**
+     * GET: the live page. For a draft that collects the details, they are
+     * shown (with the correction form) once the student sends them, along
+     * with the duplicate-student panel when the name matches a student —
+     * on this page only, never on the device.
      */
     public function show(Request $request): View
     {
         $draft = $this->ownedDraftOr404($request);
-        $studentData = $request->session()->get(self::SESSION_KEY.'.student_data') ?? abort(404);
         $token = $request->session()->get(self::SESSION_KEY.'.remote_token');
+        $identity = $draft->collects_identity ? $draft->identity : null;
+
+        if ($draft->collects_identity) {
+            $student = $identity === null ? null : new Student($identity);
+        } else {
+            $student = new Student($request->session()->get(self::SESSION_KEY.'.student_data') ?? abort(404));
+        }
 
         return view('assessments.create.remote', [
-            'student' => new Student($studentData),
+            'student' => $student,
+            'identity' => $identity,
+            'duplicate' => $identity === null ? null : $this->duplicatePanel($identity),
+            'courses' => $this->assessmentService->activeCourses(),
+            'yearLevels' => $this->assessmentService->activeYearLevels(),
+            'sections' => $this->assessmentService->activeSections(),
             'draft' => $draft,
             'questions' => $draft->questionnaireVersion->questions,
             'shortCode' => $request->session()->get(self::SESSION_KEY.'.remote_short_code'),
@@ -198,7 +254,44 @@ class RemoteAssessmentController extends Controller
     }
 
     /**
-     * DELETE: discard the draft and its answers; back to Step 2's choice.
+     * PUT: correct the details the student typed (a typo), with Step 1's
+     * rules and normalization. Only the details: the answers stay as the
+     * student gave them. Re-runs the duplicate check; a held device
+     * continues once no active student has the corrected name.
+     */
+    public function correctIdentity(Request $request): RedirectResponse
+    {
+        $draft = $this->ownedDraftOr404($request);
+
+        if (! $draft->collects_identity || $draft->identity_submitted_at === null) {
+            return $this->backToLivePage(['remote' => self::NO_DETAILS_MESSAGE]);
+        }
+
+        $input = $request->only(AssessmentStudentRequest::IDENTITY_FIELDS);
+        $validator = $this->identityValidator([...$input, ...AssessmentStudentRequest::normalizedNameParts($input)]);
+
+        if ($validator->fails()) {
+            return redirect()->route('assessments.create.remote')->withErrors($validator, 'identity')->withInput($input);
+        }
+
+        $identity = $this->castIdentity($validator->validated());
+        $matches = $this->duplicateService->findMatches($identity['first_name'], $identity['middle_name'], $identity['last_name']);
+
+        try {
+            $released = $this->remoteAssessments->correctIdentity($draft, $identity, $matches['active']->isNotEmpty());
+        } catch (RemoteDraftStateException) {
+            return $this->backToLivePage(['remote' => 'This session is no longer available. Send to the student device again.']);
+        }
+
+        return redirect()->route('assessments.create.remote')->with('status', $released
+            ? 'The details were corrected. No active student has this name now, so the student device continues.'
+            : 'The details were corrected.');
+    }
+
+    /**
+     * DELETE: discard the draft, its answers and any details the student
+     * typed; back to Step 2's choice (or to Step 1, when the student was
+     * filling it in).
      */
     public function cancel(Request $request): RedirectResponse
     {
@@ -207,7 +300,8 @@ class RemoteAssessmentController extends Controller
         $draft->delete();
         $this->staging->forgetRemote($request->session());
 
-        return redirect()->route('assessments.create.questionnaire')->with('status', 'The student device session was cancelled. Nothing was saved.');
+        return redirect()->route($draft->collects_identity ? 'assessments.create' : 'assessments.create.questionnaire')
+            ->with('status', 'The student device session was cancelled. Nothing was saved.');
     }
 
     /**
@@ -219,14 +313,23 @@ class RemoteAssessmentController extends Controller
      *
      * Consent: the student's on-device acknowledgment time (when that
      * screen is on) becomes the recorded `privacy_consent_at`. Take Again
-     * also requires the staff checkbox here, as Step 2 does.
+     * also requires the staff checkbox here, as Step 2 does, and so does a
+     * draft where the student filled in Step 1 (the checkbox is then the
+     * staff attestation Step 1 would have had).
+     *
+     * Details typed on the device go through Step 1's checks again here:
+     * its validation, then the duplicate check exactly as confirmStudent()
+     * runs it (an active match blocks; an archived one needs the confirm
+     * box, and is recorded as acknowledged for the final save). They are
+     * then staged as Step 1 stages them, and nothing reaches `students`
+     * until Step 3's save.
      */
     public function submit(Request $request): RedirectResponse
     {
         $draft = $this->ownedDraftOr404($request);
         $isRetake = $request->session()->has(self::SESSION_KEY.'.existing_student_id');
 
-        if ($isRetake) {
+        if ($isRetake || $draft->collects_identity) {
             $request->validate(
                 ['privacy_consent' => ['required', 'accepted']],
                 ['privacy_consent.required' => 'Please check the privacy consent box to continue.', 'privacy_consent.accepted' => 'Please check the privacy consent box to continue.'],
@@ -252,6 +355,32 @@ class RemoteAssessmentController extends Controller
             return $this->backToLivePage(['remote' => 'The student’s answers are incomplete. Return the questionnaire to the student.']);
         }
 
+        $archivedIds = [];
+
+        if ($draft->collects_identity) {
+            $identityValidator = $this->identityValidator($draft->identity ?? []);
+
+            if ($draft->identity === null || $identityValidator->fails()) {
+                return redirect()->route('assessments.create.remote')
+                    ->withErrors($identityValidator, 'identity')
+                    ->withErrors(['remote' => self::INVALID_DETAILS_MESSAGE]);
+            }
+
+            $identity = $this->castIdentity($identityValidator->validated());
+            $matches = $this->duplicateService->findMatches($identity['first_name'], $identity['middle_name'], $identity['last_name']);
+
+            if ($matches['active']->isNotEmpty()) {
+                return $this->backToLivePage(['remote' => self::ACTIVE_MATCH_MESSAGE]);
+            }
+
+            if ($matches['archived']->isNotEmpty() && ! $request->boolean('confirm_archived_match')) {
+                return $this->backToLivePage(['confirm_archived_match' => AssessmentWizardController::CONFIRM_ARCHIVED_MATCH_MESSAGE]);
+            }
+
+            $archivedIds = $matches['archived']->modelKeys();
+            $request->session()->put(self::SESSION_KEY.'.student_data', [...$identity, 'privacy_consent_at' => $draft->consented_at]);
+        }
+
         $consentAt = $draft->consented_at;
 
         $this->staging->stageResponses($request->session(), $version, $validator->validated()['responses'], $consentAt);
@@ -260,12 +389,76 @@ class RemoteAssessmentController extends Controller
             $request->session()->put(self::SESSION_KEY.'.student_data.privacy_consent_at', $consentAt);
         }
 
+        if ($archivedIds !== []) {
+            $request->session()->put(self::SESSION_KEY.'.acknowledged_archived_ids', $archivedIds);
+        }
+
         $request->session()->put(self::SESSION_KEY.'.'.AssessmentWizardStaging::ADMINISTRATION_MODE_KEY, Assessment::ADMINISTRATION_STUDENT_DEVICE);
 
         $draft->delete();
         $this->staging->forgetRemote($request->session());
 
         return redirect()->route('assessments.create.result');
+    }
+
+    /**
+     * Step 1's own rules and messages for the details (the device's are the
+     * same, but Active lookups only).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function identityValidator(array $data): ValidatorContract
+    {
+        return Validator::make(
+            $data,
+            AssessmentStudentRequest::identityRules(),
+            AssessmentStudentRequest::identityMessages(),
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $identity
+     * @return array<string, mixed>
+     */
+    private function castIdentity(array $identity): array
+    {
+        foreach (['course_id', 'year_level_id', 'section_id'] as $field) {
+            $identity[$field] = (int) $identity[$field];
+        }
+
+        return $identity;
+    }
+
+    /**
+     * The duplicate-student panel for the details on the live page, built
+     * like Step 1's (assessments/create/_duplicate-student): an active match
+     * first, otherwise an archived one. Null when nobody matches.
+     *
+     * @param  array<string, mixed>  $identity
+     * @return array<string, mixed>|null
+     */
+    private function duplicatePanel(array $identity): ?array
+    {
+        if (! is_string($identity['first_name'] ?? null) || ! is_string($identity['last_name'] ?? null)) {
+            return null;
+        }
+
+        $matches = $this->duplicateService->findMatches($identity['first_name'], $identity['middle_name'] ?? null, $identity['last_name']);
+        [$kind, $students] = $matches['active']->isNotEmpty() ? ['active', $matches['active']] : ['archived', $matches['archived']];
+
+        if ($students->isEmpty()) {
+            return null;
+        }
+
+        $nameParts = Arr::only($identity, ['first_name', 'middle_name', 'last_name']);
+
+        return [
+            'kind' => $kind,
+            'ids' => $students->modelKeys(),
+            'name' => implode(' ', array_filter($nameParts, fn ($part): bool => filled($part))),
+            'search' => trim($identity['first_name'].' '.$identity['last_name']),
+            'students' => $this->duplicateService->describe($students->modelKeys()),
+        ];
     }
 
     private function ownedDraft(Request $request): ?RemoteAssessmentDraft

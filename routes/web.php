@@ -116,11 +116,14 @@ Route::middleware(['auth', 'single-session'])->group(function (): void {
                 Route::get('/result', [AssessmentWizardController::class, 'showResultStep'])->name('result');
                 Route::post('/submit', [AssessmentWizardController::class, 'submit'])->name('submit');
 
-                // Step 2 answered on a separate student device (the device
-                // itself uses routes/student-device.php). Each action works
-                // only on this Psychometrician's own draft.
+                // Step 2 (or Steps 1 and 2, from `remote/student`) answered
+                // on a separate student device (the device itself uses
+                // routes/student-device.php). Each action works only on this
+                // Psychometrician's own draft.
                 Route::prefix('remote')->name('remote')->group(function (): void {
                     Route::post('/', [RemoteAssessmentController::class, 'store'])->name('.store');
+                    Route::post('/student', [RemoteAssessmentController::class, 'storeForStudent'])->name('.store-student');
+                    Route::put('/identity', [RemoteAssessmentController::class, 'correctIdentity'])->name('.identity');
                     Route::get('/', [RemoteAssessmentController::class, 'show'])->name('');
                     Route::get('/status', [RemoteAssessmentController::class, 'status'])
                         ->middleware('throttle:remote-assessment-monitor')

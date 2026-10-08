@@ -46,6 +46,7 @@ Route::prefix('s')->name('student-device.')->group(function (): void {
     Route::middleware(['throttle:student-device-device', EnsureSameOrigin::class])->group(function (): void {
         Route::post('/consent', [StudentDeviceController::class, 'consent'])->middleware(RefuseStaffBrowser::class)->name('consent');
         Route::post('/decline', [StudentDeviceController::class, 'decline'])->middleware(RefuseStaffBrowser::class)->name('decline');
+        Route::post('/identity', [StudentDeviceController::class, 'identity'])->middleware(RefuseStaffBrowser::class)->name('identity');
         Route::post('/answer', [StudentDeviceController::class, 'answer'])->name('answer');
         Route::post('/done', [StudentDeviceController::class, 'done'])->name('done');
     });

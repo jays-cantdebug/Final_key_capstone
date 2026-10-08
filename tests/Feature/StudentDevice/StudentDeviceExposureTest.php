@@ -53,6 +53,7 @@ class StudentDeviceExposureTest extends TestCase
         'GET|HEAD s/q' => 'student-device.show',
         'POST s/consent' => 'student-device.consent',
         'POST s/decline' => 'student-device.decline',
+        'POST s/identity' => 'student-device.identity',
         'POST s/answer' => 'student-device.answer',
         'POST s/done' => 'student-device.done',
         'GET|HEAD s/state' => 'student-device.state',
@@ -220,8 +221,18 @@ class StudentDeviceExposureTest extends TestCase
             'Exception', 'Stack trace', 'vendor', 'Ignition', 'Whoops',
         ];
 
+        $identityForms = 0;
+
         foreach ($this->studentResponses as ['label' => $label, 'response' => $response]) {
             $haystack = (string) $response->getContent()."\n".$response->headers;
+
+            // The details form's own label and field name and its fixed
+            // gender options are the only places "Year Level" and "Female"
+            // may appear (its lists are checked in StudentDeviceIdentityTest).
+            if (str_contains($haystack, 'data-student-device="identity"')) {
+                $identityForms++;
+                $haystack = str_ireplace(['Year Level', 'year_level_id', 'Female'], '', $haystack);
+            }
 
             foreach ($forbidden as $term) {
                 $this->assertStringNotContainsStringIgnoringCase($term, $haystack, "{$label} contains \"{$term}\".");
@@ -229,6 +240,9 @@ class StudentDeviceExposureTest extends TestCase
 
             $this->assertNoAppLinks($label, $response);
         }
+
+        // The form itself and its 422 re-render.
+        $this->assertSame(2, $identityForms);
     }
 
     public function test_student_device_json_never_has_more_than_state_answered_and_missing(): void
@@ -246,7 +260,7 @@ class StudentDeviceExposureTest extends TestCase
             $data = $response->json();
             $this->assertIsArray($data, $label);
             $this->assertSame([], array_diff(array_keys($data), ['state', 'answered', 'missing']), "{$label}: ".json_encode($data));
-            $this->assertContains($data['state'], ['consent', 'answering', 'locked', 'reload', 'unavailable'], $label);
+            $this->assertContains($data['state'], ['consent', 'identity', 'answering', 'help', 'locked', 'reload', 'unavailable'], $label);
             $checked++;
         }
 
@@ -321,6 +335,45 @@ class StudentDeviceExposureTest extends TestCase
         $this->studentRequest('GET', route('student-device.show'), device: $declining)->assertOk();
         $this->studentRequest('POST', route('student-device.decline'), device: $declining)->assertOk();
         $this->studentRequest('GET', route('student-device.show'), device: $declining)->assertNotFound();
+
+        // The student types their own details (neutral lookups, so the
+        // only Active ones are these).
+        $course = Course::factory()->create(['course_code' => 'NTRL', 'course_name' => 'Neutral Programme']);
+        $yearLevel = YearLevel::factory()->create(['label' => 'Year One']);
+        $section = Section::factory()->create(['section_name' => 'Alpha']);
+        $details = fn (string $first, ?string $middle, string $last): array => [
+            'first_name' => $first, 'middle_name' => $middle, 'last_name' => $last, 'gender' => 'Male',
+            'course_id' => $course->id, 'year_level_id' => $yearLevel->id, 'section_id' => $section->id,
+        ];
+
+        ['short_code' => $identityCode] = $this->createRemoteDraft($this->psychometrician(), $version, collectsIdentity: true);
+        $typing = $this->claimWithCode($identityCode);
+        $this->studentRequest('GET', route('student-device.show'), device: $typing)->assertOk();
+        $this->studentRequest('POST', route('student-device.identity'), $details('Quentin', 'R.', 'Neutralis'), $typing)->assertStatus(303);
+        $this->consentOnDevice($typing);
+        $this->studentRequest('GET', route('student-device.show'), device: $typing)->assertOk();
+        $this->studentRequest('GET', route('student-device.state'), device: $typing, json: true)->assertOk();
+        $this->studentRequest('POST', route('student-device.answer'), ['question_id' => $version->questions->first()->id, 'value' => 1], $typing, json: true)->assertStatus(409);
+        $this->studentRequest('POST', route('student-device.identity'), [...$details('Quentin', 'Rx', 'Neutralis'), 'course_id' => 999999], $typing)->assertStatus(422);
+        $this->studentRequest('POST', route('student-device.identity'), $details('Quentin', 'r.', 'Neutralis'), $typing)->assertStatus(303);
+        $this->studentRequest('GET', route('student-device.show'), device: $typing)->assertOk();
+        $this->studentRequest('POST', route('student-device.identity'), $details('Quentin', 'R.', 'Neutralis'), $typing)->assertStatus(303);
+
+        // Typing the name of an existing active student (the seeded one,
+        // when there is one): held, with only the generic message.
+        $existing = Student::query()->first();
+        if ($existing !== null) {
+            ['short_code' => $matchCode] = $this->createRemoteDraft($this->psychometrician(), $version, collectsIdentity: true);
+            $matching = $this->claimWithCode($matchCode);
+            $this->consentOnDevice($matching);
+            $this->studentRequest('POST', route('student-device.identity'), $details($existing->first_name, $existing->middle_name, $existing->last_name), $matching)->assertStatus(303);
+            $this->studentRequest('GET', route('student-device.show'), device: $matching)->assertOk();
+            $this->studentRequest('GET', route('student-device.state'), device: $matching, json: true)->assertOk();
+            $this->studentRequest('POST', route('student-device.answer'), ['question_id' => $version->questions->first()->id, 'value' => 1], $matching, json: true)->assertStatus(409);
+            $this->studentRequest('POST', route('student-device.done'), [], $matching, json: true)->assertStatus(409);
+            $this->studentRequest('POST', route('student-device.identity'), $details('Quentin', 'R.', 'Neutralis'), $matching)->assertStatus(303);
+            $this->studentRequest('GET', route('student-device.show'), device: $matching)->assertOk();
+        }
     }
 
     /**
@@ -409,6 +462,13 @@ class StudentDeviceExposureTest extends TestCase
 
         // Staged only, in the wizard session, while the device is used.
         $stepOne('Zephyrinex', 'K.', 'Quillfeather');
+
+        // The details form lists the Active lookups, so these become
+        // inactive: if they appear anywhere now, it's a leak of the saved
+        // student's record. runWholeStudentFlow() adds neutral Active ones.
+        $course->update(['status' => Course::STATUS_INACTIVE]);
+        $yearLevel->update(['status' => YearLevel::STATUS_INACTIVE]);
+        $section->update(['status' => Section::STATUS_INACTIVE]);
 
         return [
             'Thaddeusqx', 'Brumblewick', 'Zephyrinex', 'Quillfeather', $student->student_number,

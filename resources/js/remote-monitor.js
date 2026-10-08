@@ -4,6 +4,9 @@
  * endpoint every `interval` ms with `?rev=`; when nothing changed the
  * server sends only the revision, last-seen time, time left and whether
  * the questionnaire version changed. The answers shown are read-only.
+ * When the student's own details arrive, or the device is held over a
+ * duplicate, the page reloads (the poll carries only those two flags,
+ * never the details).
  */
 export default (config) => ({
     ...config.initial,
@@ -59,6 +62,17 @@ export default (config) => ({
 
             const data = await response.json();
             this.offline = false;
+
+            // The student's details arrived, or the device was held over a
+            // duplicate: reload, so the server renders the details, the
+            // correction form and the duplicate-student panel.
+            if (data.unchanged === false
+                && (data.identity_received !== config.initial.identity_received || data.held !== config.initial.held)) {
+                this.stop();
+                window.location.reload();
+                return;
+            }
+
             Object.assign(this, data);
 
             if (['expired', 'declined'].includes(this.state)) {
@@ -72,7 +86,7 @@ export default (config) => ({
     },
 
     get active() {
-        return ['pending', 'consent', 'answering', 'locked'].includes(this.state);
+        return ['pending', 'consent', 'identity', 'held', 'answering', 'locked'].includes(this.state);
     },
 
     get countdown() {

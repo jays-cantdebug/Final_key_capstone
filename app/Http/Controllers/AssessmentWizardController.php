@@ -79,6 +79,11 @@ class AssessmentWizardController extends Controller
                 ...$duplicate,
                 'students' => $this->duplicateService->describe($duplicate['ids']),
             ],
+            // A student-device draft where the student fills in this step.
+            'remoteDraftInProgress' => $this->remoteAssessments->ownedDraft(
+                $request->user(),
+                $request->session()->get(self::SESSION_KEY.'.remote_draft_id'),
+            )?->collects_identity === true,
         ]);
     }
 

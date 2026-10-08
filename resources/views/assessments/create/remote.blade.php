@@ -1,8 +1,12 @@
 @php
     $isRetake = $existingStudentId !== null;
+    // The student fills in Step 1 on the device too.
+    $collectsIdentity = $draft->collects_identity;
     $statusLabels = [
         'pending' => 'Waiting for the student device',
         'consent' => 'Student device connected — waiting for the student to acknowledge the privacy notice',
+        'identity' => 'Waiting for the student to enter their details',
+        'held' => 'Stopped: the name the student entered matches an existing active student (see below). The student device shows only the generic “not available” message.',
         'answering' => 'Student is answering',
         'locked' => 'The student pressed Done — review the answers, then submit',
         'declined' => 'The student declined the privacy notice. Nothing was saved.',
@@ -10,7 +14,8 @@
         'gone' => 'This session is no longer available.',
     ];
     $state = $monitor['state'];
-    $isActive = in_array($state, ['pending', 'consent', 'answering', 'locked'], true);
+    $isActive = in_array($state, ['pending', 'consent', 'identity', 'held', 'answering', 'locked'], true);
+    $identityValue = fn (string $field): string => (string) old($field, $identity[$field] ?? '');
     // Server-rendered starting state, so the page is right before Alpine runs.
     $cloakUnless = fn (bool $visible): string => $visible ? '' : 'x-cloak';
     $selectedClass = 'border-primary bg-tint text-primary dark:border-primary-soft dark:bg-primary-soft/15 dark:text-primary-soft';
@@ -19,19 +24,23 @@
 
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-2xl font-semibold text-body dark:text-slate-100">{{ $isRetake ? 'Retake: Questionnaire' : 'Step 2: Questionnaire' }} &mdash; {{ $student->full_name }}</h2>
+        @if ($collectsIdentity)
+            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Steps 1 and 2 on the student device &mdash; {{ $student?->full_name ?? 'waiting for the student’s details' }}</h2>
+        @else
+            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">{{ $isRetake ? 'Retake: Questionnaire' : 'Step 2: Questionnaire' }} &mdash; {{ $student->full_name }}</h2>
+        @endif
     </x-slot>
 
     @unless ($isRetake)
-        @include('assessments.create._steps', ['currentStep' => 2])
+        @include('assessments.create._steps', ['currentStep' => $collectsIdentity && $identity === null ? 1 : 2])
     @endunless
 
     @if (session('status'))
         <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>
     @endif
 
-    @if ($errors->has('remote') || $errors->has('privacy_consent'))
-        <x-alert type="warning" class="mb-6">{{ $errors->first('remote') ?: $errors->first('privacy_consent') }}</x-alert>
+    @if ($errors->has('remote') || $errors->has('privacy_consent') || $errors->has('confirm_archived_match'))
+        <x-alert type="warning" class="mb-6">{{ $errors->first('remote') ?: ($errors->first('privacy_consent') ?: $errors->first('confirm_archived_match')) }}</x-alert>
     @endif
 
     @if ($loopback)
@@ -70,6 +79,9 @@
                         <p class="text-sm text-slate-600 dark:text-slate-400">Or scan this QR code on a tablet or phone, then press Begin.</p>
                     </div>
                 @endif
+                <p class="mt-4 text-xs text-slate-500 dark:text-slate-400" data-browser-advice>
+                    On a shared student PC, open the address in a guest or private browser window, so nothing the student types is kept in the browser. Outside a private LAN demo, serve the app over HTTPS: otherwise the student’s answers{{ $collectsIdentity ? ' and details' : '' }} cross the network unencrypted.
+                </p>
             </div>
 
             <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800" :class="state === 'pending' ? '' : 'lg:col-span-3'">
@@ -98,14 +110,25 @@
             The active questionnaire changed while the student was answering. Restart on the new version to have it answered again; the current answers will be cleared.
         </div>
 
+        @if ($collectsIdentity)
+            @include('assessments.create._remote-identity')
+        @endif
+
         {{-- Actions --}}
         <div class="flex flex-wrap items-center gap-3">
             <form method="POST" action="{{ route('assessments.create.remote.submit') }}" class="flex flex-wrap items-center gap-3">
                 @csrf
-                @if ($isRetake)
+                @if ($isRetake || $collectsIdentity)
+                    {{-- The staff attestation (Step 1's checkbox), next to Submit. --}}
                     <label class="flex items-start gap-2">
                         <x-checkbox name="privacy_consent" value="1" class="mt-1" :invalid="$errors->has('privacy_consent')" />
                         <span class="text-sm text-slate-700 dark:text-slate-300">{{ __('The student has acknowledged the data privacy consent notice for this assessment.') }}</span>
+                    </label>
+                @endif
+                @if (($duplicate['kind'] ?? null) === 'archived')
+                    <label class="flex items-start gap-2" data-confirm-archived>
+                        <x-checkbox name="confirm_archived_match" value="1" class="mt-1" :invalid="$errors->has('confirm_archived_match')" />
+                        <span class="text-sm text-slate-700 dark:text-slate-300">I understand. Create a new student record.</span>
                     </label>
                 @endif
                 <x-primary-button x-bind:disabled="state !== 'locked' || version_changed" :disabled="$state !== 'locked' || $monitor['version_changed']">{{ __('Submit and continue to review') }}</x-primary-button>
@@ -126,7 +149,7 @@
                 <x-secondary-button type="submit">{{ __('New code') }}</x-secondary-button>
             </form>
 
-            <form method="POST" action="{{ route('assessments.create.remote.store') }}" x-show="!active" {{ $cloakUnless(! $isActive) }}>
+            <form method="POST" action="{{ route($collectsIdentity ? 'assessments.create.remote.store-student' : 'assessments.create.remote.store') }}" x-show="!active" {{ $cloakUnless(! $isActive) }}>
                 @csrf
                 <x-secondary-button type="submit">{{ __('Send to student device again') }}</x-secondary-button>
             </form>

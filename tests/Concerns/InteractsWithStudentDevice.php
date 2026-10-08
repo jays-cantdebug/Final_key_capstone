@@ -29,11 +29,12 @@ trait InteractsWithStudentDevice
     /**
      * @return array{draft: RemoteAssessmentDraft, token: string, short_code: string}
      */
-    protected function createRemoteDraft(?User $psychometrician = null, ?QuestionnaireVersion $version = null): array
+    protected function createRemoteDraft(?User $psychometrician = null, ?QuestionnaireVersion $version = null, bool $collectsIdentity = false): array
     {
         return app(RemoteAssessmentService::class)->create(
             $psychometrician ?? $this->psychometrician(),
             $version ?? QuestionnaireVersion::query()->where('status', QuestionnaireVersion::STATUS_ACTIVE)->firstOrFail(),
+            $collectsIdentity,
         );
     }
 
@@ -153,6 +154,77 @@ trait InteractsWithStudentDevice
             'token' => (string) session('assessment_wizard.remote_token'),
             'short_code' => (string) session('assessment_wizard.remote_short_code'),
         ];
+    }
+
+    /**
+     * Psychometrician side: "Let the student fill this in on their device"
+     * from Step 1.
+     *
+     * @return array{draft: RemoteAssessmentDraft, token: string, short_code: string}
+     */
+    protected function sendStepOneToStudentDevice(): array
+    {
+        $this->post(route('assessments.create.remote.store-student'))->assertRedirect(route('assessments.create.remote'));
+
+        return [
+            'draft' => RemoteAssessmentDraft::query()->findOrFail(session('assessment_wizard.remote_draft_id')),
+            'token' => (string) session('assessment_wizard.remote_token'),
+            'short_code' => (string) session('assessment_wizard.remote_short_code'),
+        ];
+    }
+
+    /**
+     * The Step 1 fields as the student device sends them, on lookups made
+     * here (Active) unless given.
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function studentDetails(string $firstName = 'Rhea', string $middleName = 'D.', string $lastName = 'Baculio', array $overrides = []): array
+    {
+        return [
+            'first_name' => $firstName,
+            'middle_name' => $middleName,
+            'last_name' => $lastName,
+            'gender' => 'Female',
+            'course_id' => $overrides['course_id'] ?? Course::factory()->create()->id,
+            'year_level_id' => $overrides['year_level_id'] ?? YearLevel::factory()->create()->id,
+            'section_id' => $overrides['section_id'] ?? Section::factory()->create()->id,
+            ...$overrides,
+        ];
+    }
+
+    /**
+     * Student side: send the details form; always an empty 303 to /s/q
+     * when they pass validation.
+     *
+     * @param  array<string, mixed>  $details
+     */
+    protected function sendDetailsOnDevice(string $device, array $details): TestResponse
+    {
+        return $this->studentRequest('POST', route('student-device.identity'), $details, $device)
+            ->assertStatus(303)
+            ->assertRedirect(route('student-device.show'));
+    }
+
+    /**
+     * Student side, for a draft that collects the details: claim,
+     * acknowledge the notice, send the details, answer everything, Done.
+     * Returns the device secret.
+     *
+     * @param  array<string, mixed>  $details
+     * @param  array<int, int>|null  $responses
+     */
+    protected function completeWithDetailsOnStudentDevice(string $shortCode, QuestionnaireVersion $version, array $details, ?array $responses = null, int $value = 1): string
+    {
+        $device = $this->claimWithCode($shortCode);
+        $this->consentOnDevice($device);
+        $this->sendDetailsOnDevice($device, $details);
+        $this->answerAllOnDevice($device, $version, $value, $responses);
+        $this->studentRequest('POST', route('student-device.done'), [], $device, json: true)
+            ->assertOk()->assertExactJson(['state' => 'locked']);
+
+        return $device;
     }
 
     /**

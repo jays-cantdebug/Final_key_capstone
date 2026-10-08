@@ -31,6 +31,8 @@ return [
     // screen before the first question (the server refuses answers until
     // then). The notice text is in lang/en/student_device.php. Applies to
     // drafts created after the change; an existing draft keeps its setting.
+    // A draft where the student also types their own Step 1 details always
+    // shows the notice first, whatever this says.
     'student_consent' => (bool) env('REMOTE_ASSESSMENT_STUDENT_CONSENT', true),
 
     // How often the Psychometrician's live page polls, in milliseconds.

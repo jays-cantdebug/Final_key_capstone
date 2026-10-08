@@ -45,9 +45,14 @@ class RemoteAssessmentService
      * draft they already had. Returns the plain token and short code; only
      * their digests are stored.
      *
+     * `$collectsIdentity`: the student also types their own Step 1 details
+     * on the device. The privacy notice is then always shown first,
+     * whatever `remote_assessment.student_consent` says, so no detail is
+     * accepted before the student acknowledges it.
+     *
      * @return array{draft: RemoteAssessmentDraft, token: string, short_code: string}
      */
-    public function create(User $psychometrician, QuestionnaireVersion $version): array
+    public function create(User $psychometrician, QuestionnaireVersion $version, bool $collectsIdentity = false): array
     {
         $this->pruneExpired();
 
@@ -56,7 +61,7 @@ class RemoteAssessmentService
             $shortCode = $this->randomShortCode();
 
             try {
-                $draft = $this->database->transaction(function () use ($psychometrician, $version, $token, $shortCode): RemoteAssessmentDraft {
+                $draft = $this->database->transaction(function () use ($psychometrician, $version, $token, $shortCode, $collectsIdentity): RemoteAssessmentDraft {
                     RemoteAssessmentDraft::query()->where('psychometrician_id', $psychometrician->id)->delete();
 
                     return RemoteAssessmentDraft::query()->create([
@@ -65,7 +70,8 @@ class RemoteAssessmentService
                         'token_hash' => $this->hash('token', $token),
                         'short_code_hash' => $this->hash('code', $shortCode),
                         'status' => RemoteAssessmentDraft::STATUS_PENDING,
-                        'requires_consent' => (bool) config('remote_assessment.student_consent'),
+                        'requires_consent' => $collectsIdentity || (bool) config('remote_assessment.student_consent'),
+                        'collects_identity' => $collectsIdentity,
                         'expires_at' => now()->addMinutes((int) config('remote_assessment.ttl_minutes')),
                     ]);
                 });
@@ -187,8 +193,74 @@ class RemoteAssessmentService
                 'short_code_hash' => null,
                 'device_hash' => null,
                 'responses' => null,
+                // None can exist before consent; cleared all the same.
+                'identity' => null,
+                'identity_submitted_at' => null,
+                'identity_corrected_at' => null,
+                'held_at' => null,
                 'revision' => $fresh->revision + 1,
             ])->save();
+        });
+    }
+
+    /**
+     * The student's own Step 1 details, already validated, accepted once per
+     * draft and only after the privacy notice. `$held` (the caller found an
+     * active student with this name) stops the device at the generic
+     * message. The same single update runs either way, so the reply can't
+     * differ.
+     *
+     * @param  array<string, mixed>  $identity
+     *
+     * @throws RemoteDraftStateException when the draft isn't waiting for them.
+     */
+    public function saveIdentity(RemoteAssessmentDraft $draft, array $identity, bool $held): void
+    {
+        $this->database->transaction(function () use ($draft, $identity, $held): void {
+            $fresh = $this->lockedFresh($draft);
+
+            if ($fresh === null || ! $fresh->awaitingIdentity()) {
+                throw new RemoteDraftStateException($this->stateOf($fresh));
+            }
+
+            $fresh->forceFill([
+                'identity' => $identity,
+                'identity_submitted_at' => now(),
+                'held_at' => $held ? now() : null,
+                'revision' => $fresh->revision + 1,
+            ])->save();
+        });
+    }
+
+    /**
+     * The Psychometrician's correction of the details the student typed
+     * (answers are never touched). A held device continues once
+     * `$matchesActiveStudent` is false. Returns whether it was released.
+     *
+     * @param  array<string, mixed>  $identity
+     *
+     * @throws RemoteDraftStateException when there are no details to correct yet.
+     */
+    public function correctIdentity(RemoteAssessmentDraft $draft, array $identity, bool $matchesActiveStudent): bool
+    {
+        return $this->database->transaction(function () use ($draft, $identity, $matchesActiveStudent): bool {
+            $fresh = $this->lockedFresh($draft);
+
+            if ($fresh === null || ! $fresh->collects_identity || $fresh->identity_submitted_at === null
+                || $fresh->status === RemoteAssessmentDraft::STATUS_DECLINED) {
+                throw new RemoteDraftStateException('unavailable');
+            }
+
+            $released = $fresh->isHeld() && ! $matchesActiveStudent;
+
+            $fresh->forceFill([
+                'identity' => $identity,
+                'identity_corrected_at' => now(),
+                'held_at' => $released ? null : $fresh->held_at,
+                'revision' => $fresh->revision + 1,
+            ])->save();
+
+            return $released;
         });
     }
 
@@ -210,7 +282,7 @@ class RemoteAssessmentService
         return $this->database->transaction(function () use ($draft, $questionId, $value): int {
             $fresh = $this->lockedFresh($draft);
 
-            if ($fresh === null || $fresh->status !== RemoteAssessmentDraft::STATUS_ANSWERING || $fresh->awaitingConsent()) {
+            if ($fresh === null || ! $this->takesAnswers($fresh)) {
                 throw new RemoteDraftStateException($this->stateOf($fresh));
             }
 
@@ -244,7 +316,7 @@ class RemoteAssessmentService
         return $this->database->transaction(function () use ($draft): array {
             $fresh = $this->lockedFresh($draft);
 
-            if ($fresh === null || $fresh->status !== RemoteAssessmentDraft::STATUS_ANSWERING || $fresh->awaitingConsent()) {
+            if ($fresh === null || ! $this->takesAnswers($fresh)) {
                 throw new RemoteDraftStateException($this->stateOf($fresh));
             }
 
@@ -287,9 +359,11 @@ class RemoteAssessmentService
     }
 
     /**
-     * The state a student device is told about: `consent`, `answering`,
+     * The state a student device is told about: `consent`, `identity`
+     * (its own details), `answering`, `help` (held: the generic message),
      * `locked`, or `unavailable` for anything else (missing, expired,
-     * declined). Never more than that.
+     * declined). Never more than that — in particular never why a draft is
+     * held.
      */
     public function stateOf(?RemoteAssessmentDraft $draft): string
     {
@@ -299,6 +373,8 @@ class RemoteAssessmentService
 
         return match (true) {
             $draft->awaitingConsent() => 'consent',
+            $draft->awaitingIdentity() => 'identity',
+            $draft->status === RemoteAssessmentDraft::STATUS_ANSWERING && $draft->isHeld() => 'help',
             $draft->status === RemoteAssessmentDraft::STATUS_ANSWERING => 'answering',
             $draft->status === RemoteAssessmentDraft::STATUS_LOCKED => 'locked',
             default => 'unavailable',
@@ -428,7 +504,8 @@ class RemoteAssessmentService
 
     /**
      * What the Psychometrician's live page shows: pending, consent,
-     * answering, locked, declined or expired.
+     * identity (waiting for the student's details), held (the details
+     * match an active student), answering, locked, declined or expired.
      */
     public function monitorState(RemoteAssessmentDraft $draft): string
     {
@@ -440,6 +517,8 @@ class RemoteAssessmentService
             $draft->status === RemoteAssessmentDraft::STATUS_PENDING => 'pending',
             $draft->status === RemoteAssessmentDraft::STATUS_DECLINED => 'declined',
             $draft->awaitingConsent() => 'consent',
+            $draft->awaitingIdentity() => 'identity',
+            $draft->status === RemoteAssessmentDraft::STATUS_ANSWERING && $draft->isHeld() => 'held',
             default => $draft->status,
         };
     }
@@ -475,6 +554,11 @@ class RemoteAssessmentService
             'consented' => $draft->consented_at !== null,
             'claimed' => $draft->device_hash !== null,
             'refused_device_attempts' => $draft->refused_device_attempts,
+            // Flags only: the details themselves are rendered by the page
+            // (it reloads when these change), never sent in the poll.
+            'collects_identity' => $draft->collects_identity,
+            'identity_received' => $draft->identity_submitted_at !== null,
+            'held' => $draft->isHeld(),
             'answers' => (object) $responses,
             'answered' => count($responses),
             'total' => $draft->questionnaireVersion->questions->count(),
@@ -608,6 +692,15 @@ class RemoteAssessmentService
         }
 
         return $deviceSecret;
+    }
+
+    /**
+     * Answering, past the privacy notice and the details, and not held.
+     */
+    private function takesAnswers(RemoteAssessmentDraft $draft): bool
+    {
+        return $draft->status === RemoteAssessmentDraft::STATUS_ANSWERING
+            && ! $draft->awaitingConsent() && ! $draft->awaitingIdentity() && ! $draft->isHeld();
     }
 
     private function lockedFresh(RemoteAssessmentDraft $draft): ?RemoteAssessmentDraft

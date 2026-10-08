@@ -5,30 +5,42 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Exceptions\RemoteDraftStateException;
+use App\Http\Requests\AssessmentStudentRequest;
 use App\Http\Responses\StudentDeviceResponse;
 use App\Models\RemoteAssessmentDraft;
+use App\Services\AssessmentService;
 use App\Services\RemoteAssessmentService;
+use App\Services\StudentDuplicateService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\MessageBag;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The student device: a session-less, login-less questionnaire reached by
  * a typed short code or a QR link (routes/student-device.php). It only
- * ever shows the privacy notice (when enabled), the instructions and
- * rating scale, the questions and answer buttons, a progress counter, a
- * save status line, Done, and the thank-you message — or the generic
- * "not available" message. It never reads the wizard session or any
- * student record; the draft it works on holds none.
+ * ever shows the privacy notice (when enabled, and always before the
+ * details form), the student's own details form (when the Psychometrician
+ * chose that the student fills in Step 1), the instructions and rating
+ * scale, the questions and answer buttons, a progress counter, a save
+ * status line, Done, and the thank-you message — or the generic "not
+ * available" message. It never reads the wizard session, and never shows
+ * a student record: the only student data it handles is what the student
+ * types into the details form, which is echoed back only on that form,
+ * only when it fails validation, and never after it is accepted.
  */
 class StudentDeviceController extends Controller
 {
-    public function __construct(private readonly RemoteAssessmentService $remoteAssessments) {}
+    public function __construct(
+        private readonly RemoteAssessmentService $remoteAssessments,
+        private readonly AssessmentService $assessmentService,
+        private readonly StudentDuplicateService $duplicateService,
+    ) {}
 
     /**
      * GET /s — the short-code form, or straight back to the questionnaire
@@ -113,10 +125,63 @@ class StudentDeviceController extends Controller
 
         return match ($this->remoteAssessments->stateOf($draft)) {
             'consent' => response()->view('student-device.consent'),
+            'identity' => $this->identityForm(),
             'answering' => response()->view('student-device.questionnaire', $this->questionnaireData($draft)),
+            // Held: the generic message, word for word, whatever the reason.
+            'help' => response()->view('student-device.held'),
             'locked' => response()->view('student-device.thanks'),
             default => $this->unavailableAndForgetDevice($request),
         };
+    }
+
+    /**
+     * POST /s/identity — the student's own Step 1 details (after the
+     * privacy notice), with Step 1's validation and normalization.
+     *
+     * Whether the name matches an existing student changes nothing in this
+     * reply: the same validation, the same duplicate query and the same
+     * single update run either way, and the answer is always the same
+     * empty 303 to /s/q. Only that page differs — a held draft shows the
+     * generic message — and the Psychometrician's live page shows the match.
+     * A draft not waiting for details gets the same 303 too.
+     */
+    public function identity(Request $request): Response
+    {
+        $draft = $this->draft($request);
+
+        if ($draft === null) {
+            return $this->unavailableAndForgetDevice($request);
+        }
+
+        if (! $draft->awaitingIdentity()) {
+            return $this->toQuestionnaire();
+        }
+
+        $input = $request->only(AssessmentStudentRequest::IDENTITY_FIELDS);
+        $validator = Validator::make(
+            [...$input, ...AssessmentStudentRequest::normalizedNameParts($input)],
+            AssessmentStudentRequest::studentDeviceIdentityRules(),
+            AssessmentStudentRequest::studentDeviceIdentityMessages(),
+        );
+
+        if ($validator->fails()) {
+            // Only what was typed on this device, back into its own form.
+            return $this->identityForm($validator->getData(), $validator->errors(), Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $identity = $validator->validated();
+        foreach (['course_id', 'year_level_id', 'section_id'] as $field) {
+            $identity[$field] = (int) $identity[$field];
+        }
+
+        $matches = $this->duplicateService->findMatches($identity['first_name'], $identity['middle_name'], $identity['last_name']);
+        try {
+            $this->remoteAssessments->saveIdentity($draft, $identity, held: $matches['active']->isNotEmpty());
+        } catch (RemoteDraftStateException) {
+            // Already sent (a double click): show where it is.
+        }
+
+        return $this->toQuestionnaire();
     }
 
     /**
@@ -303,6 +368,26 @@ class StudentDeviceController extends Controller
     private function failedEntryKey(Request $request): string
     {
         return 'student-device-failed-entry|'.$request->ip();
+    }
+
+    /**
+     * The details form. Its lists come from the lookup tables only (Active
+     * courses, year levels and sections — the same queries as Step 1), never
+     * from a student record. `$old` and `$errors` are only ever the input
+     * this device just sent.
+     *
+     * @param  array<string, mixed>  $old
+     */
+    private function identityForm(array $old = [], ?MessageBag $errors = null, int $status = Response::HTTP_OK): Response
+    {
+        return response()->view('student-device.identity', [
+            'courses' => $this->assessmentService->activeCourses(),
+            'yearLevels' => $this->assessmentService->activeYearLevels(),
+            'sections' => $this->assessmentService->activeSections(),
+            'genders' => AssessmentStudentRequest::GENDERS,
+            'old' => array_map(fn (mixed $value): string => is_scalar($value) ? (string) $value : '', $old),
+            'fieldErrors' => $errors ?? new MessageBag,
+        ], $status);
     }
 
     /**

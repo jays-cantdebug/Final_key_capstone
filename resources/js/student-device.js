@@ -8,9 +8,11 @@
  *   question wins. Answers tapped before the script ran are sent on start. A failed save is retried with backoff and the status
  *   line says "Not saved — reconnecting…". Done stays disabled until every
  *   required statement is answered and every answer is saved.
- * - The state is polled (every 5 s while answering, 3 s once locked): when
- *   the draft is gone the page shows the generic message; when staff return
- *   a locked questionnaire, the page reloads for editing.
+ * - The state is polled (every 5 s while answering, 3 s once locked or
+ *   held): when the draft is gone the page shows the generic message; when
+ *   staff return a locked questionnaire, or let a held one continue, the
+ *   page reloads.
+ * - The details form (identity) is a plain HTML form and needs no script.
  * - A page restored from the back/forward cache is reloaded, so it always
  *   reflects the server's state.
  */
@@ -29,6 +31,17 @@ const root = document.querySelector('[data-student-device]');
 
 if (root?.dataset.studentDevice === 'questionnaire') {
     initQuestionnaire(root);
+} else if (root?.dataset.studentDevice === 'held') {
+    // Held: reopen the page once the Psychometrician lets it continue (or
+    // it ends, which then shows the generic message for good).
+    pollState(root.dataset.stateUrl, LOCKED_POLL_MS, (state) => {
+        if (state !== 'help') {
+            window.location.replace(root.dataset.pageUrl);
+            return false;
+        }
+
+        return true;
+    });
 } else if (root?.dataset.studentDevice === 'locked') {
     pollState(root.dataset.stateUrl, LOCKED_POLL_MS, (state) => {
         if (state === 'answering' || state === 'consent') {
@@ -132,7 +145,7 @@ function initQuestionnaire(container) {
     const handleState = (state) => {
         if (state === 'unavailable') {
             showUnavailable();
-        } else if (state === 'locked' || state === 'consent' || state === 'reload') {
+        } else if (['locked', 'consent', 'identity', 'help', 'reload'].includes(state)) {
             reloadPage();
         }
     };

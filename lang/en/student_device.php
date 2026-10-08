@@ -45,6 +45,24 @@ return [
     'consent_accept' => 'I understand and agree',
     'consent_decline' => 'I do not agree',
 
+    // The student's own details (only when the staff member chose that the
+    // student fills them in). Nothing here may come from a student record.
+    'identity_heading' => 'Your details',
+    'identity_help' => 'Please type your own details. The staff member will check them with you.',
+    'identity_first_name' => 'First Name',
+    'identity_middle_name' => 'Middle Name',
+    'identity_middle_name_help' => 'Your middle initial only, with a period, e.g., P.',
+    'identity_last_name' => 'Last Name',
+    'identity_gender' => 'Gender',
+    'identity_gender_placeholder' => 'Select gender',
+    'identity_course' => 'Course',
+    'identity_course_placeholder' => 'Select a course',
+    'identity_year_level' => 'Year Level',
+    'identity_year_level_placeholder' => 'Select a year level',
+    'identity_section' => 'Section',
+    'identity_section_placeholder' => 'Select a section',
+    'identity_submit' => 'Continue',
+
     'counter' => ':answered of :total answered',
     'done' => 'Done',
     'missing' => 'Please answer every statement before pressing Done.',

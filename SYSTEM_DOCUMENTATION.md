@@ -3,6 +3,8 @@
 **NORMI** (Web-Based Student Depression, Anxiety and Stress Assessment) is a school guidance and psychometric records portal built for Northern Mindanao Colleges, Inc. It lets school staff run the DASS-21 mental health screening on students, get an AI-assisted severity classification, route serious cases to the guidance office, and keep proper records for reporting and audits.
 
 > **Scope change (2026-10-08): student device assessment.** NORMI was built as a closed staff system with no student-facing access. It now has one deliberate exception: the Psychometrician can send the questionnaire to a separate **student device**, where the student answers it on their own screen, reached with a short code or QR link and **no login**. That student page shows only the privacy notice, the questions and a thank-you message; everything else (scoring, the AI, the review, saving) still happens on the Psychometrician's side. See [Student Device Assessment](#student-device-assessment-scope-change). Statements elsewhere in this document about a closed staff system now carry this exception.
+>
+> **Second approved exception (2026-10-08): the student can fill in Step 1 too.** At the adviser's request, the Psychometrician can instead let the student type their **own details** (name, gender, course, year level, section) on the student device, after the privacy notice and before the questionnaire. The device still never shows any record that already exists in the system. See [When the student fills in Step 1 too](#when-the-student-fills-in-step-1-too), including the one remaining "tell" for the adviser and the DPO to decide on.
 
 This document explains what the system does, how each part works, and — just as importantly — *why* it was built that way. It's written in plain language for a non-technical reader (like a thesis panel), not as a code reference.
 
@@ -42,7 +44,7 @@ This document explains what the system does, how each part works, and — just a
 
 There are exactly two staff roles. There is no public registration — accounts are created by an administrator, not signed up for.
 
-Students are **not** users: they have no account and never log in. Since the 2026-10-08 scope change, a student can answer the questionnaire on a separate student device (see [Student Device Assessment](#student-device-assessment-scope-change)), but that page needs only a one-time code from the Psychometrician, can't reach any other page, and shows nothing about the student or any result.
+Students are **not** users: they have no account and never log in. Since the 2026-10-08 scope change, a student can answer the questionnaire on a separate student device (see [Student Device Assessment](#student-device-assessment-scope-change)), but that page needs only a one-time code from the Psychometrician, can't reach any other page, and shows nothing already stored about any student, nor any result. When the Psychometrician chooses it, the student also types their own details there; the page shows those only in its own form, back to the student who typed them.
 
 | Role | What they do |
 |---|---|
@@ -184,13 +186,15 @@ This is the core workflow: a 3-step guided process — **Student Information →
 
 Nothing is written to the database until the Psychometrician reaches the final step and clicks **Confirm & Save** or **Correct & Save**. Everything in between — the student's name/course/section, their answers to all 21 questions, even the AI's computed classification — lives only in the login session, not in any of the assessment tables. Sessions are stored server-side in the database's `sessions` table, so this data does sit there, in that session's row, until it is saved, cleared or expires (see [Data Encryption & Privacy](#data-encryption--privacy-ra-10173)).
 
-**Scope change (2026-10-08): one temporary table.** When the questionnaire is sent to a student device, the student's answers can't live in the Psychometrician's session, because they arrive from another device. They are kept temporarily in `remote_assessment_drafts`: answers encrypted, no student name, number or any other student detail, and no IP address. That row is deleted when the Psychometrician submits, cancels or leaves the wizard, or when it expires. It is never audited. So nothing is written to the *assessment* tables until the final save, and an abandoned student-device run still leaves no trace once its draft is gone (see [Student Device Assessment](#student-device-assessment-scope-change)).
+**Scope change (2026-10-08): one temporary table.** When the questionnaire is sent to a student device, the student's answers can't live in the Psychometrician's session, because they arrive from another device. They are kept temporarily in `remote_assessment_drafts`: answers encrypted, no student number, no link to a student record, and no IP address. When the student fills in Step 1 on the device as well, the details they type are kept in the same row, also encrypted, and nowhere else (not in the Psychometrician's session) until Submit. That row is deleted when the Psychometrician submits, cancels or leaves the wizard, or when it expires. It is never audited. So nothing is written to the *assessment* tables until the final save, and an abandoned student-device run still leaves no trace once its draft is gone (see [Student Device Assessment](#student-device-assessment-scope-change)).
 
 **Why build it this way?** An earlier version of this system *did* save the student record as soon as Step 1 was submitted — but that meant every time a Psychometrician started a wizard and then closed the tab, got interrupted, or made a mistake and restarted, a half-finished "student" record was permanently left behind in the database with no actual assessment attached to it. Dozens of these orphan records accumulated. Deferring all saving to the final step means an abandoned wizard — at any point, for any reason — leaves **zero trace** in the database.
 
 ### Step 1: Student Information
 
 Captures First Name, Middle Name, Last Name (as three separate fields, not one "Full Name" field, to avoid ambiguous name-splitting), Gender, Course, Year Level, Section, and a privacy consent checkbox. When the questionnaire is then sent to a student device, this checkbox is the staff attestation, and the student also acknowledges the notice on their own screen (see [Student Device Assessment](#student-device-assessment-scope-change)).
+
+Above the form, **Let the student fill this in on their device** lets the student type these details themselves on a student device, followed by the questionnaire (see [When the student fills in Step 1 too](#when-the-student-fills-in-step-1-too)). The same fields, rules and tidying below apply there; the checkbox moves to the live page's Submit form.
 
 **Middle Name format rule:** the Middle Name field only accepts a single letter followed by a period (e.g., `P.`) — a middle *initial*, not a full middle name. The letter is A–Z or Ñ (a letter of the Filipino alphabet). Lowercase is accepted but automatically converted to uppercase before it's saved, so `p.` becomes `P.` and `ñ.` becomes `Ñ.` without the user needing to retype it. Some keyboards type Ñ as a plain N followed by a separate tilde mark; when the server's PHP has the intl extension enabled, that is combined into the single letter Ñ before the check, so it is accepted and saved the same way. Without intl it is left as typed and rejected with the normal format message (retyping the letter as a single Ñ works). If the format doesn't match, a floating tooltip explains the expected format with an example. Extra spaces in the three name fields are tidied up before anything else happens (`"Dela  Cruz "` becomes `"Dela Cruz"`).
 
@@ -205,6 +209,7 @@ A returning student must be assessed through **Take Again** (see below), never r
 - **An active student has the name** → the wizard stops at Step 1 and nothing is staged or saved. A message (which stays on screen until closed with its × button) names the existing student — student number, course, year level, section, and how many assessments they have — with a **Take Again** button and a **View student record** link. When several students have the name, it lists one row per student, each with its own buttons, plus an "Open these in Students" link to the Students list searched by first + last name. **There is no way to continue as a new student.**
 - **Only an archived student has the name** → a warning, not a block, because archived students can't use Take Again (they no longer appear in the Students list, and their profile can't be opened), so the user would otherwise be stuck. The warning says continuing will create a new, separate record, or that the student can be restored from Archived Students instead (see [Student Information Management](#student-information-management)), and links to the archived student's assessments in Assessment History. To continue, the Psychometrician must tick "I understand. Create a new student record." and submit again. The entered details and the privacy consent tick are kept when the warning appears, so ticking the box and clicking Continue is all that's needed; if that submit fails some other check, the warning and its tick stay on screen with the error rather than disappearing. That confirmation is recorded in the Audit Log as its own **"Archived Match Confirmed"** entry (module *Student Information*) against the newly created student, listing the archived student(s) it was confirmed against. It is written at the final save, not at Step 1 — consistent with the wizard writing nothing until the end, an abandoned run leaves no audit entry behind.
 - If both an active and an archived student match, the active one wins: the wizard is blocked.
+- **When the student typed the details on a student device**, the same check runs when they send the form and again on Submit, and the same panel appears, but only on the Psychometrician's live page; the student device shows only the generic message (see [When the student fills in Step 1 too](#when-the-student-fills-in-step-1-too)).
 
 **The final save checks again.** Step 1's check alone isn't enough: the same student could be registered from another browser tab while this assessment is in progress, or a stale wizard session or a double submit could reach the final save. So `AssessmentService::save()` repeats the check inside its database transaction, just before registering the student. If an active student with the name now exists, nothing at all is saved (no student, assessment, result, flag or notification), and the Psychometrician is returned to Step 1 with a message explaining the student was registered while they were working, and a Take Again button. The questionnaire answers from that run are not kept — Take Again starts a fresh questionnaire. This check never applies to Take Again itself, which attaches to an existing student by design. Separately, the Step 3 Confirm & Save / Correct & Save buttons ignore every click after the first, so a double-click sends only one save.
 
@@ -266,6 +271,8 @@ Both buttons sit under the same three correction dropdowns, so the save checks t
 
 ### How it works
 
+There are two ways to start. This part describes the first, where only the questionnaire goes to the device; the second, where the student fills in Step 1 too, is described in [When the student fills in Step 1 too](#when-the-student-fills-in-step-1-too) and works the same way from step 3 on.
+
 1. **Step 1** is unchanged. The Psychometrician enters the student's details and ticks the privacy consent box, which is now the *staff attestation* that the notice was explained.
 2. **Step 2: Send to student device.** Instead of answering on her own PC, the Psychometrician presses **Send to student device**. This creates a temporary draft pinned to the Active questionnaire version. It also runs one extra duplicate check, which only warns: if an active student with the same name was registered since Step 1, the live page says so, and the final save will still refuse a second record as always.
 3. **The live page** (Psychometrician only) shows:
@@ -279,7 +286,7 @@ Both buttons sit under the same three correction dropdowns, so the save checks t
    The page checks for changes every 1.5 seconds; when nothing changed, the server sends only a few small fields.
 4. **On the student device** the student opens the address and types the code, or scans the QR code on a tablet or phone and presses **Begin**. They then acknowledge the privacy notice (when that screen is on), answer the questionnaire (every tap is saved immediately) and press **Done**. The page then shows only "Thank you … please hand the device back" and is locked: the student can't go back and change answers.
 5. **The Psychometrician's actions:**
-   - **Submit** works only once the student pressed Done.
+   - **Submit** works only once the student pressed Done. On a shared student PC, the live page recommends a guest or private browser window, and HTTPS outside a private LAN demo.
    - **Return to student** unlocks the answers so the student can edit them again.
    - **New code** gives a fresh code, keeps the answers and the acknowledgment, and stops the old device and the old code from working. Use it if the student's browser was closed in a private window, or the wrong device took the code.
    - **Restart on the new version** appears if another questionnaire version was activated meanwhile. It clears the answers and the student device reloads with the new questions.
@@ -291,6 +298,7 @@ Both buttons sit under the same three correction dropdowns, so the save checks t
 It shows only:
 
 - the privacy notice, with Accept and Decline;
+- when the student fills in Step 1 too: the details form (First, Middle and Last Name, Gender, and the Course, Year Level and Section lists), showing back only what the student typed on that device, and only when it needs correcting;
 - the instructions and rating scale;
 - each statement with its item number and four answer buttons;
 - a small "*n* of 21 answered" counter;
@@ -300,7 +308,8 @@ It shows only:
 
 It never shows:
 
-- the student's name or any student detail;
+- any data that already exists in the system: no student record, no student number, no assessment count, no other student's name, and no hint whether a typed name is already registered (beyond the one "tell" described under [When the student fills in Step 1 too](#when-the-student-fills-in-step-1-too));
+- the student's name or details once they have been sent, not even back to that student (the questionnaire has no name on it);
 - the subscale of a statement;
 - scores, severity levels, flags or the AI's result;
 - a menu, sidebar or link to any other page;
@@ -316,10 +325,13 @@ It uses its own minimal page layout. Anything wrong — an invalid, used, expire
 | `POST /s` | anyone, same-origin only | uses the code: binds this device and opens the questionnaire, or the generic message |
 | `GET /s/t/{token}` | anyone | the **Begin** page for a QR link (opening the link uses nothing up), or the generic message |
 | `POST /s/t/{token}` | anyone, same-origin only | Begin: binds this device and opens the questionnaire, or the generic message |
-| `GET /s/q` | the bound device | the privacy notice, the questionnaire, or the thank-you message |
+| `GET /s/q` | the bound device | the privacy notice, the details form (when the student fills in Step 1), the questionnaire, the thank-you message, or — when held — the generic message |
 | `POST /s/consent`, `POST /s/decline` | the bound device | records the acknowledgment / ends the draft |
+| `POST /s/identity` | the bound device, same-origin only | takes the student's own details once: always an empty redirect to `/s/q`, whether or not the name matches anyone; or the form again (422) with what was typed and a message per field |
 | `POST /s/answer`, `POST /s/done` | the bound device | saves one answer / locks the answers (or lists the item numbers still missing) |
-| `GET /s/state` | the bound device | `{"state": …}` and nothing else |
+| `GET /s/state` | the bound device | `{"state": …}` and nothing else: `consent`, `identity`, `answering`, `help` (held), `locked`, `reload` or `unavailable` |
+
+**Every field the student device can send:** `code` (`POST /s`); `first_name`, `middle_name`, `last_name`, `gender`, `course_id`, `year_level_id`, `section_id` (`POST /s/identity`); `question_id`, `value`, `version` (`POST /s/answer`); `version` (`POST /s/done`, and `?version=` on `GET /s/state`). Anything else it sends is ignored. **Every JSON field it can receive:** `state`, `answered` (a count) and `missing` (item numbers).
 
 ### Why the student device can't reach anything else
 
@@ -335,7 +347,8 @@ It uses its own minimal page layout. Anything wrong — an invalid, used, expire
   - a device holding only its cookie is sent to the login page by every staff route;
   - no student response sets a session cookie or creates a session row;
   - every response carries the headers above;
-  - no student response — page source, JSON, error pages (including a forced server error with debug output on) or headers — contains a student's name, number, course, year level, section, a score, a level, a flag or a link into the app.
+  - no student response — page source, JSON, error pages (including a forced server error with debug output on) or headers — contains a student's name, number, course, year level, section, a score, a level, a flag or a link into the app. This includes a run where the student types the name of an already registered student: the saved student's course, year level and section are made inactive in that test, so if they appeared anywhere it would be a leak;
+  - the details form lists exactly the Active course, year level and section rows, and a typed name that matches an active student, an archived student or nobody gets byte-for-byte the same reply, with the same number of database queries.
 
 ### Privacy consent on the student's own screen (RA 10173)
 
@@ -343,7 +356,45 @@ It uses its own minimal page layout. Anything wrong — an invalid, used, expire
 - Declining ends the draft: no answers are kept, the student is asked to hand the device back, and the live page tells the Psychometrician "The student declined the privacy notice."
 - **The notice text is a placeholder.** It lives in `lang/en/student_device.php`, is clearly marked "to be replaced by the DPO's approved text", and must be replaced with the privacy notice approved by Northern Mindanao Colleges, Inc.'s Data Protection Officer before real use.
 - **For a student under 18, a parent's or guardian's consent must also be confirmed** before the assessment. The system does not do this.
-- The adviser can switch the student's own acknowledgment off with `REMOTE_ASSESSMENT_STUDENT_CONSENT=false`. The questionnaire then starts straight away, and consent rests on the Step 1 attestation alone.
+- The adviser can switch the student's own acknowledgment off with `REMOTE_ASSESSMENT_STUDENT_CONSENT=false`. The questionnaire then starts straight away, and consent rests on the Step 1 attestation alone. **This never applies when the student fills in Step 1 too:** the notice is then always shown first, whatever the setting, so no detail is accepted before the student acknowledges it.
+
+### When the student fills in Step 1 too
+
+> **Second approved exception, 2026-10-08, at the adviser's request**, so that the Psychometrician no longer types the student's details. The device still never shows any data that already exists in the system.
+
+**The flow:**
+
+1. **Start from Step 1.** Above the Step 1 form, the Psychometrician presses **Let the student fill this in on their device**. This starts the wizard over, exactly like submitting Step 1: anything staged before and any earlier student-device draft are discarded. The live page opens with the code and QR code. Nothing about the student is kept in the Psychometrician's session: until Submit, the details exist only in the draft, encrypted.
+2. **On the student device**, in this order: the code or QR link, the **privacy notice** (always, see above), the **details form**, the questionnaire, Done, and the thank-you message. The server refuses details before the notice is acknowledged, and refuses answers before the details are in.
+3. **The details form** has the same fields, rules and tidying as Step 1: First, Middle and Last Name, Gender, Course, Year Level and Section. The middle initial must be a letter (A–Z or Ñ) and a period; it is uppercased, a two-part Ñ is combined, and extra spaces are removed. The error messages are the same too.
+   - **Lists:** the Course, Year Level and Section lists come only from the lookup tables managed in Course, Year Level and Section Management, never from a student record: the Active, unarchived rows, the same lists Step 1 shows (`code - name` for courses, the label for year levels, the name for sections). Gender has the three fixed choices. An inactive, archived or made-up id gets exactly the same reply as an empty choice ("Please select a Course."), so the form reveals nothing about other rows.
+   - **Shared PCs:** autocomplete is off on the form and on every field.
+   - **Once only:** the details are accepted once per draft. After that the device never shows them again, not even after New code, Return to student or a reload.
+4. **The live page** says "Waiting for the student to enter their details" until they arrive. Then it shows them, with the time they were entered, and a **Save corrections** form with Step 1's rules, so the Psychometrician can fix a typo with the student. The answers stay read-only: the correction form only ever sends the Step 1 fields, and anything else in it is ignored. The page's polling carries only "details received" and "held" flags, never the details themselves; the page reloads to show them.
+5. **The duplicate check, without telling the student.** When the student sends the form, the server runs the same check as Step 1. Whatever the result, the device gets exactly the same reply: an empty redirect to its own page, with the same headers, after the same database work. Tests check that the reply and the number of database queries are identical for an active match, an archived match and no match.
+   - **No match, or only an archived student:** the questionnaire follows as usual. An archived match is handled at Submit, as at Step 1: the archived-student warning appears on the live page, the Submit form gets the box "I understand. Create a new student record.", and the confirmation is recorded as "Archived Match Confirmed" at the final save.
+   - **An active student has the name:** the draft is **held**. The device shows only the generic message, "This page is not available. Please ask the staff member for help." — word for word the same as for any other failure — and refuses answers and Done. The live page says "Stopped: the name the student entered matches an existing active student", and shows the same panel as Step 1, with the student's record, number, course and assessment count, and Take Again.
+   - **Then:** the Psychometrician either uses **Take Again** from the panel, or **corrects the name** if it was mistyped. Take Again discards this draft, so the device keeps showing the generic message; the retake is sent to the device again with a **new code**, and shows only the notice and the questionnaire. After a correction, if no active student has the corrected name, the device continues by itself within a few seconds.
+6. **Submit** needs the staff attestation box (Step 1's privacy checkbox, moved here), and works only once the student pressed Done. It checks the details again with Step 1's rules and runs the duplicate check again, exactly as Step 1 does: an active match blocks, and an archived match needs the confirm box. It then stages the details as Step 1 would, with the student's own on-device acknowledgment time as the privacy consent time, and continues into the unchanged Step 3. The final save repeats the duplicate check as always. **Nothing is written to the `students` table until Confirm & Save or Correct & Save.**
+
+**Take Again is unchanged.** The Psychometrician picks the existing student on their own PC. A retake sent to the device never shows the details form, and refuses details.
+
+#### The one remaining "tell" (for the adviser and the DPO to decide)
+
+A held screen tells the person at the device that **the name they typed belongs to a registered, active student**. The words are the generic ones, but stopping right after the details form, instead of continuing to the questions, is itself the signal. Nothing else leaks: not which student, their number, course or history, nor whether an archived student has the name. To someone reading the network traffic in the browser's developer tools, the held page also differs slightly from a dead code: it returns 200 rather than 404, and its state reads `help`.
+
+**It is limited to one probe per staff-issued code.** The details are accepted once per draft; a second try with another name changes nothing and gets the same reply. Each code is handed out in person by the Psychometrician, and every hold shows on their live page. Trying more names means asking the staff for more codes.
+
+**An alternative would remove the tell entirely:** let the device continue to the questionnaire on a match, and let the Psychometrician resolve it at Submit, which blocks a duplicate anyway. That was not chosen, because the requirement was for the device to stop. Whether to accept the tell is a decision for the adviser and the Data Protection Officer.
+
+#### Privacy risks to weigh
+
+- **Names now cross the network to a page without a login.** They are protected by the one-time code, the one-device binding, the same-origin rule and `no-store`, but over plain HTTP they travel unencrypted. **Use HTTPS outside a private LAN demo**; the live page says so.
+- **Shared student PCs.** Autocomplete is off, and nothing is cached, but a browser can still keep form history or offer to save an address; Chrome doesn't always honour "autocomplete off". **Use a guest or private window on the student PC**; the live page says so.
+- **Impersonation.** A student could type someone else's name, and the system can't tell who is at the device. The Psychometrician must **verify the student in person**, correct the details if needed, and tick the attestation on the Submit form.
+- **The draft now holds a name.** It is encrypted with `APP_KEY` and deleted on every exit, but a leaked `APP_KEY` would also expose the details of drafts still in progress.
+- **The consent text is a placeholder** pending the DPO's approved text, and **a parent's or guardian's consent for a student under 18 must still be confirmed** outside the system (see above).
+- **The Audit Log records only the final student record**, created at Confirm & Save (with the assessment, its review and, where one was confirmed, the "Archived Match Confirmed" entry). It never records the draft, the details typed on the device, a correction, a hold or a cancelled run.
 
 ### Expiry and cleanup
 
@@ -356,6 +407,7 @@ It uses its own minimal page layout. Anything wrong — an invalid, used, expire
   - logging out (only the draft started in that login session);
   - Force Logout or deactivation of the Psychometrician's account;
   - expiry: every lookup refuses an expired draft, expired drafts are removed whenever a draft is created and on every live-page check, and `model:prune` runs every minute from the scheduler.
+- Details typed on the device are in the same row, so every one of these deletes them too. A declined draft is kept, stripped of its code, answers and any details, only until it expires, so the live page can say so.
 - Drafts are never written to the Audit Log, so an abandoned run leaves no trace once its draft is gone.
 - **The scheduler only runs if something starts it.** On a Windows server, create a Windows Task Scheduler task that runs `php artisan schedule:run` in the project folder every minute (or keep `php artisan schedule:work` running). Without it, expired drafts are still refused and still removed on the next create or check, just not on a timer.
 
@@ -391,6 +443,9 @@ The student PC must be able to reach the server over the network:
 - **…the student PC is shared:** nothing is cached, the answers are removed from the page after Done, and Back shows only the thank-you message. Once the draft ends, the cookie is useless. A browser signed in to a staff account is refused. A kiosk or private browser profile on the student PC is still recommended.
 - **…the network drops:** the answer stays on screen, the status line says "Not saved — reconnecting…", it is retried automatically, and Done stays disabled until everything is saved. The live page shows when the device was last seen.
 - **…the student taps an answer before the page has finished loading:** the page sends that answer as soon as its script starts, so it isn't lost.
+- **…the student mistypes their name:** the Psychometrician corrects it on the live page before submitting; the answers are kept as they are.
+- **…the student types a name that is already registered:** the device stops with the generic message, and the live page shows the record with Take Again (see [When the student fills in Step 1 too](#when-the-student-fills-in-step-1-too)).
+- **…the student presses Back after sending the details:** nothing is cached, so the page is fetched again, and the server now shows the questionnaire, not the form. (Checked in Chrome only.)
 
 ---
 
@@ -649,7 +704,7 @@ Because each subscale is checked independently, a single assessment can produce 
 
 Lets a Psychometrician run a brand-new assessment on a student who is **already registered** in the system, without re-typing their name, course, section, or year level — and without creating a duplicate student record.
 
-**How it works:** clicking "Take Again" on an existing student's row stages that student's existing information into the wizard session and skips straight to Step 2 (Questionnaire) — Step 1 is bypassed entirely since the student's info is already known. Because Step 1 is skipped, the student's privacy consent (normally captured on Step 1) is instead captured on Step 2 for a retake — the retake flow adds a required consent checkbox there specifically to cover this gap. When a retake is sent to a student device, that checkbox moves onto the live page's **Submit** form, and is required there.
+**How it works:** clicking "Take Again" on an existing student's row stages that student's existing information into the wizard session and skips straight to Step 2 (Questionnaire) — Step 1 is bypassed entirely since the student's info is already known. Because Step 1 is skipped, the student's privacy consent (normally captured on Step 1) is instead captured on Step 2 for a retake — the retake flow adds a required consent checkbox there specifically to cover this gap. When a retake is sent to a student device, that checkbox moves onto the live page's **Submit** form, and is required there. The student device then shows only the privacy notice and the questionnaire, never the details form: the student is picked on the Psychometrician's own PC.
 
 **Why this exists:** without it, every retake would either (a) require manually re-typing a returning student's full information every time, inviting typos and duplicate near-identical student records, or (b) require a "search for existing student" step baked into every single New Assessment run, slowing down the much more common case of a brand-new student encounter. The regular wizard always registers a new student, and retake is a separate, explicit entry point, which keeps both paths simple. The two are tied together by the duplicate check on Step 1 (see [Duplicate students](#duplicate-students-step-1-refuses-a-student-who-is-already-registered)): if the Psychometrician types in a student who is already registered, the wizard stops and sends them to that student's Take Again instead. Take Again itself is never subject to that check. It isn't available for archived students (the link returns "not found"), which is why an archived name match only warns rather than blocks.
 
@@ -796,7 +851,7 @@ Entries labelled module "Feedback Loop", action "Feedback Loop Submission" are t
 
 **Encrypted fields never reach the log.** For every encrypted field (see [Data Encryption & Privacy](#data-encryption--privacy-ra-10173)), the log stores the fixed marker `[changed]` instead of the value — never the plaintext and never the ciphertext. A Create or Delete entry shows `"session_notes": "[changed]"`; an Update entry shows it on both sides only when the notes were actually edited, and leaves the field out when they weren't. So the log records *that* notes were written or changed, never *what* they said. Today only `counseling_sessions.session_notes` passes through the log (the score and answer tables aren't audited), but the rule covers every encrypted column automatically.
 
-**Student device drafts are never audited.** Creating, claiming, answering, new codes, cancelling and expiry of a [student device](#student-device-assessment-scope-change) draft write no Audit Log entry, so an abandoned run leaves no trace. The assessment it produces is audited as usual when it's saved, and records `administration_mode = student_device`.
+**Student device drafts are never audited.** Creating, claiming, answering, new codes, cancelling and expiry of a [student device](#student-device-assessment-scope-change) draft write no Audit Log entry, so an abandoned run leaves no trace. That includes the details a student types on the device, the Psychometrician's corrections and a hold over a duplicate name: the Audit Log records only the **final student record**, created at Confirm & Save, never the draft. The assessment it produces is audited as usual when it's saved, and records `administration_mode = student_device`.
 
 Filterable by module, action, and a date range (see below for exactly how that filtering works).
 
@@ -815,7 +870,7 @@ The following columns are encrypted transparently with AES-256-CBC, authenticate
 | `dass_responses` | `answer_value` | The raw answer to an individual DASS-21 question — the most granular clinical data point in the system. |
 | `dass_results` | `depression_raw_score`, `anxiety_raw_score`, `stress_raw_score`, `depression_final_score`, `anxiety_final_score`, `stress_final_score` | The computed DASS-21 subscale scores. |
 | `counseling_sessions` | `session_notes` | Free-text clinical notes from a counseling session. |
-| `remote_assessment_drafts` | `responses` | *(Scope change, 2026-10-08.)* A student-device questionnaire's answers while it is being answered, stored with Laravel's built-in `encrypted:array` cast. The row holds no student details at all, and is deleted on submit, cancel, every wizard exit or expiry (see [Student Device Assessment](#student-device-assessment-scope-change)). |
+| `remote_assessment_drafts` | `responses`, `identity` | *(Scope change, 2026-10-08.)* A student-device questionnaire's answers while it is being answered, and — when the student fills in Step 1 on the device — the details they typed (name, gender, course, year level, section), both stored with Laravel's built-in `encrypted:array` cast. The row holds no student number and no link to a student record, and is deleted on submit, cancel, every wizard exit or expiry (see [Student Device Assessment](#student-device-assessment-scope-change)). |
 
 The draft's one-time code, QR token and device secret are not stored at all, only as HMAC-SHA256 digests keyed by `APP_KEY`.
 
@@ -911,4 +966,4 @@ NORMI is built around a few consistent principles that show up repeatedly across
 2. **Almost nothing destructive actually destroys data.** Students, courses, year levels, sections and questionnaires are archived (the button says **Archive**) — archived students can be restored from the Students page's Archived tab — notifications are archived and can be unarchived, and user accounts are deactivated. Counseling sessions and Draft versions say **Delete** and can't be restored in the app, but their rows are kept. The one real deletion is a question in a Draft version, which never has answers. The historical record matters more than a tidy list.
 3. **The same patterns are reused everywhere** — the same name-search logic, the same AND-combined filters, the same archive-with-a-guard-clause pattern, the same audit-logging mechanism — rather than each feature reinventing its own approach. This makes the system easier to reason about as a whole, and easier to extend consistently as new features are added.
 4. **Every consequential action leaves a record.** From login lockouts to threshold overrides to who reviewed which AI classification, the system is built so that "who did what, and why" is always answerable after the fact.
-5. **Staff-only, with one narrow, deliberate exception.** Since the 2026-10-08 scope change, a student can answer the questionnaire on their own device. That page needs no login but only a one-time code, can reach nothing else, and shows nothing about the student. Every decision after the answers — scoring, the AI, the review, saving — stays with the Psychometrician.
+5. **Staff-only, with one narrow, deliberate exception.** Since the 2026-10-08 scope change, a student can answer the questionnaire, and if the Psychometrician chooses, type their own details, on their own device. That page needs no login but only a one-time code, can reach nothing else, and shows nothing that already exists in the system. Every decision after that — checking the details, the duplicate check, scoring, the AI, the review, saving — stays with the Psychometrician.
