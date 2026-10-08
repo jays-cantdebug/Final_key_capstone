@@ -66,8 +66,12 @@ class AssessmentWizardController extends Controller
      * box left unticked), the warning is rebuilt from the old input
      * instead — otherwise it would vanish along with the confirm box.
      */
-    public function showStudentStep(Request $request): View
+    public function showStudentStep(Request $request): View|RedirectResponse
     {
+        if (RemoteAssessmentService::studentEntryOnly()) {
+            return $this->showStartPage($request);
+        }
+
         $duplicate = $request->session()->get('duplicate_student')
             ?? $this->archivedWarningFromOldInput($request);
 
@@ -84,6 +88,35 @@ class AssessmentWizardController extends Controller
                 $request->user(),
                 $request->session()->get(self::SESSION_KEY.'.remote_draft_id'),
             )?->collects_identity === true,
+        ]);
+    }
+
+    /**
+     * GET /assessments/create with student entry only: no Step 1 form. It
+     * only RESUMES — a live draft this session holds goes straight to its
+     * live page — and otherwise shows the minimal start page (any error
+     * flashed by a redirect, the save-time duplicate panel, and one "Start a
+     * new assessment" POST button). It never creates a draft, so a link, a
+     * prefetch, Cancel or an error redirect can't start anything. The
+     * sidebar's New Assessment is a POST (RemoteAssessmentController::start())
+     * and never lands here.
+     */
+    private function showStartPage(Request $request): View|RedirectResponse
+    {
+        $draft = $this->remoteAssessments->ownedDraft($request->user(), $request->session()->get(self::SESSION_KEY.'.remote_draft_id'));
+
+        if ($this->remoteAssessments->isLive($draft)
+            && ($draft->collects_identity || $request->session()->has(self::SESSION_KEY.'.student_data'))) {
+            return redirect()->route('assessments.create.remote', status: 303);
+        }
+
+        $duplicate = $request->session()->get('duplicate_student');
+
+        return view('assessments.create.start', [
+            'duplicate' => $duplicate === null ? null : [
+                ...$duplicate,
+                'students' => $this->duplicateService->describe($duplicate['ids']),
+            ],
         ]);
     }
 

@@ -44,6 +44,16 @@ return [
     // as trustProxies resolves it: never trust "*" proxies with this set.
     'allowed_ips' => array_values(array_filter(array_map('trim', explode(',', (string) env('REMOTE_ASSESSMENT_ALLOWED_IPS', ''))), fn (string $entry): bool => $entry !== '')),
 
+    // Student entry only (default on): the student enters Step 1 on the
+    // student device; the Psychometrician never types a new student's
+    // details. "New Assessment" starts (or resumes) a student-device run
+    // directly; the manual Step 1 form doesn't exist, and its POST, the
+    // same-device Step 2 answers and sending staff-typed details are
+    // refused on the server. Take Again works, on the student device only.
+    // Off: the manual Step 1 and answering on this PC come back — the
+    // fallback when the student device can't be used (e.g. no network).
+    'student_entry_only' => (bool) env('REMOTE_ASSESSMENT_STUDENT_ENTRY_ONLY', true),
+
     // How often the Psychometrician's live page polls, in milliseconds.
     'poll_interval_ms' => (int) env('REMOTE_ASSESSMENT_POLL_INTERVAL_MS', 1500),
 

@@ -144,9 +144,12 @@ class StudentDeviceIdentityTest extends TestCase
             ->assertSee('id="questions"', false);
         $this->assertSame(0, preg_match('#<(form|select|textarea)\b#', $body), 'The saved page has a form control for the details.');
         $this->assertSame(0, preg_match('#<input\b(?![^>]*type="radio")#', $body), 'The saved page has a non-answer input.');
-        foreach (['Zacarias', 'Pangilinan', 'Q.', 'Female', 'BSPS', 'Plain Studies', 'First Year', 'Rizal', 'first_name', 'course_id'] as $value) {
+        foreach (['Zacarias', 'Pangilinan', 'Female', 'BSPS', 'Plain Studies', 'First Year', 'Rizal', 'first_name', 'course_id'] as $value) {
             $this->assertStringNotContainsString($value, $body, "The saved page shows \"{$value}\".");
         }
+        // The middle initial, in the page's visible text ('Q.' on its own
+        // can also turn up inside built asset names).
+        $this->assertStringNotContainsString('Q.', strip_tags($body), 'The saved page shows the middle initial.');
         $this->assertStringContainsString('data-locked="0"', $body);
         $this->assertSame(1, preg_match('#<fieldset\b([^>]*)\bdata-questions\b#', $body, $outer));
         $this->assertDoesNotMatchRegularExpression('#\bdisabled\b#', $outer[1]);
@@ -316,7 +319,9 @@ class StudentDeviceIdentityTest extends TestCase
         $this->assertStringContainsString('value="Typedfirst"', $body);
         $this->assertStringContainsString('value="Villafuerte"', $body);
         $this->assertStringContainsString('value="BAD"', $body);
-        foreach (['Gregorio', 'H.', 'OLDX', 'Old Programme'] as $existing) {
+        // The existing student's middle initial, as a field value ('H.' on
+        // its own also turns up inside built asset names).
+        foreach (['Gregorio', 'value="H."', 'OLDX', 'Old Programme'] as $existing) {
             $this->assertStringNotContainsString($existing, $body);
         }
     }

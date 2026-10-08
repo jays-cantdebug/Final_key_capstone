@@ -21,6 +21,17 @@
         <x-alert type="error" class="mb-6">{{ $errors->first() }}</x-alert>
     @endif
 
+    {{-- New Assessment brought the Psychometrician back here: these answers are waiting to be reviewed and saved. Never wiped silently. --}}
+    @if (session('wizard_resumed'))
+        <div class="mb-6 flex flex-col gap-3 rounded-lg border border-gold bg-white px-5 py-4 text-sm text-body dark:bg-slate-800 dark:text-slate-100 sm:flex-row sm:items-center sm:justify-between" data-wizard-resumed>
+            <p>This assessment's answers are waiting for your review. Save it below, or discard it (nothing of it has been saved) and start a new assessment.</p>
+            <form method="POST" action="{{ route('assessments.create.discard') }}" class="shrink-0">
+                @csrf
+                <x-secondary-button type="submit">{{ __('Discard and start a new assessment') }}</x-secondary-button>
+            </form>
+        </div>
+    @endif
+
     <x-card class="mb-6">
         <h3 class="text-lg font-semibold text-body dark:text-slate-100">Student Information</h3>
         <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">

@@ -43,6 +43,24 @@ class RemoteAssessmentService
     public function __construct(private readonly DatabaseManager $database) {}
 
     /**
+     * REMOTE_ASSESSMENT_STUDENT_ENTRY_ONLY: the student enters Step 1 on the
+     * student device, and the manual Step 1 / same-device answers are off.
+     */
+    public static function studentEntryOnly(): bool
+    {
+        return (bool) config('remote_assessment.student_entry_only');
+    }
+
+    /**
+     * Still usable: not expired and not declined (a declined draft is a
+     * stripped row kept only to tell the live page).
+     */
+    public function isLive(?RemoteAssessmentDraft $draft): bool
+    {
+        return $draft !== null && $draft->expires_at->isFuture() && $draft->status !== RemoteAssessmentDraft::STATUS_DECLINED;
+    }
+
+    /**
      * Start a draft for this Psychometrician on `$version`, replacing any
      * draft they already had. Returns the plain link token and short code;
      * only their digests are stored.

@@ -1,6 +1,7 @@
 @php
     $steps = [
-        1 => 'Student Information',
+        // With student entry only, the student enters Step 1 on the student device.
+        1 => \App\Services\RemoteAssessmentService::studentEntryOnly() ? 'Student details (by the student)' : 'Student Information',
         2 => 'Questionnaire',
         3 => 'Assessment Result',
     ];

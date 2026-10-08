@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Exceptions\RemoteDraftStateException;
+use App\Http\Middleware\RefuseWhenStudentEntryOnly;
 use App\Http\Middleware\RestrictStudentDeviceNetwork;
 use App\Http\Requests\AssessmentResponseFormRequest;
 use App\Http\Requests\AssessmentStudentRequest;
 use App\Models\Assessment;
+use App\Models\QuestionnaireVersion;
 use App\Models\RemoteAssessmentDraft;
 use App\Models\Student;
 use App\Services\AssessmentService;
@@ -52,6 +54,8 @@ class RemoteAssessmentController extends Controller
 
     public const INVALID_DETAILS_MESSAGE = 'Please correct the student’s details before submitting.';
 
+    public const STUDENT_ENTRY_ONLY_MESSAGE = RefuseWhenStudentEntryOnly::STEP_ONE_MESSAGE;
+
     public function __construct(
         private readonly RemoteAssessmentService $remoteAssessments,
         private readonly AssessmentService $assessmentService,
@@ -71,6 +75,13 @@ class RemoteAssessmentController extends Controller
         if ($studentData === null) {
             return redirect()->route('assessments.create')
                 ->withErrors(['student' => 'Please select or register a student before continuing.']);
+        }
+
+        // Student entry only: details the Psychometrician typed (staged
+        // before the flag was turned on) are never sent; Take Again is fine.
+        if (RemoteAssessmentService::studentEntryOnly() && ! $request->session()->has(self::SESSION_KEY.'.existing_student_id')) {
+            return redirect()->route('assessments.create')
+                ->withErrors(['student' => self::STUDENT_ENTRY_ONLY_MESSAGE]);
         }
 
         $version = $this->assessmentService->activeQuestionnaireVersion();
@@ -119,8 +130,12 @@ class RemoteAssessmentController extends Controller
      */
     public function storeForStudent(Request $request): RedirectResponse
     {
-        $this->remoteAssessments->discardFor($request->user());
-        $request->session()->forget(self::SESSION_KEY);
+        // Student entry only: this is "Send to student device again" on the
+        // live page, and works like New Assessment — never replacing a live
+        // draft.
+        if (RemoteAssessmentService::studentEntryOnly()) {
+            return $this->start($request);
+        }
 
         $version = $this->assessmentService->activeQuestionnaireVersion();
 
@@ -129,6 +144,72 @@ class RemoteAssessmentController extends Controller
                 ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
         }
 
+        $this->remoteAssessments->discardFor($request->user());
+        $request->session()->forget(self::SESSION_KEY);
+
+        return $this->startIdentityDraft($request, $version);
+    }
+
+    /**
+     * POST "New Assessment" (the sidebar button; Psychometrician only, CSRF
+     * protected). Resume-or-create, in this order:
+     * 1. a live draft of this Psychometrician (a student-device run or a
+     *    Take Again on the student device) — its live page; never discarded;
+     * 2. answers staged and waiting for Step 3 — Step 3, with "Discard and
+     *    start a new assessment"; never wiped silently;
+     * 3. otherwise the wizard starts over (as a Step 1 POST always did) with
+     *    a new draft where the student enters Step 1, and its live page.
+     * Always a 303. Nothing is created when an error stops it (no active
+     * questionnaire version). GET /assessments/create never creates.
+     */
+    public function start(Request $request): RedirectResponse
+    {
+        if ($this->resumeLiveDraft($request)) {
+            return redirect()->route('assessments.create.remote', status: 303);
+        }
+
+        if ($request->session()->get(self::SESSION_KEY.'.responses') !== null
+            && $request->session()->get(self::SESSION_KEY.'.student_data') !== null) {
+            return redirect()->route('assessments.create.result', status: 303)->with('wizard_resumed', true);
+        }
+
+        $version = $this->assessmentService->activeQuestionnaireVersion();
+
+        if ($version === null) {
+            return redirect()->route('assessments.create', status: 303)
+                ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
+        }
+
+        $request->session()->forget(self::SESSION_KEY);
+
+        return $this->startIdentityDraft($request, $version);
+    }
+
+    /**
+     * POST "Discard and start a new assessment" (Step 3, when New Assessment
+     * resumed staged answers): clears the wizard — nothing of it was saved —
+     * and starts a new student-device run.
+     */
+    public function discardAndStart(Request $request): RedirectResponse
+    {
+        $version = $this->assessmentService->activeQuestionnaireVersion();
+
+        if ($version === null) {
+            return redirect()->route('assessments.create.result', status: 303)
+                ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
+        }
+
+        $this->remoteAssessments->discardFor($request->user());
+        $request->session()->forget(self::SESSION_KEY);
+
+        return $this->startIdentityDraft($request, $version);
+    }
+
+    /**
+     * A new draft where the student enters Step 1, held in this session.
+     */
+    private function startIdentityDraft(Request $request, QuestionnaireVersion $version): RedirectResponse
+    {
         ['draft' => $draft, 'token' => $token, 'short_code' => $shortCode] = $this->remoteAssessments->create($request->user(), $version, collectsIdentity: true);
 
         $request->session()->put([
@@ -137,7 +218,45 @@ class RemoteAssessmentController extends Controller
             self::SESSION_KEY.'.remote_short_code' => $shortCode,
         ]);
 
-        return redirect()->route('assessments.create.remote');
+        return redirect()->route('assessments.create.remote', status: 303);
+    }
+
+    /**
+     * Whether this Psychometrician has a live draft the live page can show,
+     * making sure this session holds it. The draft this session started is
+     * always resumed. A live draft from an earlier session (e.g. one that
+     * expired before the draft did) is taken over when it's a student-entry
+     * draft: if no device has it yet, its code and link are renewed (their
+     * plain values were only in the old session; the draft and its expiry
+     * are kept). An earlier session's Take Again draft can't be shown (its
+     * student's details were in that session), so it isn't resumed.
+     */
+    private function resumeLiveDraft(Request $request): bool
+    {
+        $owned = $this->ownedDraft($request);
+
+        if ($this->remoteAssessments->isLive($owned)) {
+            return $owned->collects_identity || $request->session()->has(self::SESSION_KEY.'.student_data');
+        }
+
+        $orphan = RemoteAssessmentDraft::query()->where('psychometrician_id', $request->user()->getKey())->first();
+
+        if (! $this->remoteAssessments->isLive($orphan) || ! $orphan->collects_identity) {
+            return false;
+        }
+
+        $request->session()->forget(self::SESSION_KEY);
+        $request->session()->put(self::SESSION_KEY.'.remote_draft_id', $orphan->id);
+
+        if ($orphan->status === RemoteAssessmentDraft::STATUS_PENDING) {
+            ['token' => $token, 'short_code' => $shortCode] = $this->remoteAssessments->reissue($orphan);
+            $request->session()->put([
+                self::SESSION_KEY.'.remote_token' => $token,
+                self::SESSION_KEY.'.remote_short_code' => $shortCode,
+            ]);
+        }
+
+        return true;
     }
 
     /**

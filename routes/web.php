@@ -28,6 +28,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentCounselingHistoryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\YearLevelController;
+use App\Http\Middleware\RefuseWhenStudentEntryOnly;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -110,9 +111,19 @@ Route::middleware(['auth', 'single-session'])->group(function (): void {
             ->name('assessments.create.')
             ->group(function (): void {
                 Route::get('/retake/{student}', [AssessmentWizardController::class, 'startRetake'])->name('retake');
-                Route::post('/student', [AssessmentWizardController::class, 'confirmStudent'])->name('student');
+                // "New Assessment" (the sidebar button): resume-or-create a
+                // student-device run. A POST, so only a deliberate,
+                // CSRF-checked click starts anything.
+                Route::post('/start', [RemoteAssessmentController::class, 'start'])->name('start');
+                Route::post('/discard', [RemoteAssessmentController::class, 'discardAndStart'])->name('discard');
+                // Refused while REMOTE_ASSESSMENT_STUDENT_ENTRY_ONLY is on.
+                Route::post('/student', [AssessmentWizardController::class, 'confirmStudent'])
+                    ->middleware(RefuseWhenStudentEntryOnly::class.':step1')
+                    ->name('student');
                 Route::get('/questionnaire', [AssessmentWizardController::class, 'showQuestionnaireStep'])->name('questionnaire');
-                Route::post('/questionnaire', [AssessmentWizardController::class, 'storeResponses'])->name('questionnaire.store');
+                Route::post('/questionnaire', [AssessmentWizardController::class, 'storeResponses'])
+                    ->middleware(RefuseWhenStudentEntryOnly::class.':step2')
+                    ->name('questionnaire.store');
                 Route::get('/result', [AssessmentWizardController::class, 'showResultStep'])->name('result');
                 Route::post('/submit', [AssessmentWizardController::class, 'submit'])->name('submit');
 

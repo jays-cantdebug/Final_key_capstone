@@ -36,6 +36,8 @@
     @else
     @include('assessments.create._device-choice')
 
+    {{-- Student entry only: the student answers on the student PC, so no "answer on this PC" form (its POST is refused too). --}}
+    @unless (\App\Services\RemoteAssessmentService::studentEntryOnly())
     @include('assessments.create._response-scale')
 
     <style>
@@ -238,5 +240,12 @@
             </div>
         </div>
     </form>
+    @endunless
+    {{-- Student entry only: Take Again keeps its Back to the student profile; a new student has no Back (Step 1 happened on the student device). --}}
+    @if (\App\Services\RemoteAssessmentService::studentEntryOnly() && $isRetake)
+        <div class="mt-6">
+            <x-secondary-button :href="route('students.show', $existingStudentId)">{{ __('Back') }}</x-secondary-button>
+        </div>
+    @endif
     @endif
 </x-app-layout>
