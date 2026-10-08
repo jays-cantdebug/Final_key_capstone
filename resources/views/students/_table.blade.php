@@ -42,9 +42,9 @@
                     </form>
                     <button
                         type="button"
-                        @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Delete this student record?', message: 'This will archive the student record — it can be reviewed later in Student Information Management.', confirmLabel: 'Delete', formId: 'delete-student-form-{{ $student->id }}' })"
+                        @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Archive this student record?', message: 'The student will no longer appear in the Students list and can’t use Take Again. Their assessments stay in Assessment History.', confirmLabel: 'Archive', formId: 'delete-student-form-{{ $student->id }}' })"
                         class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50"
-                    >Delete</button>
+                    >Archive</button>
                 </div>
             </x-table.td>
         </tr>

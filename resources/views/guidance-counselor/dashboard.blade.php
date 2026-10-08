@@ -58,7 +58,7 @@
     </x-card>
 
     <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <x-stat-card label="Total Students" :value="$totalStudents" />
+        <x-stat-card label="Active Students" :value="$totalStudents" />
         <x-stat-card label="Total Assessments" :value="$totalAssessments" />
         <x-stat-card label="Today's Assessments" :value="$todaysAssessments" />
         <x-stat-card label="Flagged Students" :value="$flaggedStudentsSummary" accent="gold" />

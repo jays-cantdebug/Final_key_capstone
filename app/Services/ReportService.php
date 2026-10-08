@@ -54,8 +54,10 @@ class ReportService
      */
     public function studentHistoryForReport(?string $studentNumber, ?string $dateFrom, ?string $dateTo): array
     {
+        // Archived students included, matching Assessment History, which
+        // still lists their assessments and links here for Print/PDF.
         $student = $studentNumber
-            ? Student::query()->where('student_number', $studentNumber)->first()
+            ? Student::withTrashed()->where('student_number', $studentNumber)->first()
             : null;
 
         if ($student === null) {

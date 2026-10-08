@@ -60,7 +60,7 @@ class StudentController extends Controller
 
         return view('students.edit', array_merge([
             'student' => $student,
-        ], $this->studentService->formData()));
+        ], $this->studentService->formData($student)));
     }
 
     public function update(StudentFormRequest $request, Student $student): RedirectResponse

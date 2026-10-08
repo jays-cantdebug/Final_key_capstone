@@ -47,9 +47,9 @@
 
             @if ($isArchived)
                 @if ($single)
-                    <p>A student named {{ $duplicate['name'] }} ({{ $single->student_number }}) was archived on {{ $single->deleted_at->format('M j, Y') }}. Archived students can't use Take Again, so continuing will create a new, separate record. Their earlier assessments stay in Assessment History under {{ $single->student_number }}.</p>
+                    <p>A student named {{ $duplicate['name'] }} ({{ $single->student_number }}) was archived on {{ $single->deleted_at->format('M j, Y') }}. Archived students can't use Take Again, so continuing will create a new, separate record, or restore them from Archived Students. Their earlier assessments stay in Assessment History under {{ $single->student_number }}.</p>
                 @else
-                    <p>{{ $students->count() }} archived students named {{ $duplicate['name'] }} were found: {{ \Illuminate\Support\Arr::join($students->map(fn ($student) => $student->student_number.' (archived '.$student->deleted_at->format('M j, Y').')')->all(), ', ', ' and ') }}. Archived students can't use Take Again, so continuing will create a new, separate record. Their earlier assessments stay in Assessment History under those student numbers.</p>
+                    <p>{{ $students->count() }} archived students named {{ $duplicate['name'] }} were found: {{ \Illuminate\Support\Arr::join($students->map(fn ($student) => $student->student_number.' (archived '.$student->deleted_at->format('M j, Y').')')->all(), ', ', ' and ') }}. Archived students can't use Take Again, so continuing will create a new, separate record, or restore them from Archived Students. Their earlier assessments stay in Assessment History under those student numbers.</p>
                 @endif
 
                 <div class="flex flex-wrap gap-2">

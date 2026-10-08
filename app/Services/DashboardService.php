@@ -37,6 +37,8 @@ class DashboardService
     public function guidanceCounselorStats(): array
     {
         return [
+            // Archived students are excluded (the card reads "Active
+            // Students"), but their assessments still count below.
             'totalStudents' => Student::query()->count(),
             'totalAssessments' => Assessment::query()->count(),
             'todaysAssessments' => Assessment::query()->whereDate('submitted_at', today())->count(),

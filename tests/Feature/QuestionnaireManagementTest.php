@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\Assessment;
 use App\Models\AuditLog;
 use App\Models\DassQuestion;
+use App\Models\DassResponse;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireVersion;
 use Database\Seeders\DassQuestionSeeder;
@@ -601,5 +602,65 @@ class QuestionnaireManagementTest extends TestCase
         $this->assertSame('Updated wording', $question->fresh()->question_text);
         $this->patch(route('questionnaires.versions.archive', [$questionnaire, $active]))->assertSessionHasNoErrors();
         $this->patch(route('questionnaires.versions.activate', [$questionnaire, $active]))->assertSessionHasNoErrors();
+    }
+
+    public function test_deleting_a_draft_question_frees_its_item_number_so_a_new_one_can_be_added_and_the_version_activated(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $questionnaire = Questionnaire::factory()->create();
+        $draft = QuestionnaireVersion::factory()->create(['questionnaire_id' => $questionnaire->id]);
+        $this->addDassQuestions($draft);
+        $itemFour = $draft->questions()->where('item_number', 4)->firstOrFail();
+
+        $this->actingAs($psychometrician)
+            ->delete(route('questionnaires.versions.questions.destroy', [$questionnaire, $draft, $itemFour]))
+            ->assertSessionHasNoErrors();
+
+        // Gone from the table entirely, not soft-deleted: a kept row would
+        // still hold item 4 and display order 4 in this version.
+        $this->assertDatabaseMissing('dass_questions', ['id' => $itemFour->id]);
+        $this->assertDatabaseHas('audit_logs', [
+            'module' => 'Questionnaire Management',
+            'action' => 'Delete',
+            'record_id' => $itemFour->id,
+        ]);
+
+        $this->post(route('questionnaires.versions.questions.store', [$questionnaire, $draft]), [
+            'item_number' => 4,
+            'question_text' => 'Replacement item 4',
+            'question_type' => DassQuestion::TYPE_LIKERT_SCALE,
+            'subscale' => DassQuestion::OFFICIAL_SUBSCALE_BY_ITEM[4],
+            'display_order' => 4,
+            'is_required' => true,
+        ])->assertSessionHasNoErrors();
+
+        $this->patch(route('questionnaires.versions.activate', [$questionnaire, $draft]))->assertSessionHasNoErrors();
+
+        $this->assertSame(QuestionnaireVersion::STATUS_ACTIVE, $draft->fresh()->status);
+        $this->assertSame('Replacement item 4', $draft->questions()->where('item_number', 4)->value('question_text'));
+    }
+
+    public function test_a_question_that_has_responses_is_never_deleted(): void
+    {
+        $psychometrician = $this->psychometrician();
+        $questionnaire = Questionnaire::factory()->create();
+        $draft = QuestionnaireVersion::factory()->create(['questionnaire_id' => $questionnaire->id]);
+        $this->addDassQuestions($draft, 1, 0, 0);
+        $question = $draft->questions()->firstOrFail();
+
+        // Can't happen through the app (responses are only saved against the
+        // Active version, which never returns to Draft); written directly to
+        // prove the guard holds if it ever did.
+        DassResponse::query()->create([
+            'assessment_id' => Assessment::factory()->create()->id,
+            'dass_question_id' => $question->id,
+            'answer_value' => 2,
+        ]);
+
+        $this->actingAs($psychometrician)
+            ->delete(route('questionnaires.versions.questions.destroy', [$questionnaire, $draft, $question]))
+            ->assertSessionHasErrors('version');
+
+        $this->assertNotSoftDeleted($question);
     }
 }

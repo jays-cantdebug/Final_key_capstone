@@ -55,7 +55,7 @@ class SectionService
     {
         if ($section->students()->exists()) {
             throw new LookupRecordInUseException(
-                'Cannot delete a section referenced by existing students. Deactivate it instead.'
+                'Cannot archive a section used by active students. Set its status to Inactive instead.'
             );
         }
 

@@ -350,4 +350,29 @@ class ReportsTest extends TestCase
 
         return $count;
     }
+
+    public function test_student_history_report_finds_an_archived_students_assessments(): void
+    {
+        $student = Student::factory()->create();
+        $assessment = Assessment::factory()->create(['student_id' => $student->id]);
+        DassResult::factory()->create(['assessment_id' => $assessment->id]);
+        PredictionFeedback::factory()->create(['assessment_id' => $assessment->id]);
+        $student->delete();
+
+        foreach ([$this->psychometrician(), $this->guidanceCounselor()] as $user) {
+            // Assessment History still lists them and offers Print/PDF.
+            $this->actingAs($user)
+                ->get(route('assessments.index', ['student_number' => $student->student_number]))
+                ->assertOk()
+                ->assertSee(route('reports.student-history.print', ['student_number' => $student->student_number]), false);
+
+            $print = $this->get(route('reports.student-history.print', ['student_number' => $student->student_number]));
+            $print->assertOk()->assertSee($student->student_number)->assertDontSee('No student found');
+            $this->assertSame([$assessment->id], $print->viewData('assessments')->modelKeys());
+
+            $pdf = $this->get(route('reports.student-history.pdf', ['student_number' => $student->student_number]));
+            $pdf->assertOk();
+            $this->assertSame('application/pdf', $pdf->headers->get('Content-Type'));
+        }
+    }
 }

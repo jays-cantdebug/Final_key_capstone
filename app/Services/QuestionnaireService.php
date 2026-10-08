@@ -78,7 +78,7 @@ class QuestionnaireService
 
         if ($hasAssessments) {
             throw new LookupRecordInUseException(
-                'Cannot delete a questionnaire with a version that has been used by an assessment.'
+                'Cannot archive a questionnaire with a version that has been used by an assessment.'
             );
         }
 

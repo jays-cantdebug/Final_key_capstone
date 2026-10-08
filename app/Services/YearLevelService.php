@@ -66,7 +66,7 @@ class YearLevelService
     {
         if ($yearLevel->students()->exists()) {
             throw new LookupRecordInUseException(
-                'Cannot delete a year level referenced by existing students. Deactivate it instead.'
+                'Cannot archive a year level used by active students. Set its status to Inactive instead.'
             );
         }
 

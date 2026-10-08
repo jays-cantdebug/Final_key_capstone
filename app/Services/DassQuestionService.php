@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Exceptions\QuestionnaireVersionLockedException;
 use App\Models\DassQuestion;
+use App\Models\DassResponse;
 use App\Models\QuestionnaireVersion;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\Collection;
@@ -58,14 +59,33 @@ class DassQuestionService
     }
 
     /**
-     * @throws QuestionnaireVersionLockedException if the parent version is not Draft.
+     * Permanently remove a Draft question, freeing its item number and
+     * display order so the Draft can be given a new question with them.
+     *
+     * A soft delete kept the row, and with it the version's
+     * (item_number) and (display_order) unique slots, so a Draft that lost
+     * item 4 could never get an item 4 again and could never be activated.
+     * A hard delete is safe here: a version only moves Draft -> Active ->
+     * Archived and never back to Draft, and responses are only ever saved
+     * against the Active version, so a Draft question has no responses.
+     * The check below (and dass_responses' restrictOnDelete foreign key
+     * behind it) refuses the delete if one ever did. The audit log keeps
+     * the deleted question's snapshot.
+     *
+     * @throws QuestionnaireVersionLockedException if the parent version is not Draft, or the question has responses.
      */
     public function delete(DassQuestion $question): void
     {
         $this->assertVersionEditable($question->questionnaireVersion);
 
+        if (DassResponse::query()->where('dass_question_id', $question->id)->exists()) {
+            throw new QuestionnaireVersionLockedException(
+                'This question cannot be deleted because it has been answered in an assessment.'
+            );
+        }
+
         $this->database->transaction(static function () use ($question): void {
-            $question->delete();
+            $question->forceDelete();
         });
     }
 

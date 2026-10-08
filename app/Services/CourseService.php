@@ -54,7 +54,7 @@ class CourseService
     {
         if ($course->students()->exists()) {
             throw new LookupRecordInUseException(
-                'Cannot delete a course referenced by existing students. Deactivate it instead.'
+                'Cannot archive a course used by active students. Set its status to Inactive instead.'
             );
         }
 

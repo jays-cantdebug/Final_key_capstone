@@ -128,4 +128,19 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'))
             ->assertRedirect(route('guidance-counselor.dashboard'));
     }
+
+    public function test_guidance_counselor_dashboard_counts_active_students_but_all_assessments(): void
+    {
+        $active = Student::factory()->create();
+        $archived = Student::factory()->create();
+        Assessment::factory()->create(['student_id' => $active->id]);
+        Assessment::factory()->create(['student_id' => $archived->id]);
+        $archived->delete();
+
+        $response = $this->actingAs($this->guidanceCounselor())->get(route('guidance-counselor.dashboard'));
+
+        $response->assertOk()->assertSee('Active Students')->assertDontSee('Total Students');
+        $response->assertViewHas('totalStudents', 1);
+        $response->assertViewHas('totalAssessments', 2);
+    }
 }

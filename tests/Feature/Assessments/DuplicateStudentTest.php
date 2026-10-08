@@ -231,7 +231,7 @@ class DuplicateStudentTest extends TestCase
 
         $this->get(route('assessments.create'))
             ->assertSee('A student with this name was archived')
-            ->assertSee("Archived students can't use Take Again, so continuing will create a new, separate record. Their earlier assessments stay in Assessment History under {$archived->student_number}.", false)
+            ->assertSee("Archived students can't use Take Again, so continuing will create a new, separate record, or restore them from Archived Students. Their earlier assessments stay in Assessment History under {$archived->student_number}.", false)
             ->assertSee(e(route('assessments.index', ['student_number' => $archived->student_number])), false)
             ->assertSee('I understand. Create a new student record.')
             ->assertDontSee(route('assessments.create.retake', $archived), false);

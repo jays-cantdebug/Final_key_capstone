@@ -59,9 +59,9 @@
                         </form>
                         <button
                             type="button"
-                            @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Delete this questionnaire?', message: 'This is blocked if any of its versions have been used by an assessment.', confirmLabel: 'Delete', formId: 'delete-questionnaire-form-{{ $questionnaire->id }}' })"
+                            @click="$dispatch('open-confirm', { name: 'confirm-modal', title: 'Archive this questionnaire?', message: 'It will no longer appear in the Questionnaires list (unlike the Archived status, which keeps it listed). This is blocked if one of its versions is Active or has been used by an assessment.', confirmLabel: 'Archive', formId: 'delete-questionnaire-form-{{ $questionnaire->id }}' })"
                             class="rounded-md border border-rose-200 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50"
-                        >Delete</button>
+                        >Archive</button>
                     </div>
                 </x-table.td>
             </tr>

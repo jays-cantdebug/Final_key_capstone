@@ -46,7 +46,7 @@
             <option value="">Select a course</option>
             @foreach ($courses as $course)
                 <option value="{{ $course->id }}" @selected((string) old('course_id', $student?->course_id) === (string) $course->id)>
-                    {{ $course->course_code }} - {{ $course->course_name }}
+                    {{ $course->course_code }} - {{ $course->course_name }}{{ $course->trashed() ? ' (archived)' : '' }}
                 </option>
             @endforeach
         </x-select>
@@ -59,7 +59,7 @@
             <option value="">Select a year level</option>
             @foreach ($yearLevels as $yearLevel)
                 <option value="{{ $yearLevel->id }}" @selected((string) old('year_level_id', $student?->year_level_id) === (string) $yearLevel->id)>
-                    {{ $yearLevel->label }}
+                    {{ $yearLevel->label }}{{ $yearLevel->trashed() ? ' (archived)' : '' }}
                 </option>
             @endforeach
         </x-select>
@@ -72,7 +72,7 @@
             <option value="">Select a section</option>
             @foreach ($sections as $section)
                 <option value="{{ $section->id }}" @selected((string) old('section_id', $student?->section_id) === (string) $section->id)>
-                    {{ $section->section_name }}
+                    {{ $section->section_name }}{{ $section->trashed() ? ' (archived)' : '' }}
                 </option>
             @endforeach
         </x-select>

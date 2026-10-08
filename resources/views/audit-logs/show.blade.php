@@ -45,6 +45,12 @@
                         <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Action</dt>
                         <dd class="mt-1 text-sm font-medium text-body dark:text-slate-100">{{ $log->action }}</dd>
                     </div>
+                    @if ($log->action === 'Restore' && is_array($log->new_values) && array_key_exists('restore_reason', $log->new_values))
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Reason</dt>
+                            <dd class="mt-1 break-words text-sm font-medium text-body dark:text-slate-100">{{ $log->new_values['restore_reason'] ?? 'None given' }}</dd>
+                        </div>
+                    @endif
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Record ID</dt>
                         <dd class="mt-1 text-sm font-medium text-body dark:text-slate-100">{{ $log->record_id ?? 'N/A' }}</dd>

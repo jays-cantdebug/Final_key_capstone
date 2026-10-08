@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ArchivedStudentController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AssessmentHistoryController;
 use App\Http\Controllers\AssessmentWizardController;
@@ -47,6 +48,11 @@ Route::middleware(['auth', 'single-session'])->group(function (): void {
         ->name('guidance-counselor.dashboard');
 
     Route::middleware('role:psychometrician')->group(function (): void {
+        // Registered before the resource so "archived" isn't captured as a {student} id.
+        Route::get('/students/archived', [ArchivedStudentController::class, 'index'])->name('students.archived.index');
+        Route::patch('/students/{student}/restore', [ArchivedStudentController::class, 'restore'])
+            ->withTrashed()
+            ->name('students.restore');
         Route::resource('students', StudentController::class)->except(['create', 'store']);
 
         Route::resource('questionnaires', QuestionnaireController::class);

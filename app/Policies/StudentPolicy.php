@@ -38,4 +38,12 @@ class StudentPolicy
     {
         return $user->hasRole('psychometrician');
     }
+
+    /**
+     * Determine whether the user can restore an archived student.
+     */
+    public function restore(User $user, Student $student): bool
+    {
+        return $user->hasRole('psychometrician');
+    }
 }
