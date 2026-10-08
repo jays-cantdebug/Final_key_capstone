@@ -15,6 +15,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionnaireController;
 use App\Http\Controllers\QuestionnaireVersionController;
+use App\Http\Controllers\RemoteAssessmentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Reports\AssessmentReportController;
 use App\Http\Controllers\Reports\AssessmentSummaryReportController;
@@ -114,6 +115,22 @@ Route::middleware(['auth', 'single-session'])->group(function (): void {
                 Route::post('/questionnaire', [AssessmentWizardController::class, 'storeResponses'])->name('questionnaire.store');
                 Route::get('/result', [AssessmentWizardController::class, 'showResultStep'])->name('result');
                 Route::post('/submit', [AssessmentWizardController::class, 'submit'])->name('submit');
+
+                // Step 2 answered on a separate student device (the device
+                // itself uses routes/student-device.php). Each action works
+                // only on this Psychometrician's own draft.
+                Route::prefix('remote')->name('remote')->group(function (): void {
+                    Route::post('/', [RemoteAssessmentController::class, 'store'])->name('.store');
+                    Route::get('/', [RemoteAssessmentController::class, 'show'])->name('');
+                    Route::get('/status', [RemoteAssessmentController::class, 'status'])
+                        ->middleware('throttle:remote-assessment-monitor')
+                        ->name('.status');
+                    Route::post('/new-code', [RemoteAssessmentController::class, 'newCode'])->name('.new-code');
+                    Route::post('/return', [RemoteAssessmentController::class, 'returnToStudent'])->name('.return');
+                    Route::post('/restart', [RemoteAssessmentController::class, 'restart'])->name('.restart');
+                    Route::delete('/', [RemoteAssessmentController::class, 'cancel'])->name('.cancel');
+                    Route::post('/submit', [RemoteAssessmentController::class, 'submit'])->name('.submit');
+                });
             });
     });
 

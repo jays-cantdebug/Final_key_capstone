@@ -12,6 +12,8 @@ use App\Http\Requests\PredictionFeedbackFormRequest;
 use App\Models\QuestionnaireVersion;
 use App\Models\Student;
 use App\Services\AssessmentService;
+use App\Services\AssessmentWizardStaging;
+use App\Services\RemoteAssessmentService;
 use App\Services\StudentDuplicateService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -45,9 +47,13 @@ class AssessmentWizardController extends Controller
 
     public const CONFIRM_ARCHIVED_MATCH_MESSAGE = 'Please tick the box to confirm you want to create a new student record.';
 
+    public const ANSWERED_ON_STUDENT_DEVICE_MESSAGE = 'These answers were given on the student device and can’t be changed here.';
+
     public function __construct(
         private readonly AssessmentService $assessmentService,
         private readonly StudentDuplicateService $duplicateService,
+        private readonly RemoteAssessmentService $remoteAssessments,
+        private readonly AssessmentWizardStaging $staging,
     ) {}
 
     /**
@@ -90,7 +96,7 @@ class AssessmentWizardController extends Controller
      * archived (soft-deleted) student, matching how they're excluded
      * everywhere else.
      */
-    public function startRetake(Student $student): RedirectResponse
+    public function startRetake(Request $request, Student $student): RedirectResponse
     {
         Gate::authorize('view', $student);
 
@@ -113,6 +119,9 @@ class AssessmentWizardController extends Controller
         session()->forget(self::SESSION_KEY.'.privacy_consent_at');
         session()->forget(self::SESSION_KEY.'.review');
         session()->forget(self::SESSION_KEY.'.acknowledged_archived_ids');
+        session()->forget(self::SESSION_KEY.'.'.AssessmentWizardStaging::ADMINISTRATION_MODE_KEY);
+        $this->staging->forgetRemote($request->session());
+        $this->remoteAssessments->discardFor($request->user());
 
         return redirect()->route('assessments.create.questionnaire');
     }
@@ -140,6 +149,8 @@ class AssessmentWizardController extends Controller
      */
     public function confirmStudent(AssessmentStudentRequest $request): RedirectResponse
     {
+        // Starting over also ends any student-device draft from before.
+        $this->remoteAssessments->discardFor($request->user());
         $request->session()->forget(self::SESSION_KEY);
 
         $matches = $this->duplicateService->findMatches(
@@ -195,6 +206,11 @@ class AssessmentWizardController extends Controller
 
         $pinnedVersionId = $request->session()->get(self::SESSION_KEY.'.questionnaire_version_id');
 
+        // After a student-device Submit the answers are read-only here,
+        // shown on the version they were answered on.
+        $answeredOnStudentDevice = $this->staging->answeredOnStudentDevice($request->session())
+            && $request->session()->get(self::SESSION_KEY.'.responses') !== null;
+
         return view('assessments.create.questionnaire', [
             'student' => new Student($studentData),
             'version' => $version,
@@ -202,6 +218,12 @@ class AssessmentWizardController extends Controller
             'questionnaireChanged' => $pinnedVersionId !== null && $pinnedVersionId !== $version->id,
             'existingResponses' => $request->session()->get(self::SESSION_KEY.'.responses', []),
             'existingStudentId' => $request->session()->get(self::SESSION_KEY.'.existing_student_id'),
+            'answeredOnStudentDevice' => $answeredOnStudentDevice,
+            'answeredVersion' => $answeredOnStudentDevice ? ($this->pinnedVersion($request) ?? $version) : null,
+            'remoteDraftInProgress' => $this->remoteAssessments->ownedDraft(
+                $request->user(),
+                $request->session()->get(self::SESSION_KEY.'.remote_draft_id'),
+            ) !== null,
         ]);
     }
 
@@ -228,6 +250,11 @@ class AssessmentWizardController extends Controller
                 ->withErrors(['student' => 'Please select or register a student before continuing.']);
         }
 
+        if ($this->staging->answeredOnStudentDevice($request->session())) {
+            return redirect()->route('assessments.create.questionnaire')
+                ->withErrors(['questionnaire' => self::ANSWERED_ON_STUDENT_DEVICE_MESSAGE]);
+        }
+
         $version = $request->questionnaireVersion();
 
         if ($version === null) {
@@ -235,13 +262,10 @@ class AssessmentWizardController extends Controller
                 ->withErrors(['student' => 'No active questionnaire version is currently configured. Please contact an administrator.']);
         }
 
-        $request->session()->put(self::SESSION_KEY.'.responses', $request->validated('responses'));
-        $request->session()->put(self::SESSION_KEY.'.questionnaire_version_id', $version->id);
-        $request->session()->forget(self::SESSION_KEY.'.review');
-
-        if ($request->session()->has(self::SESSION_KEY.'.existing_student_id')) {
-            $request->session()->put(self::SESSION_KEY.'.privacy_consent_at', now());
-        }
+        // Answered on this device after all: end any student-device draft.
+        $this->remoteAssessments->discardFor($request->user());
+        $this->staging->forgetRemote($request->session());
+        $this->staging->stageResponses($request->session(), $version, $request->validated('responses'));
 
         return redirect()->route('assessments.create.result');
     }
@@ -343,11 +367,13 @@ class AssessmentWizardController extends Controller
                 $existingStudent,
                 $privacyConsentAt,
                 $request->session()->get(self::SESSION_KEY.'.acknowledged_archived_ids', []),
+                $request->session()->get(self::SESSION_KEY.'.'.AssessmentWizardStaging::ADMINISTRATION_MODE_KEY),
             );
         } catch (DuplicateStudentException $exception) {
             // Someone registered this student after Step 1's check (another
             // tab, a stale session, a double submit). Nothing was saved;
             // the wizard starts over and points at Take Again.
+            $this->remoteAssessments->discardFor($request->user());
             $request->session()->forget(self::SESSION_KEY);
 
             return $this->backToStudentStepWithDuplicate('conflict', $exception->studentIds, $studentData);
@@ -358,12 +384,14 @@ class AssessmentWizardController extends Controller
                 self::SESSION_KEY.'.responses',
                 self::SESSION_KEY.'.review',
                 self::SESSION_KEY.'.questionnaire_version_id',
+                self::SESSION_KEY.'.'.AssessmentWizardStaging::ADMINISTRATION_MODE_KEY,
             ]);
 
             return redirect()->route('assessments.create.questionnaire')
                 ->withErrors(['questionnaire' => $exception->getMessage()]);
         }
 
+        $this->remoteAssessments->discardFor($request->user());
         $request->session()->forget(self::SESSION_KEY);
 
         return redirect()->route('assessments.show', $assessment)

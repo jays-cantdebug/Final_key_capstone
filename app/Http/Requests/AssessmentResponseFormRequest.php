@@ -60,6 +60,24 @@ class AssessmentResponseFormRequest extends FormRequest
             ];
         }
 
+        $rules = self::rulesFor($version);
+
+        if ($this->session()->has('assessment_wizard.existing_student_id')) {
+            $rules['privacy_consent'] = ['required', 'accepted'];
+        }
+
+        return $rules;
+    }
+
+    /**
+     * The answer rules for a version's questions, shared by this request
+     * (answers given on this device) and RemoteAssessmentController::submit()
+     * (answers given on a student device), so both are validated the same.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    public static function rulesFor(?QuestionnaireVersion $version): array
+    {
         $rules = [
             'responses' => ['required', 'array'],
         ];
@@ -70,10 +88,6 @@ class AssessmentResponseFormRequest extends FormRequest
                 'integer',
                 'between:0,3',
             ];
-        }
-
-        if ($this->session()->has('assessment_wizard.existing_student_id')) {
-            $rules['privacy_consent'] = ['required', 'accepted'];
         }
 
         return $rules;

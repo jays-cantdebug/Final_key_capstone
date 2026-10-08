@@ -2,6 +2,8 @@
 
 **NORMI** (Web-Based Student Depression, Anxiety and Stress Assessment) is a school guidance and psychometric records portal built for Northern Mindanao Colleges, Inc. It lets school staff run the DASS-21 mental health screening on students, get an AI-assisted severity classification, route serious cases to the guidance office, and keep proper records for reporting and audits.
 
+> **Scope change (2026-10-08): student device assessment.** NORMI was built as a closed staff system with no student-facing access. It now has one deliberate exception: the Psychometrician can send the questionnaire to a separate **student device**, where the student answers it on their own screen, reached with a short code or QR link and **no login**. That student page shows only the privacy notice, the questions and a thank-you message; everything else (scoring, the AI, the review, saving) still happens on the Psychometrician's side. See [Student Device Assessment](#student-device-assessment-scope-change). Statements elsewhere in this document about a closed staff system now carry this exception.
+
 This document explains what the system does, how each part works, and — just as importantly — *why* it was built that way. It's written in plain language for a non-technical reader (like a thesis panel), not as a code reference.
 
 ---
@@ -16,28 +18,31 @@ This document explains what the system does, how each part works, and — just a
 6. [Student Information Management](#student-information-management)
 7. [Questionnaire Management](#questionnaire-management)
 8. [The New Assessment Wizard](#the-new-assessment-wizard)
-9. [The AI Classification System (Full Detail)](#the-ai-classification-system-full-detail)
-10. [DASS-21 Scoring — How Raw Answers Become Final Scores](#dass-21-scoring--how-raw-answers-become-final-scores)
-11. [Differentiated Flagging](#differentiated-flagging)
-12. [The "Take Again" Retake Feature](#the-take-again-retake-feature)
-13. [Assessment History](#assessment-history)
-14. [Flagged Cases (Guidance Counselor)](#flagged-cases-guidance-counselor)
-15. [Notifications](#notifications)
-16. [Counseling Sessions](#counseling-sessions)
-17. [Reports](#reports)
-18. [Classification Thresholds & Settings](#classification-thresholds--settings)
-19. [User Management](#user-management)
-20. [Audit Logs](#audit-logs)
-21. [Data Encryption & Privacy (RA 10173)](#data-encryption--privacy-ra-10173)
-22. [Search & Filter System — How It Works Everywhere](#search--filter-system--how-it-works-everywhere)
-23. [Page Loading Without a Flash](#page-loading-without-a-flash)
-24. [Closing Summary](#closing-summary)
+9. [Student Device Assessment (Scope Change)](#student-device-assessment-scope-change)
+10. [The AI Classification System (Full Detail)](#the-ai-classification-system-full-detail)
+11. [DASS-21 Scoring — How Raw Answers Become Final Scores](#dass-21-scoring--how-raw-answers-become-final-scores)
+12. [Differentiated Flagging](#differentiated-flagging)
+13. [The "Take Again" Retake Feature](#the-take-again-retake-feature)
+14. [Assessment History](#assessment-history)
+15. [Flagged Cases (Guidance Counselor)](#flagged-cases-guidance-counselor)
+16. [Notifications](#notifications)
+17. [Counseling Sessions](#counseling-sessions)
+18. [Reports](#reports)
+19. [Classification Thresholds & Settings](#classification-thresholds--settings)
+20. [User Management](#user-management)
+21. [Audit Logs](#audit-logs)
+22. [Data Encryption & Privacy (RA 10173)](#data-encryption--privacy-ra-10173)
+23. [Search & Filter System — How It Works Everywhere](#search--filter-system--how-it-works-everywhere)
+24. [Page Loading Without a Flash](#page-loading-without-a-flash)
+25. [Closing Summary](#closing-summary)
 
 ---
 
 ## Who Uses This System
 
 There are exactly two staff roles. There is no public registration — accounts are created by an administrator, not signed up for.
+
+Students are **not** users: they have no account and never log in. Since the 2026-10-08 scope change, a student can answer the questionnaire on a separate student device (see [Student Device Assessment](#student-device-assessment-scope-change)), but that page needs only a one-time code from the Psychometrician, can't reach any other page, and shows nothing about the student or any result.
 
 | Role | What they do |
 |---|---|
@@ -61,6 +66,7 @@ There are exactly two staff roles. There is no public registration — accounts 
 | **Vite** | The build tool that compiles and bundles the CSS/JS files into what the browser actually loads. | Laravel's official, recommended asset bundler — fast rebuilds during development, small optimized output for production. |
 | **Claude API (Anthropic)** | The AI service used for one of the two interchangeable "AI Classification" strategies — reads the three DASS-21 scores and classifies their severity. | Provides a second, independent classification pathway that can be cross-checked against the system's own deterministic rule engine (see the [AI Classification](#the-ai-classification-system-full-detail) section) — chosen specifically because its "tool use" feature can force a reply into a strict, guaranteed JSON structure rather than free-form text. |
 | **barryvdh/laravel-dompdf** | A PHP library that turns an HTML page into a downloadable PDF. | Used for every printable/downloadable Report — lets the reports reuse the exact same Blade templates already built for on-screen viewing, instead of building PDFs by hand. |
+| **bacon/bacon-qr-code** | A pure-PHP library that draws QR codes as SVG images. | Draws the QR code on the student device live page on the server itself. No online QR service is used, so the one-time link is never sent to a third party, and it works on a school network with no internet access. |
 | **Laravel Breeze** | A starter kit for login, password reset, and account security scaffolding. | Rather than writing password hashing, session handling, and login throttling from scratch (and risking security mistakes), Breeze provides Laravel's own official, security-reviewed implementation as a starting point, which was then customized (e.g. registration removed, roles added, styling replaced). |
 | **PHPUnit** | The testing framework used to write and run the automated test suite. | Comes standard with Laravel; lets the system verify — automatically, every time something changes — that DASS scoring, flagging rules, role permissions, and every workflow still behave correctly. |
 
@@ -87,9 +93,11 @@ Laravel enforces a specific folder layout. Here's what each major folder actuall
 | `database/factories/` | Used only for automated testing — generates realistic fake data (fake students, fake assessments) so tests don't need a real database full of real people. |
 | `resources/views/` | All the Blade template files — the actual HTML/visual content of every page, organized into subfolders that match each feature (`students/`, `assessments/`, `reports/`, etc.), plus a `components/` folder for small reusable pieces (buttons, badges, modals) used across many pages. |
 | `resources/css/` and `resources/js/` | The raw Tailwind CSS and Alpine.js source files, before Vite compiles them into what the browser downloads. |
-| `routes/web.php` | The master map of every URL in the system and which Controller handles it. If a page exists, its URL is registered here. |
+| `routes/web.php` | The master map of every staff URL in the system and which Controller handles it. Every page behind the login is registered here. |
+| `routes/student-device.php` | The student device's URLs (everything under `/s`), kept in their own file and their own middleware group, without the login, session and CSRF layers of `web.php`. See [Student Device Assessment](#student-device-assessment-scope-change). |
+| `lang/en/student_device.php` | Every piece of text the student device can show, including the **placeholder** privacy notice. |
 | `tests/` | The automated test suite — code that exercises the real system (creates a student, submits an assessment, checks the right things happened) and fails loudly if a change breaks existing behavior. |
-| `config/` | Small settings files for the whole application — e.g., `config/ai.php` decides which AI Classification strategy is active. |
+| `config/` | Small settings files for the whole application — e.g., `config/ai.php` decides which AI Classification strategy is active, and `config/remote_assessment.php` holds the student device settings (address, expiry, consent screen, rate limits). |
 
 **Why this structure?** It's Laravel's standard convention, and following convention matters more than it sounds: any developer who already knows Laravel can find their way around this codebase immediately, without needing a special onboarding explanation. The Controller → Service → Model split specifically exists so that business logic (Services) never gets tangled up with web-request handling (Controllers) — which makes it possible to write automated tests against the *logic* directly, without needing to fake an entire web request every time.
 
@@ -97,7 +105,7 @@ Laravel enforces a specific folder layout. Here's what each major folder actuall
 
 ## Login & Account Security
 
-There is **no public sign-up**. Every account is created by a Psychometrician through User Management — this is a closed staff system, not a public website.
+There is **no public sign-up**. Every account is created by a Psychometrician through User Management — this is a closed staff system, not a public website. **Scope change (2026-10-08):** the one exception is the student device questionnaire under `/s` (see [Student Device Assessment](#student-device-assessment-scope-change)): it is reached without a login, by a one-time code, and it is the only thing outside the login. Every other page still sends a visitor who isn't signed in to the login page, and an automated test fails if any other route without a login ever appears.
 
 **How login works:**
 - Email + password, checked against a securely hashed (never stored in plain text) password.
@@ -176,11 +184,13 @@ This is the core workflow: a 3-step guided process — **Student Information →
 
 Nothing is written to the database until the Psychometrician reaches the final step and clicks **Confirm & Save** or **Correct & Save**. Everything in between — the student's name/course/section, their answers to all 21 questions, even the AI's computed classification — lives only in the login session, not in any of the assessment tables. Sessions are stored server-side in the database's `sessions` table, so this data does sit there, in that session's row, until it is saved, cleared or expires (see [Data Encryption & Privacy](#data-encryption--privacy-ra-10173)).
 
+**Scope change (2026-10-08): one temporary table.** When the questionnaire is sent to a student device, the student's answers can't live in the Psychometrician's session, because they arrive from another device. They are kept temporarily in `remote_assessment_drafts`: answers encrypted, no student name, number or any other student detail, and no IP address. That row is deleted when the Psychometrician submits, cancels or leaves the wizard, or when it expires. It is never audited. So nothing is written to the *assessment* tables until the final save, and an abandoned student-device run still leaves no trace once its draft is gone (see [Student Device Assessment](#student-device-assessment-scope-change)).
+
 **Why build it this way?** An earlier version of this system *did* save the student record as soon as Step 1 was submitted — but that meant every time a Psychometrician started a wizard and then closed the tab, got interrupted, or made a mistake and restarted, a half-finished "student" record was permanently left behind in the database with no actual assessment attached to it. Dozens of these orphan records accumulated. Deferring all saving to the final step means an abandoned wizard — at any point, for any reason — leaves **zero trace** in the database.
 
 ### Step 1: Student Information
 
-Captures First Name, Middle Name, Last Name (as three separate fields, not one "Full Name" field, to avoid ambiguous name-splitting), Gender, Course, Year Level, Section, and a privacy consent checkbox.
+Captures First Name, Middle Name, Last Name (as three separate fields, not one "Full Name" field, to avoid ambiguous name-splitting), Gender, Course, Year Level, Section, and a privacy consent checkbox. When the questionnaire is then sent to a student device, this checkbox is the staff attestation, and the student also acknowledges the notice on their own screen (see [Student Device Assessment](#student-device-assessment-scope-change)).
 
 **Middle Name format rule:** the Middle Name field only accepts a single letter followed by a period (e.g., `P.`) — a middle *initial*, not a full middle name. The letter is A–Z or Ñ (a letter of the Filipino alphabet). Lowercase is accepted but automatically converted to uppercase before it's saved, so `p.` becomes `P.` and `ñ.` becomes `Ñ.` without the user needing to retype it. Some keyboards type Ñ as a plain N followed by a separate tilde mark; when the server's PHP has the intl extension enabled, that is combined into the single letter Ñ before the check, so it is accepted and saved the same way. Without intl it is left as typed and rejected with the normal format message (retyping the letter as a single Ñ works). If the format doesn't match, a floating tooltip explains the expected format with an example. Extra spaces in the three name fields are tidied up before anything else happens (`"Dela  Cruz "` becomes `"Dela Cruz"`).
 
@@ -216,6 +226,8 @@ Shows the 21 DASS-21 questions from the currently Active questionnaire version. 
 | 2 | Applied to me to a considerable degree, or a good part of the time |
 | 3 | Applied to me very much, or most of the time |
 
+At the top of Step 2 the Psychometrician chooses where the student answers: **on this device** (the questionnaire below, unchanged), or **Send to student device** (see [Student Device Assessment](#student-device-assessment-scope-change)). Both the normal flow and Take Again offer the choice.
+
 Questions are listed in the version's display order, each shown with its item number. The response-scale instructions and the four rating labels above are fixed English text in the page itself (`assessments/create/_response-scale.blade.php`), not part of the questionnaire version — so a translated version shows its translated questions under English instructions and labels.
 
 **The questionnaire version is pinned when Step 2 is submitted.** The answers are saved in the session together with the version they were given for — the one Active at that moment — and Step 3 and the final save always use that version, even if another version is activated in the meantime (from another tab or by another user). The saved assessment is linked to that version, and its answers all belong to that version's questions. Specifically:
@@ -245,6 +257,140 @@ Both buttons sit under the same three correction dropdowns, so the save checks t
 **Nothing is saved until one of those two choices is made.** This decision is recorded permanently in the `prediction_feedback` table (shown in the Audit Log as "Feedback Loop Submission"; see [The mandatory pre-save review](#the-mandatory-pre-save-review--why-the-ais-raw-output-never-triggers-anything-by-itself) below) and can't be changed after saving — every single assessment has exactly one review decision, there is no way to skip this step and save without a decision on record.
 
 **Why this exists:** DASS-21 classification is legally and clinically consequential — a wrong severity tier could mean a student who needs help doesn't get flagged, or a false alarm needlessly escalates a normal result. The system treats the AI as a *draft suggestion*, never a final verdict. A trained Psychometrician always has the final say, and the system is built so that saying so is not optional — it's baked into the save action itself.
+
+---
+
+## Student Device Assessment (Scope Change)
+
+> **Scope change, added 2026-10-08 at the adviser's request.** Until then NORMI had no student-facing access at all: only the two staff roles could open any page, and the Psychometrician entered the student's answers on her own PC. This section describes the one student-facing page that now exists, what it can and cannot do, and the safeguards around it.
+
+### How it works
+
+1. **Step 1** is unchanged. The Psychometrician enters the student's details and ticks the privacy consent box, which is now the *staff attestation* that the notice was explained.
+2. **Step 2: Send to student device.** Instead of answering on her own PC, the Psychometrician presses **Send to student device**. This creates a temporary draft pinned to the Active questionnaire version. It also runs one extra duplicate check, which only warns: if an active student with the same name was registered since Step 1, the live page says so, and the final save will still refuse a second record as always.
+3. **The live page** (Psychometrician only) shows:
+   - the student address (e.g. `http://192.168.1.10/s`), a short code like `2T29-MN1P` and a QR code;
+   - a countdown;
+   - the device status: waiting, connected and waiting for the privacy notice, answering, Done, or declined;
+   - a warning when **another device tried to use the code**, and when the device was last seen;
+   - whether the student acknowledged the privacy notice;
+   - the student's answers, **read-only**, updated live.
+
+   The page checks for changes every 1.5 seconds; when nothing changed, the server sends only a few small fields.
+4. **On the student device** the student opens the address and types the code, or scans the QR code on a tablet or phone and presses **Begin**. They then acknowledge the privacy notice (when that screen is on), answer the questionnaire (every tap is saved immediately) and press **Done**. The page then shows only "Thank you … please hand the device back" and is locked: the student can't go back and change answers.
+5. **The Psychometrician's actions:**
+   - **Submit** works only once the student pressed Done.
+   - **Return to student** unlocks the answers so the student can edit them again.
+   - **New code** gives a fresh code, keeps the answers and the acknowledgment, and stops the old device and the old code from working. Use it if the student's browser was closed in a private window, or the wrong device took the code.
+   - **Restart on the new version** appears if another questionnaire version was activated meanwhile. It clears the answers and the student device reloads with the new questions.
+   - **Cancel** discards everything and returns to the Step 2 choice.
+6. **Submit** feeds the answers into the **existing** flow, exactly as if Step 2 had been answered on the Psychometrician's PC. The answers are checked with the same rules, the version is pinned the same way, the scoring and the AI classification are unchanged, the Step 3 review is mandatory as always, and the duplicate check runs again at the final save. The saved assessment records `administration_mode = student_device`; answers given on the Psychometrician's own PC leave it empty. After a student-device Submit, Step 2 shows the student's answers **read-only**: the Psychometrician can only continue to the review or send the questionnaire to the student device again, never change the student's answers.
+
+### What the student device shows, and never shows
+
+It shows only:
+
+- the privacy notice, with Accept and Decline;
+- the instructions and rating scale;
+- each statement with its item number and four answer buttons;
+- a small "*n* of 21 answered" counter;
+- a save status line ("All answers saved" / "Saving…" / "Not saved — reconnecting…");
+- **Done**;
+- the thank-you message.
+
+It never shows:
+
+- the student's name or any student detail;
+- the subscale of a statement;
+- scores, severity levels, flags or the AI's result;
+- a menu, sidebar or link to any other page;
+- the app layout.
+
+It uses its own minimal page layout. Anything wrong — an invalid, used, expired or cancelled code or link, a refused request, even a server error — shows one generic message: "This page is not available. Please ask the staff member for help." The only other message is a request to sign out when the browser is signed in to a staff account (see below).
+
+### Every page the student device can reach
+
+| Address | Who can open it | What it returns |
+|---|---|---|
+| `GET /s` | anyone | the code form (or straight back to the questionnaire for a device that already has one) |
+| `POST /s` | anyone, same-origin only | uses the code: binds this device and opens the questionnaire, or the generic message |
+| `GET /s/t/{token}` | anyone | the **Begin** page for a QR link (opening the link uses nothing up), or the generic message |
+| `POST /s/t/{token}` | anyone, same-origin only | Begin: binds this device and opens the questionnaire, or the generic message |
+| `GET /s/q` | the bound device | the privacy notice, the questionnaire, or the thank-you message |
+| `POST /s/consent`, `POST /s/decline` | the bound device | records the acknowledgment / ends the draft |
+| `POST /s/answer`, `POST /s/done` | the bound device | saves one answer / locks the answers (or lists the item numbers still missing) |
+| `GET /s/state` | the bound device | `{"state": …}` and nothing else |
+
+### Why the student device can't reach anything else
+
+- **No login and no session at all.** These routes run outside Laravel's normal `web` layer: no session, no CSRF token, no authentication. A request to `/s` therefore can never carry a staff identity, and it never creates a row in the `sessions` table.
+- **Codes are secrets.** The QR link carries a 256-bit token; the short code is 8 characters. Both are stored only as HMAC-SHA256 digests keyed by `APP_KEY`, so even the database doesn't hold a usable code.
+- **One device per code.** The first device to use a code is bound to it through a random secret in an HttpOnly, SameSite=Strict cookie limited to `/s`. Every other device is refused, and the live page counts the attempt.
+- **Same-origin only.** Every POST must come from the page itself (the browser's `Sec-Fetch-Site`/`Origin`), which blocks cross-site requests.
+- **Locked-down responses.** Every response, error pages included, is sent with `Cache-Control: no-store` (nothing is kept by the browser or a shared PC's cache), a strict Content-Security-Policy (no inline or foreign scripts), no framing (`X-Frame-Options: DENY`), `Referrer-Policy: same-origin`, `X-Robots-Tag: noindex` and `nosniff`.
+- **Staff browsers are refused.** If the browser is signed in to a staff account (a live session or a "Remember me" cookie), the student page refuses to start and asks for a sign-out or a private window. A student could otherwise type a staff address into that browser.
+- **Proven by tests.** Automated tests check that:
+  - this is the exact list of student routes, none of them with session, CSRF or login middleware;
+  - every other route needs a login, except the login, password-reset and health-check pages;
+  - a device holding only its cookie is sent to the login page by every staff route;
+  - no student response sets a session cookie or creates a session row;
+  - every response carries the headers above;
+  - no student response — page source, JSON, error pages (including a forced server error with debug output on) or headers — contains a student's name, number, course, year level, section, a score, a level, a flag or a link into the app.
+
+### Privacy consent on the student's own screen (RA 10173)
+
+- When `REMOTE_ASSESSMENT_STUDENT_CONSENT` is on (the default), the student acknowledges the privacy notice **on their own screen before the first question**, and the server refuses any answer until they have. The time of that acknowledgment is recorded as the assessment's privacy consent time. The Psychometrician's Step 1 checkbox stays, as the staff attestation that the notice was explained.
+- Declining ends the draft: no answers are kept, the student is asked to hand the device back, and the live page tells the Psychometrician "The student declined the privacy notice."
+- **The notice text is a placeholder.** It lives in `lang/en/student_device.php`, is clearly marked "to be replaced by the DPO's approved text", and must be replaced with the privacy notice approved by Northern Mindanao Colleges, Inc.'s Data Protection Officer before real use.
+- **For a student under 18, a parent's or guardian's consent must also be confirmed** before the assessment. The system does not do this.
+- The adviser can switch the student's own acknowledgment off with `REMOTE_ASSESSMENT_STUDENT_CONSENT=false`. The questionnaire then starts straight away, and consent rests on the Step 1 attestation alone.
+
+### Expiry and cleanup
+
+- A draft lasts a fixed **60 minutes** from when it was created (`REMOTE_ASSESSMENT_TTL_MINUTES`); activity doesn't extend it, and New code keeps the same expiry. When the student presses Done, the draft is kept for at least **15 more minutes** (`REMOTE_ASSESSMENT_LOCKED_GRACE_MINUTES`) so the Psychometrician has time to review and submit; this never shortens a longer remaining time.
+- The draft is deleted on:
+  - Submit or Cancel;
+  - starting a new Step 1 or a Take Again;
+  - answering on the Psychometrician's own PC instead;
+  - the final save, including a duplicate-student refusal;
+  - logging out (only the draft started in that login session);
+  - Force Logout or deactivation of the Psychometrician's account;
+  - expiry: every lookup refuses an expired draft, expired drafts are removed whenever a draft is created and on every live-page check, and `model:prune` runs every minute from the scheduler.
+- Drafts are never written to the Audit Log, so an abandoned run leaves no trace once its draft is gone.
+- **The scheduler only runs if something starts it.** On a Windows server, create a Windows Task Scheduler task that runs `php artisan schedule:run` in the project folder every minute (or keep `php artisan schedule:work` running). Without it, expired drafts are still refused and still removed on the next create or check, just not on a timer.
+
+### Rate limits (and a class behind one school NAT)
+
+- Failed code or link attempts are limited to **10 per minute per IP** (`REMOTE_ASSESSMENT_FAILED_ENTRY_PER_MINUTE`). **Successful claims don't count**, so a whole class whose PCs share one public IP behind the school's NAT is never locked out by its own successful logins.
+- Page loads and actions are limited **per device**, not per IP (60 page loads and 180 actions a minute; a browser without a device cookie gets 300 page loads a minute per IP). The live page's checks are limited per Psychometrician (120 a minute).
+- All limits are configurable in `.env` (see `.env.example`).
+
+### Network requirements
+
+The student PC must be able to reach the server over the network:
+
+- **Not `127.0.0.1` or `localhost`.** Those addresses mean "this same computer": on the student PC they point at the student PC itself, so nothing loads. Set `REMOTE_ASSESSMENT_URL` to the server's LAN address or domain. The live page warns when the address is a loopback address.
+- **On a school LAN:**
+  - the server must listen on its LAN address, not only on `127.0.0.1`;
+  - Windows Firewall needs an inbound rule for the web server's port;
+  - the server needs a **fixed IP** (a static address or a DHCP reservation), or the address and QR code change;
+  - many school Wi-Fi networks use **client isolation**, which stops two Wi-Fi devices from reaching each other; use a wired connection or ask IT to allow the server.
+  - Herd's `*.test` names only work on the server PC itself, so use the IP address.
+- **Use HTTPS** even on a LAN if possible (e.g. a locally trusted certificate). Over plain HTTP the student's answers cross the network unencrypted, and on HTTPS the device cookie is also marked Secure.
+- **Build the assets** with `npm run build`. Never use `npm run dev` for a student device: the dev server's files are served from `localhost:5173`, which the student PC can't reach.
+- **`APP_DEBUG` must be `false`** on any server another device can reach. With debug on, Laravel's debug tool (Ignition) has its own routes without a login.
+- **On a deployed (internet) server** the student page works from anywhere over HTTPS. It is then the system's only page reachable without a login, so the rate limits above matter more. `trustProxies` must match the real proxy, so that per-IP limits see the real address.
+
+### What happens when…
+
+- **…the student closes the tab and opens it again:** the device cookie brings them back to their answers. After a closed *private* window the cookie is gone, so the device is refused; press **New code**.
+- **…the Psychometrician cancels or starts Step 1 again:** the draft is deleted, and the student device shows the generic message within a few seconds.
+- **…another questionnaire version is activated mid-answer:** the live page warns, Submit is refused, and **Restart on the new version** clears the answers. The device reloads with the new questions.
+- **…the time runs out:** the draft and its answers are gone; send to the student device again.
+- **…two devices try the same code:** the first wins; the second gets the generic message, and the live page shows "Another device tried to open this code".
+- **…the student PC is shared:** nothing is cached, the answers are removed from the page after Done, and Back shows only the thank-you message. Once the draft ends, the cookie is useless. A browser signed in to a staff account is refused. A kiosk or private browser profile on the student PC is still recommended.
+- **…the network drops:** the answer stays on screen, the status line says "Not saved — reconnecting…", it is retried automatically, and Done stays disabled until everything is saved. The live page shows when the device was last seen.
+- **…the student taps an answer before the page has finished loading:** the page sends that answer as soon as its script starts, so it isn't lost.
 
 ---
 
@@ -503,7 +649,7 @@ Because each subscale is checked independently, a single assessment can produce 
 
 Lets a Psychometrician run a brand-new assessment on a student who is **already registered** in the system, without re-typing their name, course, section, or year level — and without creating a duplicate student record.
 
-**How it works:** clicking "Take Again" on an existing student's row stages that student's existing information into the wizard session and skips straight to Step 2 (Questionnaire) — Step 1 is bypassed entirely since the student's info is already known. Because Step 1 is skipped, the student's privacy consent (normally captured on Step 1) is instead captured on Step 2 for a retake — the retake flow adds a required consent checkbox there specifically to cover this gap.
+**How it works:** clicking "Take Again" on an existing student's row stages that student's existing information into the wizard session and skips straight to Step 2 (Questionnaire) — Step 1 is bypassed entirely since the student's info is already known. Because Step 1 is skipped, the student's privacy consent (normally captured on Step 1) is instead captured on Step 2 for a retake — the retake flow adds a required consent checkbox there specifically to cover this gap. When a retake is sent to a student device, that checkbox moves onto the live page's **Submit** form, and is required there.
 
 **Why this exists:** without it, every retake would either (a) require manually re-typing a returning student's full information every time, inviting typos and duplicate near-identical student records, or (b) require a "search for existing student" step baked into every single New Assessment run, slowing down the much more common case of a brand-new student encounter. The regular wizard always registers a new student, and retake is a separate, explicit entry point, which keeps both paths simple. The two are tied together by the duplicate check on Step 1 (see [Duplicate students](#duplicate-students-step-1-refuses-a-student-who-is-already-registered)): if the Psychometrician types in a student who is already registered, the wizard stops and sends them to that student's Take Again instead. Take Again itself is never subject to that check. It isn't available for archived students (the link returns "not found"), which is why an archived name match only warns rather than blocks.
 
@@ -650,6 +796,8 @@ Entries labelled module "Feedback Loop", action "Feedback Loop Submission" are t
 
 **Encrypted fields never reach the log.** For every encrypted field (see [Data Encryption & Privacy](#data-encryption--privacy-ra-10173)), the log stores the fixed marker `[changed]` instead of the value — never the plaintext and never the ciphertext. A Create or Delete entry shows `"session_notes": "[changed]"`; an Update entry shows it on both sides only when the notes were actually edited, and leaves the field out when they weren't. So the log records *that* notes were written or changed, never *what* they said. Today only `counseling_sessions.session_notes` passes through the log (the score and answer tables aren't audited), but the rule covers every encrypted column automatically.
 
+**Student device drafts are never audited.** Creating, claiming, answering, new codes, cancelling and expiry of a [student device](#student-device-assessment-scope-change) draft write no Audit Log entry, so an abandoned run leaves no trace. The assessment it produces is audited as usual when it's saved, and records `administration_mode = student_device`.
+
 Filterable by module, action, and a date range (see below for exactly how that filtering works).
 
 ---
@@ -667,6 +815,9 @@ The following columns are encrypted transparently with AES-256-CBC, authenticate
 | `dass_responses` | `answer_value` | The raw answer to an individual DASS-21 question — the most granular clinical data point in the system. |
 | `dass_results` | `depression_raw_score`, `anxiety_raw_score`, `stress_raw_score`, `depression_final_score`, `anxiety_final_score`, `stress_final_score` | The computed DASS-21 subscale scores. |
 | `counseling_sessions` | `session_notes` | Free-text clinical notes from a counseling session. |
+| `remote_assessment_drafts` | `responses` | *(Scope change, 2026-10-08.)* A student-device questionnaire's answers while it is being answered, stored with Laravel's built-in `encrypted:array` cast. The row holds no student details at all, and is deleted on submit, cancel, every wizard exit or expiry (see [Student Device Assessment](#student-device-assessment-scope-change)). |
+
+The draft's one-time code, QR token and device secret are not stored at all, only as HMAC-SHA256 digests keyed by `APP_KEY`.
 
 ### What is intentionally left unencrypted, and why
 
@@ -690,6 +841,7 @@ For the fields above that stay in plain text at the column level (and as defense
   - **What stays readable:** only the payload is encrypted. The row's `id`, `user_id`, `ip_address`, `user_agent` and `last_activity` stay plain. The one-session-per-account check at login, the per-request check that ends a second session (e.g. one that came back through "Remember me"), and the administrator's Force Logout (which deletes that user's rows) use only `user_id` and `last_activity`, so they work the same either way.
   - **Turning it on:** sessions created before the switch can't be decrypted. Each one is logged out on its next request, losing any New Assessment in progress, and its row is then rewritten encrypted and without a user. Until that request happens, or until the session expires (`SESSION_LIFETIME`), it still counts as that user's active session, so a login from a different browser is refused. Switch while nobody is signed in, or clear the `sessions` table at the same moment (or use Force Logout for anyone affected).
   - **Cost:** about 0.1 ms to decrypt and 0.1 ms to encrypt per request, and the stored payload grows about 2.5×, e.g. ~3 KB of wizard data becomes ~7 KB in the column.
+  - **Student device:** the student device never gets a session at all, so it adds no rows here. While a questionnaire is out on a student device, the Psychometrician's session holds the plain one-time code and QR token (shown on the live page) until the draft ends — one more reason for `SESSION_ENCRYPT=true` in production.
 - **The Audit Log never stores encrypted fields** — it writes `[changed]` in their place (see [Audit Logs](#audit-logs)). Before 2026-10-08 it did not: Create and Delete entries for counseling sessions stored the notes' ciphertext (or the plaintext, for entries written before the notes were encrypted), and every Update entry stored the session's previous notes in **plaintext**, because the observer read them through `getOriginal()`, which decrypts. Those older entries have not been changed or redacted; redacting them is a separate, deliberate decision, to be taken after a database backup.
 - A one-time backfill command (`php artisan security:encrypt-sensitive-data`) encrypts any rows that were written before this feature was added; it's idempotent (safe to re-run) and writes directly via the query builder rather than through Eloquent, specifically so it doesn't flood the Audit Logs with thousands of "Update" entries for what is a one-off maintenance operation.
 
@@ -744,6 +896,7 @@ NORMI is a normal multi-page site: every sidebar click loads a complete new page
 - **Nothing hidden flashes into view.** Parts of the page that start hidden and are shown by Alpine.js (the mobile sidebar and its dimmed backdrop, the dashboard chart tooltips, the password field's "hide" eye icon) carry `x-cloak`, and the stylesheet hides anything with `x-cloak` until Alpine has started. Two places don't use `x-cloak` and instead have their starting state written by the server, so they are still correct even if the page's JavaScript fails to load: the counseling session form's Follow-Up Date field (hidden unless Follow-up required is ticked) and the Classification Thresholds buttons (only Enable Override Mode visible; Save Changes and Cancel start hidden).
 - **Fonts requested early.** The app's Figtree font files are self-hosted. Each layout tells the browser up front (a `preload` link) to fetch the weights it paints with — 400, 500 and 600 for the app and guest layouts, all four (400–700) for the login page — instead of the browser discovering them only after reading the stylesheet. The preload uses the exact same file address the stylesheet does, so each font is downloaded once. Text still appears immediately in a fallback font if a font is slow (`font-display: swap`).
 - **The page width never jumps.** On a computer whose scrollbars take up space (e.g. Windows), a page that scrolls is narrower than one that doesn't, and a confirmation dialog — which stops the page behind it from scrolling — makes the scrollbar disappear. Every page in the main app always keeps the scrollbar's space reserved, so opening a dialog, or moving between a long page and a short one, never changes the width of the page. Where no scrollbar is showing, that reserved strip is coloured to match the page, and darkened like the rest of the page while a dialog is open. The login, password-reset and printed/PDF report pages don't reserve it. On the Notifications page, the buttons on each notification also move to a new line on a phone instead of squeezing.
+- **The student device page is separate.** It has its own minimal layout without the theme script (its security policy blocks inline scripts), so it is always light, and it doesn't reserve the scrollbar space. It preloads the same three font weights.
 - **The sidebar keeps its scroll position.** On a short screen where the sidebar scrolls, its position is remembered for the current browser tab and restored before the new page is drawn, instead of jumping back to the top on every click. If the browser blocks this storage, the sidebar simply starts at the top as before.
 
 **Local development note:** the `php artisan serve` development server sends the built CSS, JavaScript and font files with no caching headers at all (no `Cache-Control`, `ETag` or `Last-Modified`), so the browser has no way to know a saved copy is still good and generally fetches them again on every page. That makes page changes slower locally than they need to be. A production web server (Apache/nginx) normally adds these headers; since the files' names change whenever their content changes, they can safely be cached for a long time there.
@@ -758,3 +911,4 @@ NORMI is built around a few consistent principles that show up repeatedly across
 2. **Almost nothing destructive actually destroys data.** Students, courses, year levels, sections and questionnaires are archived (the button says **Archive**) — archived students can be restored from the Students page's Archived tab — notifications are archived and can be unarchived, and user accounts are deactivated. Counseling sessions and Draft versions say **Delete** and can't be restored in the app, but their rows are kept. The one real deletion is a question in a Draft version, which never has answers. The historical record matters more than a tidy list.
 3. **The same patterns are reused everywhere** — the same name-search logic, the same AND-combined filters, the same archive-with-a-guard-clause pattern, the same audit-logging mechanism — rather than each feature reinventing its own approach. This makes the system easier to reason about as a whole, and easier to extend consistently as new features are added.
 4. **Every consequential action leaves a record.** From login lockouts to threshold overrides to who reviewed which AI classification, the system is built so that "who did what, and why" is always answerable after the fact.
+5. **Staff-only, with one narrow, deliberate exception.** Since the 2026-10-08 scope change, a student can answer the questionnaire on their own device. That page needs no login but only a one-time code, can reach nothing else, and shows nothing about the student. Every decision after the answers — scoring, the AI, the review, saving — stays with the Psychometrician.

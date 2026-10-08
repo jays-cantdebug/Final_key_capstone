@@ -22,6 +22,7 @@ class UserManagementService
     public function __construct(
         private readonly DatabaseManager $database,
         private readonly ActiveSessionGuard $activeSessionGuard,
+        private readonly RemoteAssessmentService $remoteAssessments,
     ) {}
 
     /**
@@ -92,6 +93,8 @@ class UserManagementService
     {
         return $this->database->transaction(function () use ($user): User {
             $user->update(['is_active' => false]);
+            // A deactivated Psychometrician's student-device draft ends too.
+            $this->remoteAssessments->discardFor($user);
 
             return $user->refresh();
         });
@@ -105,6 +108,9 @@ class UserManagementService
     public function forceLogout(User $user): void
     {
         $this->activeSessionGuard->forceLogout($user);
+        // No Logout event fires for sessions ended this way, so their
+        // student-device draft is discarded here.
+        $this->remoteAssessments->discardFor($user);
     }
 
     public function resetPassword(User $user, string $password): User

@@ -27,6 +27,15 @@
         </x-alert>
     @endif
 
+    @if (session('status'))
+        <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>
+    @endif
+
+    @if ($answeredOnStudentDevice)
+        @include('assessments.create._answered-on-device')
+    @else
+    @include('assessments.create._device-choice')
+
     @include('assessments.create._response-scale')
 
     <style>
@@ -229,4 +238,5 @@
             </div>
         </div>
     </form>
+    @endif
 </x-app-layout>

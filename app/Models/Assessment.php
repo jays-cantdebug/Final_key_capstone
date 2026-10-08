@@ -19,6 +19,12 @@ class Assessment extends Model
     public const STATUS_COMPLETED = 'Completed';
 
     /**
+     * `administration_mode`: answered on a separate student device. Null
+     * means the same device (the Psychometrician's own PC).
+     */
+    public const ADMINISTRATION_STUDENT_DEVICE = 'student_device';
+
+    /**
      * The three subscale keys used by `effectiveLevel()` (matching
      * `dass_results.{subscale}_level` and `prediction_feedback.corrected_{subscale}_level`).
      */
@@ -40,6 +46,7 @@ class Assessment extends Model
         'status',
         'submitted_at',
         'privacy_consent_at',
+        'administration_mode',
     ];
 
     /**

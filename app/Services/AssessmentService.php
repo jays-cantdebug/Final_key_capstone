@@ -202,6 +202,10 @@ class AssessmentService
      * computed for it; otherwise QuestionnaireVersionMismatchException is
      * thrown and nothing is saved. The assessment is saved under `$version`.
      *
+     * `$administrationMode` is recorded on the assessment: null for the
+     * same device, Assessment::ADMINISTRATION_STUDENT_DEVICE when the
+     * questionnaire was answered on a separate student device.
+     *
      * @throws DuplicateStudentException if an active student with the same name already exists.
      * @throws QuestionnaireVersionMismatchException if the responses or review don't belong to `$version`.
      */
@@ -215,10 +219,11 @@ class AssessmentService
         ?Student $existingStudent = null,
         ?\DateTimeInterface $privacyConsentAt = null,
         array $acknowledgedArchivedIds = [],
+        ?string $administrationMode = null,
     ): Assessment {
         $this->assertBelongsToVersion($version, $responses, $review);
 
-        return $this->database->transaction(function () use ($studentData, $version, $psychometrician, $responses, $review, $feedbackData, $existingStudent, $privacyConsentAt, $acknowledgedArchivedIds): Assessment {
+        return $this->database->transaction(function () use ($studentData, $version, $psychometrician, $responses, $review, $feedbackData, $existingStudent, $privacyConsentAt, $acknowledgedArchivedIds, $administrationMode): Assessment {
             $student = $existingStudent ?? $this->registerNewStudent($studentData, $acknowledgedArchivedIds);
 
             $assessment = Assessment::query()->create([
@@ -228,6 +233,7 @@ class AssessmentService
                 'status' => Assessment::STATUS_COMPLETED,
                 'submitted_at' => now(),
                 'privacy_consent_at' => $privacyConsentAt,
+                'administration_mode' => $administrationMode,
             ]);
 
             foreach ($responses as $questionId => $answerValue) {
