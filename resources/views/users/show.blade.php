@@ -82,6 +82,7 @@
                     <div>
                         <x-input-label for="password" :value="__('New Password')" />
                         <x-password-input id="password" name="password" class="mt-1 block w-full" required />
+                        <x-password-requirements />
                         <x-input-error class="mt-2" :messages="$errors->get('password')" />
                     </div>
 

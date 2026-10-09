@@ -109,6 +109,7 @@ Laravel enforces a specific folder layout. Here's what each major folder actuall
 There is **no public sign-up**. Every account is created by a Psychometrician through User Management — this is a closed staff system, not a public website. **Scope change (2026-10-08):** the one exception is the student device questionnaire under `/s` (see [Student Device Assessment](#student-device-assessment-scope-change)): it is reached without a login, by a one-time code, and it is the only thing outside the login. Every other page still sends a visitor who isn't signed in to the login page, and an automated test fails if any other route without a login ever appears.
 
 **How login works:**
+- **Password rule (since 2026-10-10)** for every new or changed password (a new user, a reset by the Psychometrician, a change on the Profile page, a reset link): at least 12 characters, with upper- and lowercase letters and a number, and not built on a common word ("password", "qwerty", "welcome", the school's own name, …), checked on the server from a small built-in list, never sent online. Existing passwords keep working until they are changed. Each password form shows the rule.
 - Email + password, checked against a securely hashed (never stored in plain text) password.
 - After **5 failed attempts** from the same email+IP combination, the system locks out further attempts for a cooldown period and logs the lockout in the Audit Log.
 - A deactivated account (`is_active = false`) fails to log in with the exact same generic message as a wrong password.

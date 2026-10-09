@@ -11,6 +11,7 @@ use App\Policies\CounselingSessionPolicy;
 use App\Policies\StudentPolicy;
 use App\Policies\SystemNotificationPolicy;
 use App\Policies\UserPolicy;
+use App\Rules\NotCommonPassword;
 use App\Services\RemoteAssessmentService;
 use App\Support\UnreadableEncryptedValues;
 use App\View\Composers\NotificationBadgeComposer;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,6 +46,12 @@ class AppServiceProvider extends ServiceProvider
         // student's details into storage/logs. PHP's production php.ini
         // default; Herd's development php.ini has it off.
         ini_set('zend.exception_ignore_args', '1');
+
+        // Every new or changed password (user create, admin reset, profile,
+        // reset link): at least 12 characters, upper- and lowercase, a
+        // number, and not built on a common word (checked locally, never
+        // online). Existing passwords aren't re-checked. BUG_LOG L1.
+        Password::defaults(fn (): Password => Password::min(12)->mixedCase()->numbers()->rules([new NotCommonPassword]));
 
         Gate::policy(Student::class, StudentPolicy::class);
         Gate::policy(SystemNotification::class, SystemNotificationPolicy::class);
