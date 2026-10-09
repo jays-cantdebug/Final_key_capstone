@@ -59,6 +59,7 @@
                     </div>
                 </div>
             </div>
+            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ __('JPG, PNG or WebP, up to 8 MB and :max × :max pixels.', ['max' => \App\Http\Requests\ProfileUpdateRequest::AVATAR_MAX_PIXELS]) }}</p>
             <x-input-error class="mt-2" :messages="$errors->get('avatar')" />
         </div>
 
