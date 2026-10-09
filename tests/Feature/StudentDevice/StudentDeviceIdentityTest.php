@@ -402,11 +402,12 @@ class StudentDeviceIdentityTest extends TestCase
             $this->studentRequest('GET', route('student-device.state'), device: $devices[$case], json: true)->assertOk()->assertExactJson(['state' => 'answering']);
         }
 
-        // An active match: only the generic message, word for word.
+        // An active match: the held page's own neutral message (never why);
+        // the generic "not available" page is unchanged.
         $held = $this->studentRequest('GET', route('student-device.show'), device: $devices['active'])->assertOk();
         $generic = $this->studentRequest('POST', route('student-device.code'), ['code' => 'ZZZZ-ZZZZ'])->assertNotFound();
         $this->assertSame('Not available This page is not available. Please ask the psychometrician for help.', $this->visibleText($generic));
-        $this->assertSame('Please wait Thank you. Please let the psychometrician know, and wait for them to continue with you.', $this->visibleText($held));
+        $this->assertSame('One moment, please Thank you for your details. The psychometrician will assist you now. Please wait.', $this->visibleText($held));
 
         $body = (string) $held->getContent();
         foreach ([

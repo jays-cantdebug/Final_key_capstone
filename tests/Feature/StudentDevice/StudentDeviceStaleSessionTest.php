@@ -100,7 +100,7 @@ class StudentDeviceStaleSessionTest extends TestCase
         $this->assertSame(2, substr_count($script, 'dataset.entryUrl'), 'Both "draft ended" paths (details still open, answering) go to the code form.');
     }
 
-    public function test_the_held_page_is_unchanged(): void
+    public function test_the_held_page_shows_its_own_neutral_message(): void
     {
         $page = view('student-device.held')->render();
 

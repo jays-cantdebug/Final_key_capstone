@@ -80,8 +80,8 @@ return [
 
     // Held (the Psychometrician has to look at something before the
     // student continues). Neutral on purpose: never says why.
-    'held_heading' => 'Please wait',
-    'held_body' => 'Thank you. Please let the psychometrician know, and wait for them to continue with you.',
+    'held_heading' => 'One moment, please',
+    'held_body' => 'Thank you for your details. The psychometrician will assist you now. Please wait.',
 
     'staff_heading' => 'Please sign out first',
     'staff_body' => 'This browser is signed in to a staff account. Please sign out, or use a private window, then open this page again.',

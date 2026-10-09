@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 /**
  * When the student's typed details match an active student, the device
- * shows a neutral "Please wait" that never says why: no record, existing
+ * shows a neutral "One moment, please" that never says why: no record, existing
  * student, duplicate or match. The generic "not available" page (wrong or
  * expired codes and links) is unchanged.
  */
@@ -23,7 +23,7 @@ class StudentDeviceHeldPageTest extends TestCase
     use InteractsWithStudentDevice;
     use RefreshDatabase;
 
-    private const HELD_TEXT = 'Please wait Thank you. Please let the psychometrician know, and wait for them to continue with you.';
+    private const HELD_TEXT = 'One moment, please Thank you for your details. The psychometrician will assist you now. Please wait.';
 
     public function test_a_matching_name_gets_the_neutral_please_wait_page(): void
     {
