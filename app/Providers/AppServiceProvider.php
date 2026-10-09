@@ -12,6 +12,7 @@ use App\Policies\StudentPolicy;
 use App\Policies\SystemNotificationPolicy;
 use App\Policies\UserPolicy;
 use App\Services\RemoteAssessmentService;
+use App\Support\UnreadableEncryptedValues;
 use App\View\Composers\NotificationBadgeComposer;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -29,7 +30,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // One "unreadable encrypted value" warning per record and column per request.
+        $this->app->scoped(UnreadableEncryptedValues::class);
     }
 
     /**

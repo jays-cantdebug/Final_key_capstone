@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Casts\EncryptedInteger;
+use App\Models\Concerns\TracksUnreadableEncryptedAttributes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class DassResult extends Model
 {
     use HasFactory;
+    use TracksUnreadableEncryptedAttributes;
 
     /**
      * The attributes that are mass assignable.

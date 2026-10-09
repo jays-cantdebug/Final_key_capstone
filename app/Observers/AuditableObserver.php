@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
-use App\Casts\EncryptedInteger;
+use App\Casts\EncryptedAttribute;
 use App\Models\Assessment;
 use App\Models\CounselingSession;
 use App\Models\Course;
@@ -235,6 +235,6 @@ class AuditableObserver
 
     private function isEncryptedCast(string $cast): bool
     {
-        return $cast === EncryptedInteger::class || str_starts_with($cast, 'encrypted');
+        return is_a($cast, EncryptedAttribute::class, true) || str_starts_with($cast, 'encrypted');
     }
 }

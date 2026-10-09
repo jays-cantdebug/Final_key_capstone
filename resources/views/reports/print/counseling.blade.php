@@ -68,6 +68,8 @@
                     <td>
                         @if ($session->isRestrictedFor($viewer))
                             <span class="empty">Restricted &mdash; visible only to the creating counselor.</span>
+                        @elseif ($session->isUnreadable('session_notes'))
+                            <x-unreadable-value />
                         @else
                             {{ $session->session_notes }}
                         @endif

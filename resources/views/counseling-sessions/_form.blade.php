@@ -2,6 +2,8 @@
     /** @var \App\Models\CounselingSession|null $session */
     $session = $session ?? null;
     $followUpRequiredChecked = (bool) old('follow_up_required', $session?->follow_up_required ?? false);
+    // Stored notes that can't be decrypted (previous APP_KEY): optional, kept unless replaced.
+    $notesUnreadable = $session?->isUnreadable('session_notes') ?? false;
 
     // Server-side errors, one message per field, fed to the sessionForm
     // Alpine component (resources/js/session-form.js), which renders them as
@@ -63,7 +65,14 @@
 
     <div class="relative sm:col-span-2">
         <x-input-label for="session_notes" :value="__('Session Notes')" />
-        <x-textarea id="session_notes" name="session_notes" rows="5" class="mt-1 block w-full" required x-bind:class="hasError('session_notes') && {{ $invalidClasses }}" x-on:input="hideTooltip('session_notes')">{{ old('session_notes', $session?->session_notes) }}</x-textarea>
+        @if ($notesUnreadable)
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-400" data-notes-unreadable>
+                The saved notes are <x-unreadable-value /> and are kept exactly as they are. Leave this field empty to keep them, or type new notes to replace them.
+            </p>
+            <x-textarea id="session_notes" name="session_notes" rows="5" class="mt-1 block w-full" data-optional x-bind:class="hasError('session_notes') && {{ $invalidClasses }}" x-on:input="hideTooltip('session_notes')">{{ old('session_notes') }}</x-textarea>
+        @else
+            <x-textarea id="session_notes" name="session_notes" rows="5" class="mt-1 block w-full" required x-bind:class="hasError('session_notes') && {{ $invalidClasses }}" x-on:input="hideTooltip('session_notes')">{{ old('session_notes', $session?->session_notes) }}</x-textarea>
+        @endif
         <x-field-error-tooltip field="session_notes" :message="$fieldErrors->get('session_notes')" />
     </div>
 
