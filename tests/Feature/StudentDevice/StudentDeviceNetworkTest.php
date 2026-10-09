@@ -96,13 +96,13 @@ class StudentDeviceNetworkTest extends TestCase
         $refusedJson = [
             'GET /s/state' => $this->studentRequest('GET', route('student-device.state'), device: 'some-device', json: true, server: ['REMOTE_ADDR' => self::OTHER_PC]),
             'POST /s/answer' => $this->studentRequest('POST', route('student-device.answer'), ['question_id' => 1, 'value' => 1], 'some-device', json: true, server: ['REMOTE_ADDR' => self::OTHER_PC]),
-            // A wrong method would be a 405 for a listed PC: refused, it is the same 404.
+            // A wrong method is the same 404 for a listed PC too.
             'PUT /s/answer' => $this->studentRequest('PUT', route('student-device.answer'), [], json: true, server: ['REMOTE_ADDR' => self::OTHER_PC]),
         ];
         foreach ($refusedJson as $label => $response) {
             $this->assertSame($this->comparable($invalidJson), $this->comparable($response), $label);
         }
-        $this->studentRequest('PUT', route('student-device.answer'), [], json: true, server: ['REMOTE_ADDR' => self::STUDENT_PC])->assertStatus(405);
+        $this->studentRequest('PUT', route('student-device.answer'), [], json: true, server: ['REMOTE_ADDR' => self::STUDENT_PC])->assertNotFound()->assertExactJson(['state' => 'unavailable']);
 
         // Nothing hints at an allowlist, and the right code was not used.
         foreach ([...$refused, ...$refusedJson] as $label => $response) {

@@ -470,7 +470,7 @@ class StudentDeviceExposureTest extends TestCase
         config(['remote_assessment.allowed_ips' => []]);
         $this->studentRequest('POST', route('student-device.code'), ['code' => 'AAAA-AAAA'], sameOrigin: false)->assertForbidden();
         $this->studentRequest('POST', route('student-device.answer'), [], 'no-such-device', json: true, sameOrigin: false)->assertForbidden();
-        $this->studentRequest('PUT', route('student-device.answer'), [], json: true)->assertStatus(405);
+        $this->studentRequest('PUT', route('student-device.answer'), [], json: true)->assertNotFound()->assertExactJson(['state' => 'unavailable']);
 
         DB::table('sessions')->insert([
             'id' => 'staff-session', 'user_id' => $this->psychometrician()->id, 'ip_address' => null,

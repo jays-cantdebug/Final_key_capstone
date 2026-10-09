@@ -67,10 +67,10 @@ class StudentDeviceResponse
      * Exception rendering for student-device paths (bootstrap/app.php):
      * every error — including 404s for unknown /s paths, 429s and 500s,
      * with APP_DEBUG on — becomes the generic response, never a stack
-     * trace or Laravel's error page. Retry-After (on a 429) is kept. An
-     * address the allowlist refuses always gets the plain generic 404, even
-     * for a wrong method (no 405 revealing a route). Null for any other
-     * path.
+     * trace or Laravel's error page. Retry-After (on a 429) is kept. A
+     * wrong method is the same generic 404 (no 405 or Allow header revealing
+     * a route), and an address the allowlist refuses always gets it too.
+     * Null for any other path.
      */
     public static function forException(Throwable $exception, Request $request): ?Response
     {
@@ -83,7 +83,9 @@ class StudentDeviceResponse
         }
 
         if ($exception instanceof HttpExceptionInterface) {
-            $status = $exception->getStatusCode();
+            $status = $exception->getStatusCode() === Response::HTTP_METHOD_NOT_ALLOWED
+                ? Response::HTTP_NOT_FOUND
+                : $exception->getStatusCode();
             $headers = array_intersect_key($exception->getHeaders(), array_flip(['Retry-After']));
 
             return self::unavailable($request, $status, $headers);

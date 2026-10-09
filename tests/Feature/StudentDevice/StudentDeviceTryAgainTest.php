@@ -48,7 +48,7 @@ class StudentDeviceTryAgainTest extends TestCase
         $this->travelBack();
 
         $replies['unknown path'] = [404, $this->studentRequest('GET', '/s/nonexistent', server: $ip(6))];
-        $replies['wrong method'] = [405, $this->studentRequest('GET', '/s/consent', server: $ip(7))];
+        $replies['wrong method'] = [404, $this->studentRequest('GET', '/s/consent', server: $ip(7))];
 
         for ($i = 0; $i < 10; $i++) {
             $this->studentRequest('POST', route('student-device.code'), ['code' => 'ZZZZ-ZZZZ'], server: $ip(8))->assertNotFound();
