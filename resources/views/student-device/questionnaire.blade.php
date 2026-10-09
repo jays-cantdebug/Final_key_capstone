@@ -12,6 +12,9 @@
     doesn't start autosave, and the server refuses answers anyway) until the
     details are saved, then only "Details saved ✓".
 --}}
+{{-- The staff Step 2 questionnaire's size: its 999px column at 1366 beside the sidebar ~ max-w-5xl here (976px); text, card padding, gaps and the 40px answer buttons are its own classes. --}}
+@section('main-width', 'max-w-5xl')
+
 @section('content')
     @php
         $locked = $details === 'open';
@@ -55,8 +58,9 @@
             @disabled($locked)
             @if ($locked) aria-describedby="questions-locked" @endif
             data-questions
-            class="min-w-0 space-y-4 disabled:opacity-60"
+            class="min-w-0 disabled:opacity-60 [&>fieldset+fieldset]:mt-4"
         >
+            {{-- 16px between cards and none above the first (space-y-4 would also push the first card down past this legend), as on Step 2. --}}
             <legend class="sr-only">{{ __('student_device.statements_legend') }}</legend>
 
             @foreach ($questions as $question)
@@ -72,7 +76,8 @@
                     {{-- float-left: a floated legend sits inside the card instead of on its top border. --}}
                     <legend class="float-left w-full break-words text-sm font-medium text-body">{{ $question->item_number }}. {{ $question->question_text }}</legend>
 
-                    <div class="clear-left flex gap-2 pt-4">
+                    {{-- pt-5: the same 20px from statement to answers as Step 2 (whose row is the subscale badge's 24px). --}}
+                    <div class="clear-left flex gap-2 pt-5">
                         @foreach ([0, 1, 2, 3] as $value)
                             <label @class(['min-w-0 flex-1', 'cursor-pointer' => ! $locked, 'cursor-not-allowed' => $locked])>
                                 <input
@@ -94,7 +99,7 @@
         </fieldset>
 
         <div class="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-4px_12px_-6px_rgba(44,44,42,0.15)]">
-            <div class="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-between gap-3">
+            <div class="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3">
                 <div>
                     <p class="text-sm font-semibold text-body" data-counter-text>{{ __('student_device.counter', ['answered' => $answered, 'total' => $questions->count()]) }}</p>
                     @if ($details !== null)

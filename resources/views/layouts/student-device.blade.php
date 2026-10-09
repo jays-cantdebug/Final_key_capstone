@@ -24,7 +24,8 @@
         @vite(['resources/css/app.css', 'resources/js/student-device.js'])
     </head>
     <body class="bg-page font-sans text-body antialiased">
-        <main class="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+        {{-- main-width: the questionnaire widens it to the staff questionnaire's column; every other page keeps max-w-3xl. --}}
+        <main class="mx-auto w-full @yield('main-width', 'max-w-3xl') px-4 py-8 sm:px-6">
             @yield('content')
         </main>
     </body>
