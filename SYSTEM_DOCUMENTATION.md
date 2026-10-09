@@ -445,7 +445,12 @@ A held screen tells the person at the device that **the name they typed belongs 
   - expiry: every lookup refuses an expired draft, expired drafts are removed whenever a draft is created and on every live-page check, and `model:prune` runs every minute from the scheduler.
 - Details typed on the device are in the same row, so every one of these deletes them too. A declined draft is kept, stripped of its code, answers and any details, only until it expires, so the live page can say so.
 - Drafts are never written to the Audit Log, so an abandoned run leaves no trace once its draft is gone.
-- **The scheduler only runs if something starts it.** On a Windows server, create a Windows Task Scheduler task that runs `php artisan schedule:run` in the project folder every minute (or keep `php artisan schedule:work` running). Without it, expired drafts are still refused and still removed on the next create or check, just not on a timer.
+- **The scheduler only runs if something starts it.** It is registered in `routes/console.php` (`model:prune` for expired drafts, every minute); something must call it. Without it, expired drafts are still refused and still removed on the next create or check, just not on a timer.
+  - **Windows (Task Scheduler), one line in an administrator Command Prompt** (adjust the path; `php` must be on the PATH of the account the task runs as, or use the full path to `php.exe`):
+    `schtasks /Create /TN "NORMI scheduler" /SC MINUTE /MO 1 /TR "cmd /c cd /d C:\path\to\Mycapstone && php artisan schedule:run" /F`
+  - **Linux (cron):** `* * * * * cd /path/to/Mycapstone && php artisan schedule:run >> /dev/null 2>&1`
+  - **Launcher notes (`start-normi.ps1`):** the launcher starts only the web server, not the scheduler. Either create the Task Scheduler task above once, or open a second window in the project folder and keep `php artisan schedule:work` running while the app is in use.
+- **Logs rotate daily (since 2026-10-10).** The default log stack is the `daily` channel: one file per day, `storage/logs/laravel-YYYY-MM-DD.log`, kept `LOG_DAILY_DAYS` (default 14) days. An install whose `.env` still says `LOG_STACK=single` keeps the old single, ever-growing `laravel.log` until that line is changed to `daily` (or removed); the old `laravel.log` is not deleted automatically.
 
 ### Rate limits (and a class behind one school NAT)
 

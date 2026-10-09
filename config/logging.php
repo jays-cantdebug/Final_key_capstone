@@ -54,7 +54,9 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', env('LOG_STACK', 'single')),
+            // Daily files kept LOG_DAILY_DAYS (14) days by default, so the log
+            // never grows without limit (docs/BUG_LOG.md L4).
+            'channels' => explode(',', env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
         ],
 
