@@ -1,0 +1,54 @@
+# NORMI bug log
+
+One row per finding. **Status:** Open, Fixed, or Won't fix. **Commit** is filled in when a finding is fixed. Seeded from the full system / responsiveness / release-readiness audit of 2026-10-09, branch `remote-assessment` at `28aad49`. That audit's report and evidence (screenshots, crawl data) live outside the repository.
+
+**Severity:**
+- **Critical:** data loss or a breach now.
+- **High:** wrong data, or access that shouldn't exist.
+- **Medium:** real risk or a broken workflow.
+- **Low:** minor or edge case.
+- **Info:** by design, noted.
+
+| ID | Date | Area | file:line | Severity | Status | Commit | Notes |
+|---|---|---|---|---|---|---|---|
+| H1 | 2026-10-09 | Auth | `app/Services/UserManagementService.php` (deactivate), `app/Http/Middleware/EnsureUserIsActive.php` | High | Fixed | 31bb3a8 | Deactivated users kept access through an open session or a remember-me cookie. Re-verified 2026-10-09: both now go to /login. |
+| H2 | 2026-10-09 | Encryption | `app/Casts/EncryptedCast.php` | High | Fixed | cc6f8dd | One undecryptable value made the page a 500. Re-verified with a foreign APP_KEY: 332 requests (every page, print and PDF, both roles), 0 × 5xx. |
+| M1 | 2026-10-09 | Security headers | `app/Http/Middleware/StaffSecurityHeaders.php` | Medium | Fixed | ce2f435 | Staff pages lacked X-Frame-Options / nosniff / Referrer-Policy. Re-verified. |
+| M2 | 2026-10-09 | Audit logs | dev DB `audit_logs` (rows before 2026-10-08) | Medium | Open | | 55 plaintext `session_notes` values (plus 17 ciphertext) visible in the Audit Log viewer. A one-off redaction to `[changed]` awaits approval; take a backup first, since it's irreversible. |
+| M3 | 2026-10-09 | Platform | `composer.lock` (laravel/framework 11.56.1, league/commonmark 2.10.0) | Medium | Open | | Laravel 11 is end of life; `composer audit` lists 6 advisories, none reachable today. Update commonmark now; plan Laravel 12 after the defence. |
+| M4 | 2026-10-09 | Responsiveness | `resources/views/components/table/td.blade.php:7`, `components/table.blade.php:10` | Medium | Open | | `whitespace-nowrap` on every cell pushes the Actions column out of view, even at 1366×768 (Assessments +192 px, Flagged +177, Counseling +146, Version items +254) and at 1920@150%. Fix: wrap long-text cells and make the Actions column sticky. |
+| M5 | 2026-10-09 | Ops / student device | `..\start-normi.ps1:60` (outside the repo) | Medium | Open | | The launcher serves plain HTTP on 0.0.0.0 with no `REMOTE_ASSESSMENT_ALLOWED_IPS`, so answers and typed details cross Wi-Fi in clear and `/s` is reachable from any device on the network. |
+| M6 | 2026-10-09 | Install | `database/seeders/UserSeeder.php` | Medium | Fixed | ce2f435 | Re-seeding reset the admin password and re-activated the account. Re-verified: re-seed leaves both unchanged. |
+| N1 | 2026-10-09 | Ops / backup | `..\NORMI-db-backups\` (outside the repo) | Medium | Open | | Only one manual, unencrypted SQL dump exists, and there's no procedure keeping the APP_KEY with the backups. Encrypted scores and notes are unrecoverable without the key. Needs a nightly encrypted backup, key custody and a restore test. |
+| N2 | 2026-10-09 | Student device / live page | `resources/views/assessments/create/remote.blade.php:9`, `resources/views/assessments/create/_remote-identity.blade.php:23`, comment `app/Models/RemoteAssessmentDraft.php:28` | Low | Open | | When a draft is held, the live page says the student sees the generic "not available" message; the device actually shows "One moment, please…" (since 3432105/321688f). |
+| N3 | 2026-10-09 | Install | `database/migrations/2026_07_08_100002_drop_severity_rank_from_classification_thresholds_table.php:33` | Low | Open | | `migrate:reset` fails on SQLite: `down()` adds a NOT NULL column without a default. Add `->default(0)`. |
+| N4 | 2026-10-09 | Tests | `phpunit.xml` | Low | Open | | The suite logs to the real `storage/logs/laravel.log` (about 84 warnings per run). Pin a test log channel. |
+| N5 | 2026-10-09 | Logs | `app/Support/UnreadableEncryptedValues.php:31` | Low | Open | | One warning per record/column per request: 332 views gave 590 lines. Throttle it, for example once per record/column per day. |
+| N6 | 2026-10-09 | Security | `app/Http/Requests/ProfileUpdateRequest.php:29`, `app/Services/AvatarService.php` | Low | Open | | The avatar has no pixel-dimension limit; a huge-dimension PNG (≤ 8 MB) can exhaust memory and cause a 500. Add a `dimensions:max_width,max_height` rule. Staff only. |
+| N7 | 2026-10-09 | Student device | `app/Services/RemoteAssessmentService.php:95`; `config/remote_assessment.php` | Low | Open | | A draft is a fixed 60 min with no extension and no warning on the device; a slow student loses all answers at expiry. Consider an "Add 15 minutes" action (capped) and a 5-minute notice. |
+| N8 | 2026-10-09 | Accessibility | `resources/views/assessments/create/_duplicate-student.blade.php:111`, `resources/views/profile/edit.blade.php:41` | Low | Open | | The 16×16 Dismiss × is below the WCAG 24 px minimum; the dark-mode toggle is 44×24; table action links are 31–34 px and buttons 36–38 px, under the 40 px goal at ≤1024. |
+| N9 | 2026-10-09 | Accessibility | `resources/views/components/severity-bar-chart.blade.php:27,34`, `components/flag-badge.blade.php:23`, `layouts/navigation.blade.php:7,68` | Low | Open | | Labels at 9–11px (chart labels, "+1 Notification", system name). |
+| N10 | 2026-10-09 | Config | `.env` (not tracked) | Low | Open | | The working `.env` is a dev config (`APP_ENV=local`, `APP_DEBUG=true`, `LOG_LEVEL=debug`); only the launcher turns debug off. Production needs its own `.env` (see the checklist in the audit report). |
+| L1 | 2026-10-09 | Auth | `app/Http/Requests/UserFormRequest.php:46`, `app/Http/Requests/ResetUserPasswordRequest.php:28` | Low | Open | | Password policy is a minimum of 8 characters only. |
+| L2 | 2026-10-09 | Performance | `assessments.submitted_at`, `counseling_sessions.session_datetime`, `audit_logs.created_at`, student names | Low | Open | | No indexes on the main sort/filter columns; matters after a few thousand rows. |
+| L3 | 2026-10-09 | Student device | `app/Http/Responses/StudentDeviceResponse.php` | Low | Open | | A wrong method on `/s` gives 405 (same generic body), not the identical 404. |
+| L4 | 2026-10-09 | Logs | `storage/logs/laravel.log` (single channel, 5.1 MB) | Low | Open | | No rotation; older entries contain stack-trace arguments from before `zend.exception_ignore_args`. No tokens, codes, keys or student names found. |
+| L5 | 2026-10-09 | Live page | `resources/js/remote-monitor.js` | Low | Open | | Back from Step 3 to the live page says "This session is no longer available" (accurate, but confusing). |
+| L6 | 2026-10-09 | Ops | `routes/console.php:13-16`; launcher | Low | Open | | Nothing runs `schedule:run`/`schedule:work`, so `model:prune` never prunes expired drafts (the lazy prune still runs on create and on status polls). |
+| L7 | 2026-10-09 | Config | `.env.example:52` | Low | Fixed | ce2f435 | `CLAUDE_API_URL` was missing from `.env.example`. |
+| L8 | 2026-10-09 | Config | `.env` | Low | Open | | `SESSION_SECURE_COOKIE=true` over plain HTTP: a staff login from another PC gets 419 on every POST. Resolved by HTTPS (M5). |
+| L9 | 2026-10-09 | Install | `database/seeders/StudentSeeder.php:21,41-58` | Low | Open | | With `APP_ENV=local`, `db:seed` adds 2 sample students whose middle names break the Step 1 middle-initial rule. |
+| L10 | 2026-10-09 | UX | `resources/views/reports/assessment-summary.blade.php` | Low | Open | | No back link on the Assessment Summary Report. |
+| L11 | 2026-10-09 | Dependencies | `package-lock.json` | Low | Open | | `npm audit`: 8 high, 4 moderate, all build/dev tooling (vite, tailwind deps); the shipped `public/build` is static. |
+| F1 | 2026-10-09 | Student device | `app/Http/Controllers/StudentDeviceController.php` (`toCodeEntry`) | Medium | Fixed | d2bbc8a | Reloading `/s/q` after the session ended showed "Not available"; it now goes to the code form and clears the cookie. Re-verified. |
+| F2 | 2026-10-09 | Student device | `resources/views/student-device/unavailable.blade.php` | Low | Fixed | 58b7d8b | No way back from "Not available"; added a "Try again" GET form to /s. Re-verified on every generic 404 (and the 405). |
+| F3 | 2026-10-09 | Student device | `lang/en/student_device.php` (`held_*`) | Low | Fixed | 3432105, 321688f | Held page showed the generic message; it now has its own neutral "One moment, please" text. Re-verified on screen. |
+| F4 | 2026-10-09 | Student device | `resources/views/layouts/student-device.blade.php` | Low | Fixed | 2170cff | No favicon on `/s` pages. Re-verified. |
+| F5 | 2026-10-09 | Auth / UX | `resources/views/layouts/partials/logout-modal.blade.php` | Low | Fixed | bd7289f | Logout signed out immediately; it now asks in a dialog. Re-verified at 11 viewports. |
+| F6 | 2026-10-09 | Student device | `resources/views/student-device/questionnaire.blade.php` | Low | Fixed | 28aad49 | Student questionnaire was narrower than staff Step 2. Re-verified at 11 viewports. |
+| I1 | 2026-10-09 | Authorization | route-model binding before `role` / `active` | Info | Open | | A missing id gives 404 before the role/active check, so a logged-in staff member can tell whether an id exists. |
+| I2 | 2026-10-09 | Student device | `EnsureSameOrigin` | Info | Won't fix | | A cross-site POST on `/s/*` gives 403 (CSRF defence, by design). |
+| I3 | 2026-10-09 | Notifications | `FlaggedAssessmentNotification` | Info | Won't fix | | Notification text stores the student's name and number in plaintext (counselor-facing, by design). |
+| I4 | 2026-10-09 | Audit logs | `audit_logs` | Info | Open | | Not tamper-evident (no hash chain); no app route edits or deletes entries. |
+| I5 | 2026-10-09 | Student device | `/s/answer`, `/s/done`, `/s/state` | Info | Won't fix | | The JSON endpoints always answer JSON (`{"state":"unavailable"}`, 404), identical for every reason. |
+| I6 | 2026-10-09 | Live page | `resources/views/assessments/create/remote.blade.php:17,187` | Info | Won't fix | | "New code" is offered in every active state, including Done and held; on a locked draft it unbinds the device (by design). |
