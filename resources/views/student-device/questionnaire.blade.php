@@ -54,7 +54,7 @@
             @disabled($locked)
             @if ($locked) aria-describedby="questions-locked" @endif
             data-questions
-            class="space-y-4 disabled:opacity-60"
+            class="min-w-0 space-y-4 disabled:opacity-60"
         >
             <legend class="sr-only">{{ __('student_device.statements_legend') }}</legend>
 
@@ -66,13 +66,14 @@
                     data-item="{{ $question->item_number }}"
                     data-required="{{ $question->is_required ? '1' : '0' }}"
                     data-missing="false"
-                    class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm data-[missing=true]:border-2 data-[missing=true]:border-red-500"
+                    class="min-w-0 rounded-lg border border-slate-200 bg-white p-6 shadow-sm data-[missing=true]:border-2 data-[missing=true]:border-red-500"
                 >
-                    <legend class="text-sm font-medium text-body">{{ $question->item_number }}. {{ $question->question_text }}</legend>
+                    {{-- float-left: a floated legend sits inside the card instead of on its top border. --}}
+                    <legend class="float-left w-full break-words text-sm font-medium text-body">{{ $question->item_number }}. {{ $question->question_text }}</legend>
 
-                    <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div class="clear-left flex gap-2 pt-4">
                         @foreach ([0, 1, 2, 3] as $value)
-                            <label @class(['cursor-pointer' => ! $locked, 'cursor-not-allowed' => $locked])>
+                            <label @class(['min-w-0 flex-1', 'cursor-pointer' => ! $locked, 'cursor-not-allowed' => $locked])>
                                 <input
                                     type="radio"
                                     name="answer-{{ $question->id }}"
