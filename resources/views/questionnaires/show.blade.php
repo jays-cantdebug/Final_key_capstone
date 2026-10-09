@@ -38,7 +38,7 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ $questionnaire->description }}</p>
             <div class="text-right">
                 <x-badge :color="$questionnaire->status === 'Active' ? 'green' : 'slate'">{{ $questionnaire->status }}</x-badge>
-                <p class="mt-1 max-w-[14rem] text-[11px] leading-snug text-slate-500 dark:text-slate-400">Template status &mdash; controls whether this questionnaire can be selected at all.</p>
+                <p class="mt-1 max-w-[14rem] text-xs leading-snug text-slate-500 dark:text-slate-400">Template status &mdash; controls whether this questionnaire can be selected at all.</p>
             </div>
         </div>
     </x-card>

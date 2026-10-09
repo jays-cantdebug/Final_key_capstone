@@ -58,7 +58,7 @@
             </dl>
             <div class="text-right">
                 <x-badge :color="$versionStatusColors[$version->status] ?? 'slate'">{{ $version->status }}</x-badge>
-                <p class="mt-1 max-w-[14rem] text-[11px] leading-snug text-slate-500 dark:text-slate-400">Version status &mdash; controls which version is currently used for new assessments. Independent from the questionnaire's own template status.</p>
+                <p class="mt-1 max-w-[14rem] text-xs leading-snug text-slate-500 dark:text-slate-400">Version status &mdash; controls which version is currently used for new assessments. Independent from the questionnaire's own template status.</p>
             </div>
         </div>
     </x-card>

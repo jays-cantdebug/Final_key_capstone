@@ -108,7 +108,8 @@
             @endif
         </div>
 
-        <button type="button" x-on:click="$root.remove()" aria-label="Dismiss" class="flex-shrink-0 opacity-60 hover:opacity-100">
+        {{-- 40x40 hit area around the 16 px ×; the negative margin keeps the panel layout unchanged. --}}
+        <button type="button" x-on:click="$root.remove()" aria-label="Dismiss" class="-m-3 inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md opacity-60 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
             <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
         </button>
     </div>

@@ -4,7 +4,7 @@
             <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
                 <x-application-logo class="h-12 w-12 flex-shrink-0 text-white lg:h-20 lg:w-20" />
                 <div class="hidden lg:block">
-                    <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
                     <p class="text-sm font-semibold">Assessment Portal</p>
                 </div>
             </a>
@@ -65,7 +65,7 @@
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
                     <x-application-logo class="h-16 w-16 text-white" />
                     <div>
-                        <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
                         <p class="text-sm font-semibold">Assessment Portal</p>
                     </div>
                 </a>
