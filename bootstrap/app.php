@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureSingleActiveSession;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\RestrictStudentDeviceNetwork;
+use App\Http\Middleware\StaffSecurityHeaders;
 use App\Http\Middleware\StudentDeviceHeaders;
 use App\Http\Responses\StudentDeviceResponse;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -28,6 +29,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '127.0.0.1');
+        // Frame protection etc. for login and staff pages; `/s` has its own
+        // (StudentDeviceHeaders). Prepended, so it is outermost and also
+        // covers responses built before the controller (e.g. the guest
+        // redirect from `auth`, which the priority list runs early).
+        $middleware->web(prepend: [StaffSecurityHeaders::class]);
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'single-session' => EnsureSingleActiveSession::class,
