@@ -176,7 +176,7 @@
                 <x-primary-button x-bind:disabled="state !== 'locked' || version_changed || submitting" :disabled="$state !== 'locked' || $monitor['version_changed']">{{ __('Submit and continue to review') }}</x-primary-button>
             </form>
 
-            <form method="POST" action="{{ route('assessments.create.remote.return') }}" x-show="state === 'locked'" {{ $cloakUnless($state === 'locked') }}>
+            <form method="POST" action="{{ route('assessments.create.remote.return') }}" x-show="state === 'locked'" x-on:submit="stop()" {{ $cloakUnless($state === 'locked') }}>
                 @csrf
                 <x-secondary-button type="submit">{{ __('Return to student') }}</x-secondary-button>
             </form>
@@ -194,7 +194,7 @@
                 <x-secondary-button type="submit">{{ __('Restart on the new version') }}</x-secondary-button>
             </form>
 
-            <form method="POST" action="{{ route('assessments.create.remote.new-code') }}" x-show="active" {{ $cloakUnless($isActive) }}>
+            <form method="POST" action="{{ route('assessments.create.remote.new-code') }}" x-show="active" x-on:submit="stop()" {{ $cloakUnless($isActive) }}>
                 @csrf
                 <x-secondary-button type="submit">{{ __('New code') }}</x-secondary-button>
             </form>
