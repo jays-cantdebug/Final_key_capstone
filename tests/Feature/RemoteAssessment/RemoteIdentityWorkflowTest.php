@@ -81,7 +81,7 @@ class RemoteIdentityWorkflowTest extends TestCase
 
         $this->get(route('assessments.create.remote'))
             ->assertOk()
-            ->assertSee('waiting for the student’s details', false)
+            ->assertSee('Waiting for the student’s details.', false)
             ->assertSee('data-identity-waiting', false)
             ->assertSee('guest or private browser window')
             ->assertSee('HTTPS')
@@ -113,7 +113,7 @@ class RemoteIdentityWorkflowTest extends TestCase
 
         $this->get(route('assessments.create.remote'))
             ->assertOk()
-            ->assertSee('Rhea D. Baculio')
+            ->assertSee('Entered by the student at')
             ->assertSee('data-identity-form', false)
             ->assertSee('value="Rhea"', false)
             ->assertSee('<option value="'.$this->course->id.'" selected', false)

@@ -458,7 +458,7 @@ The student PC must be able to reach the server over the network:
 
 `REMOTE_ASSESSMENT_STUDENT_ENTRY_ONLY` (`config/remote_assessment.php`, `.env.example`) is **on by default**. While it is on, **Step 1 is entered by the student** on the student PC:
 
-- **New Assessment** in the sidebar is a button (a CSRF-protected POST, `assessments.create.start`, Psychometrician only) that goes **straight to the live page** ("Steps 1 and 2 on the student device") with the code and address — no Step 1 form, no "Who will fill in the details?". It **resumes before it creates**, in this order:
+- **New Assessment** in the sidebar is a button (a CSRF-protected POST, `assessments.create.start`, Psychometrician only) that goes **straight to the live page** (no page heading; the step indicator reads "Student details (by the student) → Questionnaire → Assessment Result") with the code and address — no Step 1 form, no "Who will fill in the details?". It **resumes before it creates**, in this order:
   1. a **live draft** of this Psychometrician (a student-device run, or a Take Again sent to the student device) — its live page; a live draft is **never discarded** (an expired or declined one is replaced). A live student-entry draft left from an earlier login session is taken over; if no device has used it yet, its code and link are renewed (their plain values were only in the old session);
   2. **answers waiting for Step 3** — Step 3, with "This assessment's answers are waiting for your review…" and a **Discard and start a new assessment** button (nothing is ever wiped silently; nothing of it was saved);
   3. otherwise a new student-entry draft and its live page.

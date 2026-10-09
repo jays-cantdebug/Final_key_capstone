@@ -23,13 +23,12 @@
 @endphp
 
 <x-app-layout>
-    <x-slot name="header">
-        @if ($collectsIdentity)
-            <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Steps 1 and 2 on the student device &mdash; {{ $student?->full_name ?? 'waiting for the student’s details' }}</h2>
-        @else
+    {{-- No page heading when the student fills in Step 1 too: the step indicator says it. --}}
+    @unless ($collectsIdentity)
+        <x-slot name="header">
             <h2 class="text-2xl font-semibold text-body dark:text-slate-100">{{ $isRetake ? 'Retake: Questionnaire' : 'Step 2: Questionnaire' }} &mdash; {{ $student->full_name }}</h2>
-        @endif
-    </x-slot>
+        </x-slot>
+    @endunless
 
     @unless ($isRetake)
         @include('assessments.create._steps', ['currentStep' => $collectsIdentity && $identity === null ? 1 : 2])

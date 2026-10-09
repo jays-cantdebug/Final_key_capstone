@@ -88,7 +88,7 @@ class StudentEntryOnlyTest extends TestCase
 
         $this->get(route('assessments.create.remote'))
             ->assertOk()
-            ->assertSee('Steps 1 and 2 on the student device')
+            ->assertSee('Waiting for the student device')
             ->assertSee('http://192.168.1.10/s')
             ->assertSee((string) session('assessment_wizard.remote_short_code'))
             ->assertSee('Student details (by the student)')
