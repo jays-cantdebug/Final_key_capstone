@@ -199,7 +199,9 @@ class StudentDeviceFlowTest extends TestCase
             $response->assertNotFound()
                 ->assertSee(__('student_device.unavailable_heading'))
                 ->assertSee(__('student_device.unavailable_body'))
-                ->assertDontSee('<form', false);
+                ->assertSee('<form method="GET" action="'.route('student-device.entry').'"', false);
+            $this->assertSame(1, substr_count((string) $response->getContent(), '<form'));
+            $this->assertSame(1, substr_count((string) $response->getContent(), '<button'));
         }
 
         // /s/q with no live session goes back to the code form.

@@ -406,7 +406,7 @@ class StudentDeviceIdentityTest extends TestCase
         // the generic "not available" page is unchanged.
         $held = $this->studentRequest('GET', route('student-device.show'), device: $devices['active'])->assertOk();
         $generic = $this->studentRequest('POST', route('student-device.code'), ['code' => 'ZZZZ-ZZZZ'])->assertNotFound();
-        $this->assertSame('Not available This page is not available. Please ask the psychometrician for help.', $this->visibleText($generic));
+        $this->assertSame('Not available This page is not available. Please ask the psychometrician for help. Try again', $this->visibleText($generic));
         $this->assertSame('One moment, please Thank you for your details. The psychometrician will assist you now. Please wait.', $this->visibleText($held));
 
         $body = (string) $held->getContent();
@@ -420,9 +420,15 @@ class StudentDeviceIdentityTest extends TestCase
         foreach (['data-question', 'data-questions', 'data-details', 'data-student-device-details', 'id="questions"', 'question 1', 'Response Scale', __('student_device.identity_saved'), __('student_device.questions_locked'), __('student_device.identity_heading')] as $term) {
             $this->assertStringNotContainsString($term, $body, "The held page contains \"{$term}\".");
         }
-        // The whole page is the generic one: the same elements, plus only
-        // the wrapper that polls for a release.
-        $expectedTags = [...$this->mainTags($generic), 'div'];
+        // The whole page is the generic one: the same elements, minus the
+        // generic page's Try again form and its button, plus only the
+        // wrapper that polls for a release.
+        $genericTags = $this->mainTags($generic);
+        foreach (['form', 'button'] as $tryAgain) {
+            $this->assertContains($tryAgain, $genericTags);
+            unset($genericTags[array_search($tryAgain, $genericTags, true)]);
+        }
+        $expectedTags = [...$genericTags, 'div'];
         sort($expectedTags);
         $this->assertSame($expectedTags, $this->mainTags($held));
 

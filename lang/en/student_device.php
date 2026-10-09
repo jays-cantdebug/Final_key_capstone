@@ -77,6 +77,8 @@ return [
 
     'unavailable_heading' => 'Not available',
     'unavailable_body' => 'This page is not available. Please ask the psychometrician for help.',
+    // Back to the code form; the same for every reason.
+    'unavailable_retry' => 'Try again',
 
     // Held (the Psychometrician has to look at something before the
     // student continues). Neutral on purpose: never says why.

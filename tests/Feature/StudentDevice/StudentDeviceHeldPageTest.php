@@ -54,7 +54,7 @@ class StudentDeviceHeldPageTest extends TestCase
         $generic = $this->studentRequest('POST', route('student-device.code'), ['code' => 'ZZZZ-ZZZZ'])->assertNotFound();
 
         $this->assertSame(
-            'Not available This page is not available. Please ask the psychometrician for help.',
+            'Not available This page is not available. Please ask the psychometrician for help. Try again',
             $this->visibleText((string) $generic->getContent()),
         );
         $this->assertStringNotContainsString(__('student_device.held_heading'), (string) $generic->getContent());
