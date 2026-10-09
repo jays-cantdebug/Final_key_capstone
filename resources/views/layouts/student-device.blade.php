@@ -16,6 +16,9 @@
 
         <title>{{ __('student_device.title') }}</title>
 
+        {{-- The staff layouts' favicon: a static same-origin file (CSP img-src 'self'), served by the web server without Laravel, so no cookie or session. --}}
+        <link rel="icon" type="image/png" href="{{ asset('images/normi-logo-favicon.png') }}?v={{ filemtime(public_path('images/normi-logo-favicon.png')) }}">
+
         @include('layouts.partials.font-preloads', ['weights' => [400, 500, 600]])
 
         @vite(['resources/css/app.css', 'resources/js/student-device.js'])

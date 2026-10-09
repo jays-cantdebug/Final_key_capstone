@@ -595,13 +595,17 @@ class StudentDeviceExposureTest extends TestCase
         preg_match_all('#https?://[^\s"\'<>]+#i', $body, $absolute);
         foreach ($absolute[0] as $url) {
             $this->assertTrue(
-                str_starts_with($url, $origin.'/s/') || $url === $origin.'/s' || str_starts_with($url, $origin.'/build/'),
+                str_starts_with($url, $origin.'/s/') || $url === $origin.'/s' || str_starts_with($url, $origin.'/build/')
+                    || $url === $origin.'/images/normi-logo-favicon.png?v='.filemtime(public_path('images/normi-logo-favicon.png')),
                 "{$label} links to {$url}."
             );
         }
 
         preg_match_all('#\b(?:href|src|action)\s*=\s*"([^"]*)"#i', $body, $attributes);
         foreach ($attributes[1] as $url) {
+            if ($url === $origin.'/images/normi-logo-favicon.png?v='.filemtime(public_path('images/normi-logo-favicon.png'))) {
+                continue;
+            }
             $path = str_starts_with($url, $origin) ? substr($url, strlen($origin)) : $url;
             $this->assertMatchesRegularExpression('#^/(s(/|$)|build/)#', $path, "{$label} has {$url}.");
         }
