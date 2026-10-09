@@ -44,6 +44,34 @@ The prune job is registered in `routes/console.php`; something must call it ever
 - [ ] A **restore test** into a scratch database, then opening one assessment and one counseling session to confirm they decrypt. Repeat after any key change.
 - [ ] Old unencrypted dumps are deleted or moved into the encrypted store.
 
+### Backup and restore-test scripts (Windows)
+
+Two scripts live **outside the repository**, next to the project folder: `C:\Users\arnhe\Documents\backup-normi.ps1` and `restore-test-normi.ps1`. They need **7-Zip** (`C:\Program Files\7-Zip\7z.exe`, or pass `-SevenZipPath`) and the MySQL client tools. Laragon's `C:\laragon\bin\mysql\*\bin` is found automatically; otherwise pass `-MysqldumpPath` / `-MysqlPath`.
+
+**Backup** (reads the database only):
+
+```
+powershell -ExecutionPolicy Bypass -File C:\Users\arnhe\Documents\backup-normi.ps1 -OutputFolder D:\NORMI-backups
+```
+
+- Reads the connection from the project's `.env` without changing it.
+- Dumps with `mysqldump --single-transaction`: a consistent, non-locking snapshot.
+- Encrypts the dump into `normi-backup-YYYYMMDD-HHMMSS.7z` (AES-256, file names hidden). **7-Zip asks for the passphrase twice; the script never sees or stores it.**
+- Deletes the plain `.sql` file, and keeps the newest 14 archives (`-Keep N` to change).
+- The DB password only lives in a temporary options file, readable by the current Windows user alone, and is deleted after the run.
+- Schedule it nightly with Task Scheduler, or run it by hand before every update. A scheduled run can't answer the passphrase prompt, so nightly runs need someone present, or a different encryption setup agreed with the APP_KEY custodian.
+
+**Restore test** (into a throwaway database only):
+
+```
+powershell -ExecutionPolicy Bypass -File C:\Users\arnhe\Documents\restore-test-normi.ps1 -BackupFolder D:\NORMI-backups
+```
+
+- Restores the newest archive into `normi_restore_test`. The script refuses any name that doesn't start with `normi_restore_test`, or that equals `DB_DATABASE` in `.env`.
+- Asks for a MySQL account that can create databases (e.g. `root`) and for the archive passphrase.
+- Prints every table's row count, then drops the test database. Use `-KeepDatabase` to keep it, so that a throwaway copy of the app with the production `APP_KEY` can open one assessment and one counseling session to prove the encrypted columns decrypt.
+- Compare the row counts with the live system (e.g. the number of assessments on the dashboard).
+
 ## 6. Logs
 
 - [ ] `LOG_STACK=daily`, `LOG_DAILY_DAYS=14`, `LOG_LEVEL=warning` (as in `.env.production.example`).
