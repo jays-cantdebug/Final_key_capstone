@@ -405,8 +405,8 @@ class StudentDeviceIdentityTest extends TestCase
         // An active match: only the generic message, word for word.
         $held = $this->studentRequest('GET', route('student-device.show'), device: $devices['active'])->assertOk();
         $generic = $this->studentRequest('POST', route('student-device.code'), ['code' => 'ZZZZ-ZZZZ'])->assertNotFound();
-        $this->assertSame($this->visibleText($generic), $this->visibleText($held));
-        $this->assertSame('Not available This page is not available. Please ask the psychometrician for help.', $this->visibleText($held));
+        $this->assertSame('Not available This page is not available. Please ask the psychometrician for help.', $this->visibleText($generic));
+        $this->assertSame('Please wait Thank you. Please let the psychometrician know, and wait for them to continue with you.', $this->visibleText($held));
 
         $body = (string) $held->getContent();
         foreach ([

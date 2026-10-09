@@ -78,6 +78,11 @@ return [
     'unavailable_heading' => 'Not available',
     'unavailable_body' => 'This page is not available. Please ask the psychometrician for help.',
 
+    // Held (the Psychometrician has to look at something before the
+    // student continues). Neutral on purpose: never says why.
+    'held_heading' => 'Please wait',
+    'held_body' => 'Thank you. Please let the psychometrician know, and wait for them to continue with you.',
+
     'staff_heading' => 'Please sign out first',
     'staff_body' => 'This browser is signed in to a staff account. Please sign out, or use a private window, then open this page again.',
 

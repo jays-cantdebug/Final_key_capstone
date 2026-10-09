@@ -105,7 +105,7 @@ class StudentDeviceStaleSessionTest extends TestCase
         $page = view('student-device.held')->render();
 
         $this->assertStringContainsString('data-student-device="held"', $page);
-        $this->assertStringContainsString(__('student_device.unavailable_body'), $page);
+        $this->assertStringContainsString(__('student_device.held_body'), $page);
     }
 
     /**
