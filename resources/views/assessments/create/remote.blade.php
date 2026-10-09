@@ -6,7 +6,7 @@
         'pending' => 'Waiting for the student device',
         'consent' => 'Student device connected — waiting for the student to acknowledge the privacy notice',
         'identity' => 'Waiting for the student to enter their details',
-        'held' => 'Stopped: the name the student entered matches an existing active student (see below). The student device shows only the generic “not available” message.',
+        'held' => 'Stopped: the name the student entered matches an existing active student (see below). The student device shows only a neutral “One moment, please” message, never the reason.',
         'answering' => 'Student is answering',
         'locked' => 'The student pressed Done — review the answers, then submit',
         'declined' => 'The student declined the privacy notice. Nothing was saved.',

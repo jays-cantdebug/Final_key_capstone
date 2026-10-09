@@ -25,8 +25,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * `consented_at`, then for the details when `collects_identity` and no
  * `identity_submitted_at`) → `locked` (the student pressed Done).
  * `held_at` is set when the typed name matches an active student; the
- * device then shows only the generic message until a correction clears
- * it. `declined` is a stripped row (no credentials, no answers, no
+ * device then shows only the neutral held page ("One moment, please")
+ * until a correction clears it. `declined` is a stripped row (no credentials, no answers, no
  * details) kept only so the Psychometrician can be told; it is pruned like
  * any other.
  *

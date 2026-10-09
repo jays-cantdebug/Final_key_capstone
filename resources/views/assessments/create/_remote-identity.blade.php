@@ -20,7 +20,7 @@
             <div data-identity-duplicate="{{ $duplicate['kind'] }}">
                 @if ($draft->isHeld())
                     <p class="mb-2 text-sm font-semibold text-red-700 dark:text-red-400" data-held-reason>
-                        The student device was stopped because the name the student entered matches an existing active student. The student sees only the generic “not available” message. Use Take Again for that student (the retake needs a new code), or correct the name below if it was mistyped.
+                        The student device was stopped because the name the student entered matches an existing active student. The student sees only a neutral “One moment, please” message, never the reason. Use Take Again for that student (the retake needs a new code), or correct the name below if it was mistyped.
                     </p>
                 @endif
                 @include('assessments.create._duplicate-student', ['duplicate' => $duplicate, 'controls' => false])
