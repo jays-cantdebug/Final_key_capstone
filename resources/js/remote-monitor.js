@@ -7,15 +7,23 @@
  * When the student's own details arrive, or the device is held over a
  * duplicate, the page reloads (the poll carries only those two flags,
  * never the details).
+ *
+ * Submit and continue to review shows Step 2's "Analyzing responses"
+ * overlay (`submitting`) and stops polling: Submit deletes the draft, so
+ * a later poll would only get a 404 ("no longer available") behind the
+ * overlay, and on php -S it would wait behind the AI call anyway. Back
+ * from Step 3 (a page restored from the back/forward cache) hides the
+ * overlay and polls again.
  */
 export default (config) => ({
     ...config.initial,
     offline: false,
     stopped: false,
     busy: false,
+    submitting: false,
 
     init() {
-        this.pollTimer = window.setInterval(() => this.poll(), config.interval);
+        this.startPolling();
         this.tickTimer = window.setInterval(() => {
             if (this.seconds_left > 0) {
                 this.seconds_left--;
@@ -24,6 +32,37 @@ export default (config) => ({
                 this.last_seen_seconds++;
             }
         }, 1000);
+    },
+
+    startPolling() {
+        this.stopped = false;
+        window.clearInterval(this.pollTimer);
+        this.pollTimer = window.setInterval(() => this.poll(), config.interval);
+    },
+
+    // x-on:submit on the Submit form only.
+    submitForReview(event) {
+        if (this.submitting) {
+            event.preventDefault();
+            return;
+        }
+
+        this.submitting = true;
+        this.stop();
+    },
+
+    // x-on:pageshow.window: a page restored from the back/forward cache
+    // still has the overlay up and polling stopped.
+    restoreAfterBack(event) {
+        if (!event.persisted || !this.submitting) {
+            return;
+        }
+
+        this.submitting = false;
+
+        if (this.active) {
+            this.startPolling();
+        }
     },
 
     destroy() {

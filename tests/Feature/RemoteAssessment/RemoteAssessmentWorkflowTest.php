@@ -112,6 +112,39 @@ class RemoteAssessmentWorkflowTest extends TestCase
         $this->assertFalse(class_exists('BaconQrCode\Writer'));
     }
 
+    public function test_only_the_submit_form_shows_step_twos_analyzing_overlay(): void
+    {
+        $this->submitStepOne();
+        $this->sendToStudentDevice();
+
+        $page = (string) $this->get(route('assessments.create.remote'))->assertOk()->getContent();
+
+        // Step 2's own overlay and animation styles, once each.
+        $this->assertSame(1, substr_count($page, 'Analyzing responses<span class="loading-dot">'));
+        $this->assertSame(1, substr_count($page, '@keyframes loading-breathe'));
+        $this->assertSame(1, substr_count($page, 'x-show="submitting"'));
+
+        preg_match_all('#<form\b[^>]*>.*?</form>#s', $page, $forms);
+        $withOverlay = array_values(array_filter($forms[0], fn (string $form): bool => str_contains($form, 'Analyzing responses<span')));
+
+        $this->assertCount(1, $withOverlay, 'The overlay is in exactly one form.');
+        $submit = $withOverlay[0];
+        $this->assertStringContainsString('action="'.route('assessments.create.remote.submit').'"', $submit);
+        $this->assertStringContainsString('data-remote-submit', $submit);
+        $this->assertStringContainsString('x-on:submit="submitForReview($event)"', $submit);
+        $this->assertStringContainsString('x-on:pageshow.window="restoreAfterBack($event)"', $submit);
+        $this->assertStringContainsString('|| submitting"', $submit, 'Submit is disabled while submitting.');
+        $this->assertStringContainsString('Submit and continue to review', $submit);
+
+        // Return to student, Restart, New code, Send again, Cancel, the
+        // correction form: none of them show it or call the hook.
+        foreach (array_diff($forms[0], [$submit]) as $form) {
+            $this->assertStringNotContainsString('submitForReview', $form);
+            $this->assertStringNotContainsString('x-show="submitting"', $form);
+        }
+        $this->assertSame(1, substr_count($page, 'submitForReview'));
+    }
+
     public function test_copy_link_puts_the_link_only_in_the_buttons_data_attribute_with_the_warning(): void
     {
         $this->submitStepOne();

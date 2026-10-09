@@ -54,6 +54,8 @@
         </x-alert>
     @endif
 
+    @include('assessments.create._analyzing-overlay', ['part' => 'style'])
+
     <div
         x-data="remoteMonitor(@js([
             'initial' => $monitor,
@@ -61,6 +63,7 @@
             'statusUrl' => route('assessments.create.remote.status'),
             'statusLabels' => $statusLabels,
         ]))"
+        x-bind:inert="submitting"
         class="space-y-6"
     >
         <div class="grid gap-6 lg:grid-cols-3">
@@ -141,8 +144,20 @@
 
         {{-- Actions --}}
         <div class="flex flex-wrap items-center gap-3">
-            <form method="POST" action="{{ route('assessments.create.remote.submit') }}" class="flex flex-wrap items-center gap-3">
+            {{-- Step 2's "Analyzing responses" overlay while Step 3 classifies; Submit only (resources/js/remote-monitor.js). --}}
+            <form
+                method="POST"
+                action="{{ route('assessments.create.remote.submit') }}"
+                class="flex flex-wrap items-center gap-3"
+                data-remote-submit
+                x-on:submit="submitForReview($event)"
+                x-on:pageshow.window="restoreAfterBack($event)"
+                x-effect="document.body.classList.toggle('overflow-y-hidden', submitting)"
+            >
                 @csrf
+
+                @include('assessments.create._analyzing-overlay', ['part' => 'overlay'])
+
                 @if ($isRetake || $collectsIdentity)
                     {{-- The staff attestation (Step 1's checkbox), next to Submit. --}}
                     <label class="flex items-start gap-2">
@@ -156,7 +171,7 @@
                         <span class="text-sm text-slate-700 dark:text-slate-300">I understand. Create a new student record.</span>
                     </label>
                 @endif
-                <x-primary-button x-bind:disabled="state !== 'locked' || version_changed" :disabled="$state !== 'locked' || $monitor['version_changed']">{{ __('Submit and continue to review') }}</x-primary-button>
+                <x-primary-button x-bind:disabled="state !== 'locked' || version_changed || submitting" :disabled="$state !== 'locked' || $monitor['version_changed']">{{ __('Submit and continue to review') }}</x-primary-button>
             </form>
 
             <form method="POST" action="{{ route('assessments.create.remote.return') }}" x-show="state === 'locked'" {{ $cloakUnless($state === 'locked') }}>
