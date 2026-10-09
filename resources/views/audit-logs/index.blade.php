@@ -50,17 +50,17 @@
             <x-table.th>Module</x-table.th>
             <x-table.th>Action</x-table.th>
             <x-table.th>Record #</x-table.th>
-            <x-table.th align="right">Actions</x-table.th>
+            <x-table.th sticky align="right">Actions</x-table.th>
         </x-slot:head>
 
         @forelse ($logs as $log)
             <tr>
                 <x-table.td>{{ $log->created_at->format('M d, Y g:i A') }}</x-table.td>
                 <x-table.td>{{ $log->user?->name ?? 'System' }}</x-table.td>
-                <x-table.td>{{ $log->module }}</x-table.td>
-                <x-table.td class="font-medium text-body dark:text-slate-100">{{ $log->action }}</x-table.td>
+                <x-table.td wrap>{{ $log->module }}</x-table.td>
+                <x-table.td wrap class="font-medium text-body dark:text-slate-100">{{ $log->action }}</x-table.td>
                 <x-table.td>{{ $log->record_id ?? '—' }}</x-table.td>
-                <x-table.td align="right">
+                <x-table.td sticky align="right">
                     <a href="{{ route('audit-logs.show', $log) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                 </x-table.td>
             </tr>

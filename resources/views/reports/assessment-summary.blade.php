@@ -70,7 +70,7 @@
         @include('reports._summary-counts-basis')
     </p>
 
-    <div class="mt-4 grid gap-6 lg:grid-cols-3">
+    <div class="mt-4 grid gap-6 xl:grid-cols-3">
         @foreach ([
             'Depression' => $depressionBySeverity,
             'Anxiety' => $anxietyBySeverity,

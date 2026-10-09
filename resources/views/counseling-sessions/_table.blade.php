@@ -22,19 +22,19 @@
         <x-table.th>Date &amp; Time</x-table.th>
         <x-table.th>Status</x-table.th>
         <x-table.th>Confidentiality</x-table.th>
-        <x-table.th align="right">Actions</x-table.th>
+        <x-table.th sticky align="right">Actions</x-table.th>
     </x-slot:head>
 
     @forelse ($sessions as $session)
         <tr>
-            <x-table.td class="font-medium text-body dark:text-slate-100">
+            <x-table.td wrap class="font-medium text-body dark:text-slate-100">
                 <a href="{{ route('counseling-sessions.students.show', $session->student) }}" class="hover:text-primary hover:underline dark:hover:text-primary-soft">{{ $session->student->full_name }}</a>
             </x-table.td>
-            <x-table.td>{{ $session->counselor->name }}</x-table.td>
+            <x-table.td wrap>{{ $session->counselor->name }}</x-table.td>
             <x-table.td>{{ $session->session_datetime->format('M d, Y g:i A') }}</x-table.td>
             <x-table.td><x-badge :color="$statusColors[$session->session_status] ?? 'slate'">{{ $session->session_status }}</x-badge></x-table.td>
             <x-table.td>{{ $session->confidentiality_level }}</x-table.td>
-            <x-table.td align="right">
+            <x-table.td sticky align="right">
                 <div class="inline-flex flex-wrap justify-end gap-2">
                     <a href="{{ route('counseling-sessions.show', $session) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                     @can('update', $session)

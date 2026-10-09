@@ -38,18 +38,18 @@
             <x-table.th>Description</x-table.th>
             <x-table.th>Versions</x-table.th>
             <x-table.th>Template Status</x-table.th>
-            <x-table.th align="right">Actions</x-table.th>
+            <x-table.th sticky align="right">Actions</x-table.th>
         </x-slot:head>
 
         @forelse ($questionnaires as $questionnaire)
             <tr>
                 <x-table.td class="font-medium text-body dark:text-slate-100">{{ $questionnaire->title }}</x-table.td>
-                <x-table.td>{{ \Illuminate\Support\Str::limit($questionnaire->description, 60) }}</x-table.td>
+                <x-table.td wrap>{{ \Illuminate\Support\Str::limit($questionnaire->description, 60) }}</x-table.td>
                 <x-table.td>{{ $questionnaire->versions_count }}</x-table.td>
                 <x-table.td>
                     <x-badge :color="$questionnaire->status === 'Active' ? 'green' : 'slate'">{{ $questionnaire->status }}</x-badge>
                 </x-table.td>
-                <x-table.td align="right">
+                <x-table.td sticky align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
                         <a href="{{ route('questionnaires.show', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                         <a href="{{ route('questionnaires.edit', $questionnaire) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">Edit</a>

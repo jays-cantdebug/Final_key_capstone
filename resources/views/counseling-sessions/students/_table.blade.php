@@ -22,12 +22,12 @@
         <x-table.th>Last Session</x-table.th>
         <x-table.th>Next Scheduled</x-table.th>
         <x-table.th>Follow-Up</x-table.th>
-        <x-table.th align="right">Actions</x-table.th>
+        <x-table.th sticky align="right">Actions</x-table.th>
     </x-slot:head>
 
     @forelse ($students as $student)
         <tr>
-            <x-table.td class="font-medium text-body dark:text-slate-100">
+            <x-table.td wrap class="font-medium text-body dark:text-slate-100">
                 {{ $student->full_name }}
                 <div class="text-xs font-normal text-slate-500 dark:text-slate-400">{{ $student->student_number }}</div>
             </x-table.td>
@@ -35,7 +35,7 @@
             <x-table.td>{{ $student->last_session_at?->format('M d, Y') ?? '—' }}</x-table.td>
             <x-table.td>{{ $student->next_session_at?->format('M d, Y g:i A') ?? '—' }}</x-table.td>
             <x-table.td><x-follow-up-badge :status="$student->follow_up_status" :due-date="$student->last_follow_up_date" /></x-table.td>
-            <x-table.td align="right">
+            <x-table.td sticky align="right">
                 <a href="{{ route('counseling-sessions.students.show', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View history</a>
             </x-table.td>
         </tr>
