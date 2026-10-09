@@ -564,6 +564,8 @@ The system defines one contract — `AIProviderInterface` — with a single meth
 
 **Choosing `CLAUDE_MODEL`:** the configured model (`claude-sonnet-5`) must support a *forced* tool call (`tool_choice` naming a specific tool), which step 3 depends on. Not every Claude model does — some newer models reject a forced tool call outright. On such a model every request fails, and because the provider falls back to the rule-based engine on any failure, the app would keep working while silently never using Claude (every result recorded as `rule_based`, with a "Claude AI classification failed" warning in the log). So before changing `CLAUDE_MODEL`, verify the new model with a live check: with `AI_PROVIDER=claude`, complete one test assessment and confirm its result shows `ai_provider = claude` and no such warning was logged.
 
+**Timeouts (`CLAUDE_TIMEOUT`, `CLAUDE_CONNECT_TIMEOUT`):** the Claude request gives up after `CLAUDE_TIMEOUT` seconds in total (default **12**) and after `CLAUDE_CONNECT_TIMEOUT` seconds if it can't even connect (default **4**). A request that gives up falls back to the rule-based result like any other failure, so Step 3 then opens with "Classified by: rule_based" and a "Claude AI classification failed … cURL error 28: Operation timed out" warning in the log. The total is **capped at 20 seconds in code** (`ClaudeAIProvider::MAX_TIMEOUT_SECONDS`), whatever `.env` says, and the connect timeout never exceeds the total; a blank, non-numeric or zero value uses the default. The cap exists because PHP's own time limit (`max_execution_time`, 30 seconds under `php -S`; on Windows it counts time spent waiting on the network) is a fatal error, not an exception: before the cap, a slow API reply turned Step 3 into a "Server Error" page after 30 seconds instead of falling back. Checked on 2026-10-09 with `php -S` against a local endpoint that never answers: before, HTTP 500 after 30.7 s; after, a clean `rule_based` result after 12.3 s (default) and 20.3 s (`CLAUDE_TIMEOUT=45`). While Step 3 waits on Claude, `php -S` (one request at a time) also holds back the student PC's and the live page's requests, which is another reason to keep the timeout short.
+
 ### The exact JSON payload sent to Claude
 
 This is the literal structure of the `user` message content, built fresh from real data on every single classification request:
@@ -681,7 +683,7 @@ Because the rule-based lookup is deterministic and always correct by definition 
 
 - **If they agree** on all three subscales → the Claude result is used, and `dass_results.ai_provider` is recorded as `"claude"`.
 - **If they disagree on even one subscale** → the discrepancy (including both results and the input scores) is written to the application log for review, and the system silently falls back to the rule-based result instead. `ai_provider` is recorded as `"rule_based"`.
-- **If the Claude API call fails outright** (network error, timeout, malformed/missing tool call, API error) → the same fallback happens, also logged.
+- **If the Claude API call fails outright** (network error, timeout — `CLAUDE_TIMEOUT`, default 12 s, capped at 20 s; see "Timeouts" above — malformed/missing tool call, API error) → the same fallback happens, also logged.
 
 These warnings go to the application log (`storage/logs/laravel.log`). Their `assessment_id` is always empty, because classification runs before the assessment is saved; a log entry can be matched to an assessment by its time and scores.
 
