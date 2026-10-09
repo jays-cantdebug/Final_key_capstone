@@ -112,13 +112,11 @@ $iconClasses = fn (bool $active) => $active ? 'h-5 w-5 flex-shrink-0 text-primar
             </li>
         @endif
         <li class="mt-auto pt-6">
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="group flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-tint hover:text-primary dark:hover:bg-primary-soft/15 dark:hover:text-primary-soft">
-                    <svg class="h-5 w-5 text-gold transition group-hover:text-primary dark:text-gold-soft dark:group-hover:text-primary-soft" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 4a1 1 0 0 0-1 1v2h2V6h6v8H8v-1H6v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H7Zm-.293 3.707L3.414 10H12v-1.5H3.414l3.293-2.707-1-1.086Z" /></svg>
-                    <span class="{{ $labelClass }}">Logout</span>
-                </button>
-            </form>
+            {{-- Only opens the confirmation (layouts/partials/logout-modal), closing the mobile drawer first; the logout POST form is in the modal. --}}
+            <button type="button" data-logout-trigger aria-haspopup="dialog" @click="open = false; $dispatch('open-modal', 'confirm-logout')" class="group flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-tint hover:text-primary dark:hover:bg-primary-soft/15 dark:hover:text-primary-soft">
+                <svg class="h-5 w-5 text-gold transition group-hover:text-primary dark:text-gold-soft dark:group-hover:text-primary-soft" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 4a1 1 0 0 0-1 1v2h2V6h6v8H8v-1H6v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H7Zm-.293 3.707L3.414 10H12v-1.5H3.414l3.293-2.707-1-1.086Z" /></svg>
+                <span class="{{ $labelClass }}">Logout</span>
+            </button>
         </li>
     </ul>
 </nav>

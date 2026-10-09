@@ -47,5 +47,7 @@
                 </main>
             </div>
         </div>
+
+        @include('layouts.partials.logout-modal')
     </body>
 </html>
