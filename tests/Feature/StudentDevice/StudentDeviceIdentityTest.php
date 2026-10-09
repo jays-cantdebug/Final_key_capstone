@@ -406,7 +406,7 @@ class StudentDeviceIdentityTest extends TestCase
         $held = $this->studentRequest('GET', route('student-device.show'), device: $devices['active'])->assertOk();
         $generic = $this->studentRequest('POST', route('student-device.code'), ['code' => 'ZZZZ-ZZZZ'])->assertNotFound();
         $this->assertSame($this->visibleText($generic), $this->visibleText($held));
-        $this->assertSame('Not available This page is not available. Please ask the staff member for help.', $this->visibleText($held));
+        $this->assertSame('Not available This page is not available. Please ask the psychometrician for help.', $this->visibleText($held));
 
         $body = (string) $held->getContent();
         foreach ([

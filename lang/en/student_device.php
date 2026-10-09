@@ -15,7 +15,7 @@ return [
     'title' => 'Questionnaire',
 
     'code_heading' => 'Enter your code',
-    'code_help' => 'Type the code the staff member gave you.',
+    'code_help' => 'Type the code the psychometrician gave you.',
     'code_label' => 'Code',
     'code_submit' => 'Continue',
 
@@ -40,7 +40,7 @@ return [
     'consent_placeholder_marker' => '[Placeholder — to be replaced by the DPO\'s approved text]',
     'consent_paragraphs' => [
         'Your answers to this questionnaire are personal and sensitive information. They will be used only by the school\'s guidance and psychometric staff to understand how you are doing and, where needed, to offer support.',
-        'Your answers are kept confidential and protected in line with the Data Privacy Act of 2012 (RA 10173). You may ask the staff member any question about how your information is used before you continue.',
+        'Your answers are kept confidential and protected in line with the Data Privacy Act of 2012 (RA 10173). You may ask the psychometrician any question about how your information is used before you continue.',
     ],
     'consent_accept' => 'I understand and agree',
     'consent_decline' => 'I do not agree',
@@ -70,13 +70,13 @@ return [
     'noscript' => 'Please turn on JavaScript in this browser to answer the questionnaire.',
 
     'thanks_heading' => 'Thank you',
-    'thanks_body' => 'You have finished. Please hand the device back to the staff member.',
+    'thanks_body' => 'You have finished. Please let the psychometrician know.',
 
     'declined_heading' => 'Thank you',
-    'declined_body' => 'Nothing was saved. Please hand the device back to the staff member.',
+    'declined_body' => 'Nothing was saved. Please let the psychometrician know.',
 
     'unavailable_heading' => 'Not available',
-    'unavailable_body' => 'This page is not available. Please ask the staff member for help.',
+    'unavailable_body' => 'This page is not available. Please ask the psychometrician for help.',
 
     'staff_heading' => 'Please sign out first',
     'staff_body' => 'This browser is signed in to a staff account. Please sign out, or use a private window, then open this page again.',
