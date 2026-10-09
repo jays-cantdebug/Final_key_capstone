@@ -24,6 +24,7 @@
         data-done-url="{{ route('student-device.done') }}"
         data-state-url="{{ route('student-device.state') }}"
         data-page-url="{{ route('student-device.show') }}"
+        data-entry-url="{{ route('student-device.entry') }}"
         data-version="{{ $version }}"
         data-status-saved="{{ __('student_device.status_saved') }}"
         data-status-saving="{{ __('student_device.status_saving') }}"
@@ -112,10 +113,5 @@
                 </button>
             </div>
         </div>
-
-        {{-- Swapped in by the script when the draft is gone (cancelled, expired). --}}
-        <template data-unavailable-template>
-            @include('student-device._message', ['heading' => __('student_device.unavailable_heading'), 'body' => __('student_device.unavailable_body')])
-        </template>
     </div>
 @endsection

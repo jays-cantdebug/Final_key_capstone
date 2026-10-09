@@ -251,7 +251,7 @@ class RemoteIdentityWorkflowTest extends TestCase
         // Take Again through the panel ends this draft; the retake needs a new code.
         $this->get(route('assessments.create.retake', $existing))->assertRedirect(route('assessments.create.questionnaire'));
         $this->assertModelMissing($draft);
-        $this->studentRequest('GET', route('student-device.show'), device: $device)->assertNotFound();
+        $this->studentRequest('GET', route('student-device.show'), device: $device)->assertRedirect(route('student-device.entry'));
         $this->actingAs($this->owner);
         ['draft' => $retake] = $this->sendToStudentDevice();
         $this->assertFalse($retake->collects_identity);

@@ -195,13 +195,15 @@ class StudentDeviceFlowTest extends TestCase
             $this->studentRequest('GET', route('student-device.begin', str_repeat('a', 43))),
             $this->studentRequest('POST', route('student-device.claim', str_repeat('a', 43))),
             $this->studentRequest('GET', '/s/t/too-short'),
-            $this->studentRequest('GET', route('student-device.show')),
         ] as $response) {
             $response->assertNotFound()
                 ->assertSee(__('student_device.unavailable_heading'))
                 ->assertSee(__('student_device.unavailable_body'))
                 ->assertDontSee('<form', false);
         }
+
+        // /s/q with no live session goes back to the code form.
+        $this->studentRequest('GET', route('student-device.show'))->assertRedirect(route('student-device.entry'));
     }
 
     public function test_the_privacy_notice_comes_first_and_answers_are_refused_until_it_is_acknowledged(): void
@@ -249,7 +251,7 @@ class StudentDeviceFlowTest extends TestCase
         $this->assertNull($draft->device_hash);
         $this->assertNull($draft->responses);
 
-        $this->studentRequest('GET', route('student-device.show'), device: $device)->assertNotFound();
+        $this->studentRequest('GET', route('student-device.show'), device: $device)->assertRedirect(route('student-device.entry'));
         $this->studentRequest('GET', route('student-device.state'), device: $device, json: true)
             ->assertNotFound()->assertExactJson(['state' => 'unavailable']);
     }
@@ -400,7 +402,7 @@ class StudentDeviceFlowTest extends TestCase
         $this->travel(61)->minutes();
 
         $this->studentRequest('GET', route('student-device.show'), device: $device)
-            ->assertNotFound()
+            ->assertRedirect(route('student-device.entry'))
             ->assertCookieExpired(RemoteAssessmentService::DEVICE_COOKIE);
         $this->studentRequest('GET', route('student-device.state'), device: $device, json: true)->assertNotFound()->assertExactJson(['state' => 'unavailable']);
         $this->studentRequest('POST', route('student-device.answer'), ['question_id' => $this->version->questions->first()->id, 'value' => 1], $device, json: true)

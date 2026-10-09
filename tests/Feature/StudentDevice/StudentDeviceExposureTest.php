@@ -409,7 +409,7 @@ class StudentDeviceExposureTest extends TestCase
         $declining = $this->claimWithCode($declineCode);
         $this->studentRequest('GET', route('student-device.show'), device: $declining)->assertOk();
         $this->studentRequest('POST', route('student-device.decline'), device: $declining)->assertOk();
-        $this->studentRequest('GET', route('student-device.show'), device: $declining)->assertNotFound();
+        $this->studentRequest('GET', route('student-device.show'), device: $declining)->assertRedirect(route('student-device.entry'));
 
         // The student types their own details (neutral lookups, so the
         // only Active ones are these).
@@ -483,7 +483,7 @@ class StudentDeviceExposureTest extends TestCase
         ['short_code' => $shortCode] = $this->createRemoteDraft($this->psychometrician());
         $device = $this->claimWithCode($shortCode);
         $this->travel(61)->minutes();
-        $this->studentRequest('GET', route('student-device.show'), device: $device)->assertNotFound();
+        $this->studentRequest('GET', route('student-device.show'), device: $device)->assertRedirect(route('student-device.entry'));
         $this->studentRequest('GET', route('student-device.state'), device: $device, json: true)->assertNotFound();
         $this->travelBack();
 

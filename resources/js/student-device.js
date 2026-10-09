@@ -9,9 +9,10 @@
  *   line says "Not saved — reconnecting…". Done stays disabled until every
  *   required statement is answered and every answer is saved.
  * - The state is polled (every 5 s while answering, 3 s once locked or
- *   held): when the draft is gone the page shows the generic message; when
- *   staff return a locked questionnaire, or let a held one continue, the
- *   page reloads.
+ *   held): when the draft is gone (submitted, cancelled, expired, New code)
+ *   the questionnaire goes to the code form (data-entry-url), ready for a
+ *   new code; when staff return a locked questionnaire, or let a held one
+ *   continue, the page reloads. The thank-you page keeps its message.
  * - The details form at the top of the page (when the student fills in
  *   their own details) is a plain HTML form and needs no script. Until it
  *   is saved the questions are locked (data-locked="1"): autosave doesn't
@@ -34,18 +35,14 @@ const root = document.querySelector('[data-student-device]');
 
 if (root?.dataset.studentDevice === 'questionnaire' && root.dataset.locked === '1') {
     // Details not saved yet: the questions are disabled and nothing is
-    // autosaved. Only watch for the draft ending (the generic message) or
-    // moving on (reload).
+    // autosaved. Only watch for the draft ending (the code form) or moving
+    // on (reload).
     pollState(root.dataset.stateUrl, ANSWERING_POLL_MS, (state) => {
         if (state === 'identity') {
             return true;
         }
 
-        if (state === 'unavailable') {
-            root.replaceChildren(root.querySelector('[data-unavailable-template]').content.cloneNode(true));
-        } else {
-            window.location.replace(root.dataset.pageUrl);
-        }
+        window.location.replace(state === 'unavailable' ? root.dataset.entryUrl : root.dataset.pageUrl);
 
         return false;
     });
@@ -53,7 +50,7 @@ if (root?.dataset.studentDevice === 'questionnaire' && root.dataset.locked === '
     initQuestionnaire(root);
 } else if (root?.dataset.studentDevice === 'held') {
     // Held: reopen the page once the Psychometrician lets it continue (or
-    // it ends, which then shows the generic message for good).
+    // it ends, which then lands on the code form).
     pollState(root.dataset.stateUrl, LOCKED_POLL_MS, (state) => {
         if (state !== 'help') {
             window.location.replace(root.dataset.pageUrl);
@@ -151,8 +148,8 @@ function initQuestionnaire(container) {
 
     const showUnavailable = () => {
         finished = true;
-        const template = container.querySelector('[data-unavailable-template]');
-        container.replaceChildren(template.content.cloneNode(true));
+        // The draft is gone: to the code form, ready for a new code.
+        window.location.replace(container.dataset.entryUrl);
     };
 
     const reloadPage = () => {

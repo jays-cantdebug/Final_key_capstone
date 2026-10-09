@@ -123,13 +123,20 @@ class StudentDeviceController extends Controller
      * the open details form above locked questions until the details are
      * saved, then only "Details saved" (never the values) above the
      * questions.
+     *
+     * No live draft for this device (never claimed, submitted, cancelled,
+     * expired, New code, unknown cookie): back to the code form with the
+     * cookie cleared, the same reply whatever the reason, so a PC left on
+     * this page is ready for the next student after a reload. /s/q takes no
+     * input, so this says nothing about any code or student; wrong codes
+     * and links keep the generic "not available" 404.
      */
     public function show(Request $request): Response
     {
         $draft = $this->draft($request);
 
         if ($draft === null) {
-            return $this->unavailableAndForgetDevice($request);
+            return $this->toCodeEntry($request);
         }
 
         return match ($this->remoteAssessments->stateOf($draft)) {
@@ -139,7 +146,7 @@ class StudentDeviceController extends Controller
             // Held: the generic message, word for word, whatever the reason.
             'help' => response()->view('student-device.held'),
             'locked' => response()->view('student-device.thanks'),
-            default => $this->unavailableAndForgetDevice($request),
+            default => $this->toCodeEntry($request),
         };
     }
 
@@ -448,6 +455,16 @@ class StudentDeviceController extends Controller
     private function toQuestions(): RedirectResponse
     {
         return redirect()->to(route('student-device.show').'#questions', Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * 303 to the code form, always clearing the device cookie (set or not),
+     * so every reason gets the same headers.
+     */
+    private function toCodeEntry(Request $request): RedirectResponse
+    {
+        return redirect()->route('student-device.entry', status: Response::HTTP_SEE_OTHER)
+            ->withCookie($this->forgetDeviceCookie($request));
     }
 
     private function unavailableAndForgetDevice(Request $request): Response

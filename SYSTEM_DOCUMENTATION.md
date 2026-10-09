@@ -331,6 +331,11 @@ It never shows:
 
 It uses its own minimal page layout. Anything wrong — an invalid, used, expired or cancelled code or link, a refused request, even a server error — shows one generic message: "This page is not available. Please ask the psychometrician for help." The only other message is a request to sign out when the browser is signed in to a staff account (see below).
 
+**When a session ends, the student PC goes back to the code form** (since 2026-10-09; before, it showed the generic message):
+- **Reloading the questionnaire page** (`/s/q`, e.g. F5, a restored tab, the next student pressing Refresh) after the session ended — submitted, cancelled, expired, New code, declined — or with no session at all redirects to the code form (`/s`) and clears the device cookie. The reply is the same for every reason. `/s/q` takes no input, so it says nothing about any code or student.
+- **While the questionnaire is open**, the page checks every 5 seconds. When the session has ended (cancelled, New code, expired), it goes straight to the code form, so after New code the student just types the new code.
+- **Unchanged:** the thank-you page keeps its message after Submit until someone reloads it. The "held" page (the typed name matches an existing student) still shows the generic message. Wrong, used or expired codes and links, unknown `/s` addresses, the IP allowlist, the attempt limit, cross-site requests and errors still get the generic message, identical for every case.
+
 ### Every page the student device can reach
 
 | Address | Who can open it | What it returns |

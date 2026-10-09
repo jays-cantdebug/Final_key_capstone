@@ -417,7 +417,7 @@ class RemoteAssessmentWorkflowTest extends TestCase
         $newCode = (string) session('assessment_wizard.remote_short_code');
         $this->assertNotSame($oldCode, $newCode);
 
-        $this->studentRequest('GET', route('student-device.show'), device: $oldDevice)->assertNotFound();
+        $this->studentRequest('GET', route('student-device.show'), device: $oldDevice)->assertRedirect(route('student-device.entry'));
         $this->studentRequest('POST', route('student-device.code'), ['code' => $oldCode])->assertNotFound();
 
         $newDevice = $this->claimWithCode($newCode);
