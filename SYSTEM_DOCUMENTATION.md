@@ -435,7 +435,7 @@ A held screen tells the person at the device that **the name they typed belongs 
 
 ### Expiry and cleanup
 
-- A draft lasts a fixed **60 minutes** from when it was created (`REMOTE_ASSESSMENT_TTL_MINUTES`); activity doesn't extend it, and New code keeps the same expiry. When the student presses Done, the draft is kept for at least **15 more minutes** (`REMOTE_ASSESSMENT_LOCKED_GRACE_MINUTES`) so the Psychometrician has time to review and submit; this never shortens a longer remaining time.
+- A draft lasts **60 minutes** from when it was created (`REMOTE_ASSESSMENT_TTL_MINUTES`); activity doesn't extend it, and New code keeps the same expiry. **Add 15 minutes** on the live page (since 2026-10-10) adds 15 minutes per press (`REMOTE_ASSESSMENT_EXTEND_MINUTES`), never past **120 minutes** from creation (`REMOTE_ASSESSMENT_MAX_LIFETIME_MINUTES`). It is offered while the student hasn't pressed Done (waiting for the device, the privacy notice, the details, answering, or held), never after Done or Submit. In the last 5 minutes while the student can still answer, the student device shows a neutral notice in its bottom bar: "This session will close in 5 minutes. Please finish your answers." (no name, no time shown). Adding time hides it again within a few seconds, and the device keeps working until the new time runs out. When the student presses Done, the draft is kept for at least **15 more minutes** (`REMOTE_ASSESSMENT_LOCKED_GRACE_MINUTES`) so the Psychometrician has time to review and submit; this never shortens a longer remaining time.
 - The draft is deleted on:
   - Submit or Cancel;
   - starting a new Step 1 or a Take Again;

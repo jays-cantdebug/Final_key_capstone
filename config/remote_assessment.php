@@ -27,6 +27,13 @@ return [
     // longer remaining expiry).
     'locked_grace_minutes' => (int) env('REMOTE_ASSESSMENT_LOCKED_GRACE_MINUTES', 15),
 
+    // "Add 15 minutes" on the live page (docs/BUG_LOG.md N7): each press adds
+    // `extend_minutes`, never past `max_lifetime_minutes` from when the
+    // draft was created. Allowed while the student hasn't pressed Done
+    // (waiting, notice, details, answering, held), never after Done.
+    'extend_minutes' => (int) env('REMOTE_ASSESSMENT_EXTEND_MINUTES', 15),
+    'max_lifetime_minutes' => (int) env('REMOTE_ASSESSMENT_MAX_LIFETIME_MINUTES', 120),
+
     // Whether the student acknowledges the data privacy notice on their own
     // screen before the first question (the server refuses answers until
     // then). The notice text is in lang/en/student_device.php. Applies to

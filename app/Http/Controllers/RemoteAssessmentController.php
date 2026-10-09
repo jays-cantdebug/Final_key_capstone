@@ -46,6 +46,8 @@ class RemoteAssessmentController extends Controller
 
     public const NOT_LOCKED_MESSAGE = 'The student hasn’t pressed Done yet.';
 
+    public const CANNOT_EXTEND_MESSAGE = 'More time can’t be added: the student has already pressed Done, or this session has reached its maximum length.';
+
     public const VERSION_CHANGED_MESSAGE = 'The active questionnaire changed while the student was answering. Restart on the new version to have it answered again.';
 
     public const NO_DETAILS_MESSAGE = 'The student hasn’t sent their details yet.';
@@ -301,6 +303,8 @@ class RemoteAssessmentController extends Controller
             'duplicateWarning' => (bool) $request->session()->get('remote_duplicate_warning'),
             'monitor' => $this->remoteAssessments->monitorData($draft, $this->assessmentService->activeQuestionnaireVersion()),
             'pollIntervalMs' => (int) config('remote_assessment.poll_interval_ms'),
+            'canExtend' => $this->remoteAssessments->canExtend($draft),
+            'extendMinutes' => (int) config('remote_assessment.extend_minutes'),
             'existingStudentId' => $request->session()->get(self::SESSION_KEY.'.existing_student_id'),
         ]);
     }
@@ -362,6 +366,22 @@ class RemoteAssessmentController extends Controller
         }
 
         return redirect()->route('assessments.create.remote')->with('status', 'The questionnaire was returned to the student device.');
+    }
+
+    /**
+     * POST: "Add 15 minutes" (config remote_assessment.extend_minutes),
+     * never past the maximum lifetime and never after the student pressed
+     * Done.
+     */
+    public function extend(Request $request): RedirectResponse
+    {
+        $draft = $this->ownedDraftOr404($request);
+
+        if (! $this->remoteAssessments->extend($draft)) {
+            return $this->backToLivePage(['remote' => self::CANNOT_EXTEND_MESSAGE]);
+        }
+
+        return redirect()->route('assessments.create.remote')->with('status', 'More time was added. The student device keeps working until the new time runs out.');
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Exceptions\RemoteDraftStateException;
 use App\Models\QuestionnaireVersion;
 use App\Models\RemoteAssessmentDraft;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -466,6 +467,68 @@ class RemoteAssessmentService
                 }
             }
         }
+    }
+
+    /**
+     * The student device's neutral "closing soon" notice is shown in the
+     * last CLOSING_WARNING_SECONDS (its text says "5 minutes").
+     */
+    public const CLOSING_WARNING_SECONDS = 300;
+
+    /**
+     * Whether "Add 15 minutes" can still be used: the student hasn't pressed
+     * Done (not locked, declined or expired) and the draft is below its
+     * maximum lifetime (`max_lifetime_minutes` from creation).
+     */
+    public function canExtend(RemoteAssessmentDraft $draft): bool
+    {
+        return in_array($this->monitorState($draft), ['pending', 'consent', 'identity', 'held', 'answering'], true)
+            && $draft->expires_at->lessThan($this->maxExpiry($draft));
+    }
+
+    /**
+     * "Add 15 minutes": push the expiry back by `extend_minutes`, capped at
+     * the maximum lifetime. False when not allowed (see canExtend()). The
+     * device cookie follows on the device's next state poll.
+     */
+    public function extend(RemoteAssessmentDraft $draft): bool
+    {
+        return $this->database->transaction(function () use ($draft): bool {
+            $fresh = $this->lockedFresh($draft);
+
+            if ($fresh === null || ! $this->canExtend($fresh)) {
+                return false;
+            }
+
+            $extended = $fresh->expires_at->copy()->addMinutes((int) config('remote_assessment.extend_minutes'));
+            $cap = $this->maxExpiry($fresh);
+
+            $fresh->forceFill([
+                'expires_at' => $extended->greaterThan($cap) ? $cap : $extended,
+                'revision' => $fresh->revision + 1,
+            ])->save();
+
+            return true;
+        });
+    }
+
+    /**
+     * Whether the student device shows its "closing soon" notice: only
+     * while the student can still answer (the details page or the
+     * questions), in the last CLOSING_WARNING_SECONDS.
+     */
+    public function closingSoon(?RemoteAssessmentDraft $draft): bool
+    {
+        if ($draft === null || ! in_array($this->stateOf($draft), ['identity', 'answering'], true)) {
+            return false;
+        }
+
+        return now()->diffInSeconds($draft->expires_at, false) <= self::CLOSING_WARNING_SECONDS;
+    }
+
+    private function maxExpiry(RemoteAssessmentDraft $draft): CarbonInterface
+    {
+        return $draft->created_at->copy()->addMinutes((int) config('remote_assessment.max_lifetime_minutes'));
     }
 
     /**

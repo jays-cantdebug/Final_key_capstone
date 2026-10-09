@@ -141,6 +141,7 @@ Route::middleware(['auth', 'active', 'single-session'])->group(function (): void
                         ->name('.status');
                     Route::post('/new-code', [RemoteAssessmentController::class, 'newCode'])->name('.new-code');
                     Route::post('/return', [RemoteAssessmentController::class, 'returnToStudent'])->name('.return');
+                    Route::post('/extend', [RemoteAssessmentController::class, 'extend'])->name('.extend');
                     Route::post('/restart', [RemoteAssessmentController::class, 'restart'])->name('.restart');
                     Route::delete('/', [RemoteAssessmentController::class, 'cancel'])->name('.cancel');
                     Route::post('/submit', [RemoteAssessmentController::class, 'submit'])->name('.submit');

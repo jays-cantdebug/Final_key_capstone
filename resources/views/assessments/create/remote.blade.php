@@ -181,6 +181,14 @@
                 <x-secondary-button type="submit">{{ __('Return to student') }}</x-secondary-button>
             </form>
 
+            {{-- Add time: not after Done (locked), never past the maximum lifetime ($canExtend, re-rendered after each press). stop(): no poll in between, so the confirmation flash survives the redirect. --}}
+            @if ($canExtend)
+                <form method="POST" action="{{ route('assessments.create.remote.extend') }}" x-show="active && state !== 'locked'" x-on:submit="stop()" {{ $cloakUnless($isActive && $state !== 'locked') }} data-extend>
+                    @csrf
+                    <x-secondary-button type="submit">{{ __('Add :minutes minutes', ['minutes' => $extendMinutes]) }}</x-secondary-button>
+                </form>
+            @endif
+
             <form method="POST" action="{{ route('assessments.create.remote.restart') }}" x-show="version_changed && active" {{ $cloakUnless($monitor['version_changed'] && $isActive) }}>
                 @csrf
                 <x-secondary-button type="submit">{{ __('Restart on the new version') }}</x-secondary-button>

@@ -139,7 +139,8 @@ class StudentDeviceController extends Controller
             return $this->toCodeEntry($request);
         }
 
-        return match ($this->remoteAssessments->stateOf($draft)) {
+        $state = $this->remoteAssessments->stateOf($draft);
+        $response = match ($state) {
             'consent' => response()->view('student-device.consent'),
             'identity' => $this->detailsAndQuestionnaire($draft),
             'answering' => response()->view('student-device.questionnaire', $this->questionnaireData($draft)),
@@ -148,6 +149,14 @@ class StudentDeviceController extends Controller
             'locked' => response()->view('student-device.thanks'),
             default => $this->toCodeEntry($request),
         };
+
+        // After "Add 15 minutes" the device cookie follows the new expiry
+        // (also on the consent page, which doesn't poll).
+        if (in_array($state, ['consent', 'identity', 'answering', 'help'], true)) {
+            $response->withCookie($this->deviceCookie($request, (string) $request->cookie(RemoteAssessmentService::DEVICE_COOKIE), $draft));
+        }
+
+        return $response;
     }
 
     /**
@@ -319,9 +328,23 @@ class StudentDeviceController extends Controller
      */
     public function state(Request $request): JsonResponse
     {
-        $state = $this->remoteAssessments->stateFor($this->draft($request), $request->query('version'));
+        $draft = $this->draft($request);
+        $state = $this->remoteAssessments->stateFor($draft, $request->query('version'));
 
-        return response()->json(['state' => $state], $state === 'unavailable' ? Response::HTTP_NOT_FOUND : Response::HTTP_OK);
+        // `closing_soon` only in the last minutes while the student can
+        // still answer (never after Done), so the reply stays just {state}
+        // otherwise.
+        $payload = $this->remoteAssessments->closingSoon($draft) ? ['state' => $state, 'closing_soon' => true] : ['state' => $state];
+        $response = response()->json($payload, $state === 'unavailable' ? Response::HTTP_NOT_FOUND : Response::HTTP_OK);
+
+        // "Add 15 minutes" on the live page moves the expiry; the device
+        // cookie follows it on this poll (as it does after Done), so the
+        // device isn't logged out at the old time.
+        if ($draft !== null && in_array($state, ['identity', 'answering', 'help'], true)) {
+            $response->withCookie($this->deviceCookie($request, (string) $request->cookie(RemoteAssessmentService::DEVICE_COOKIE), $draft));
+        }
+
+        return $response;
     }
 
     /**
@@ -431,6 +454,8 @@ class StudentDeviceController extends Controller
             'answered' => $questions->filter(fn ($question): bool => array_key_exists($question->id, $responses))->count(),
             'required' => $questions->where('is_required', true)->count(),
             'details' => $draft->collects_identity ? 'saved' : null,
+            // The neutral "closing soon" notice (no PII, no time shown).
+            'closingSoon' => $this->remoteAssessments->closingSoon($draft),
         ];
     }
 

@@ -101,6 +101,8 @@
         <div class="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-4px_12px_-6px_rgba(44,44,42,0.15)]">
             <div class="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3">
                 <div>
+                    {{-- "Closing soon": shown by the server in the last 5 minutes, then kept in step by the state poll (student-device.js). --}}
+                    <p class="mb-1 rounded-md border border-gold bg-white px-3 py-1 text-sm font-semibold text-body" data-closing-soon role="status" @if (! ($closingSoon ?? false)) hidden @endif>{{ __('student_device.closing_soon') }}</p>
                     <p class="text-sm font-semibold text-body" data-counter-text>{{ __('student_device.counter', ['answered' => $answered, 'total' => $questions->count()]) }}</p>
                     @if ($details !== null)
                         <p @class(['text-xs font-medium', 'text-primary' => ! $locked, 'text-gold' => $locked]) data-details-indicator>{{ $locked ? __('student_device.identity_not_saved') : __('student_device.identity_saved') }}</p>

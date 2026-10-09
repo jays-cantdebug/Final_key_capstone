@@ -64,6 +64,9 @@ return [
     'counter' => ':answered of :total answered',
     'done' => 'Done',
     'missing' => 'Please answer every statement before pressing Done.',
+    // Shown in the last 5 minutes while the student can still answer
+    // (RemoteAssessmentService::CLOSING_WARNING_SECONDS). Neutral, no time.
+    'closing_soon' => 'This session will close in 5 minutes. Please finish your answers.',
     'status_saved' => 'All answers saved.',
     'status_saving' => 'Saving…',
     'status_offline' => 'Not saved — reconnecting…',

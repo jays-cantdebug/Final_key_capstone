@@ -103,6 +103,10 @@ function pollState(url, intervalMs, onState) {
         try {
             const { data } = await request(url, 'GET');
 
+            // The "closing soon" notice (questionnaire page only): shown
+            // while the server says so, hidden again after "Add 15 minutes".
+            document.querySelector('[data-closing-soon]')?.toggleAttribute('hidden', data.closing_soon !== true);
+
             if (typeof data.state === 'string' && onState(data.state) === false) {
                 return;
             }
