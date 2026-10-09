@@ -41,7 +41,8 @@ class StudentSeeder extends Seeder
             ['student_number' => '2024-0001'],
             [
                 'first_name' => 'Maria',
-                'middle_name' => 'Santos',
+                // A middle initial, as Step 1 requires (A–Z or Ñ plus a period).
+                'middle_name' => 'S.',
                 'last_name' => 'Reyes',
                 'gender' => 'Female',
                 'course_id' => $course->id,
@@ -54,7 +55,7 @@ class StudentSeeder extends Seeder
             ['student_number' => '2024-0002'],
             [
                 'first_name' => 'John',
-                'middle_name' => null,
+                'middle_name' => 'D.',
                 'last_name' => 'Cruz',
                 'gender' => 'Male',
                 'course_id' => $course->id,
