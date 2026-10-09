@@ -12,6 +12,8 @@
         'declined' => 'The student declined the privacy notice. Nothing was saved.',
         'expired' => 'This session has expired. The answers were discarded.',
         'gone' => 'This session is no longer available.',
+        // Only after Back from Step 3 (remote-monitor.js): Submit already went through.
+        'submitted' => 'Already submitted. Continue to the review (Step 3) to finish this assessment.',
     ];
     $state = $monitor['state'];
     $isActive = in_array($state, ['pending', 'consent', 'identity', 'held', 'answering', 'locked'], true);
@@ -189,12 +191,15 @@
                 <x-secondary-button type="submit">{{ __('New code') }}</x-secondary-button>
             </form>
 
-            <form method="POST" action="{{ route($collectsIdentity ? 'assessments.create.remote.store-student' : 'assessments.create.remote.store') }}" x-show="!active" {{ $cloakUnless(! $isActive) }}>
+            {{-- After Back from Step 3 once Submit went through: only the way forward (sending again or Cancel would drop the submitted answers). --}}
+            <x-primary-button :href="route('assessments.create.result')" x-show="state === 'submitted'" x-cloak data-continue-review>{{ __('Continue to the review') }}</x-primary-button>
+
+            <form method="POST" action="{{ route($collectsIdentity ? 'assessments.create.remote.store-student' : 'assessments.create.remote.store') }}" x-show="!active && state !== 'submitted'" {{ $cloakUnless(! $isActive) }}>
                 @csrf
                 <x-secondary-button type="submit">{{ __('Send to student device again') }}</x-secondary-button>
             </form>
 
-            <form method="POST" action="{{ route('assessments.create.remote.cancel') }}">
+            <form method="POST" action="{{ route('assessments.create.remote.cancel') }}" x-show="state !== 'submitted'">
                 @csrf
                 @method('DELETE')
                 <x-secondary-button type="submit">{{ __('Cancel') }}</x-secondary-button>

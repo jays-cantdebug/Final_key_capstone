@@ -13,7 +13,8 @@
  * a later poll would only get a 404 ("no longer available") behind the
  * overlay, and on php -S it would wait behind the AI call anyway. Back
  * from Step 3 (a page restored from the back/forward cache) hides the
- * overlay and polls again.
+ * overlay and polls again; if Submit went through (the draft is gone), the
+ * page says so and links to Step 3 instead of "no longer available".
  */
 export default (config) => ({
     ...config.initial,
@@ -21,6 +22,8 @@ export default (config) => ({
     stopped: false,
     busy: false,
     submitting: false,
+    // Back from Step 3 after a Submit (see restoreAfterBack).
+    afterSubmit: false,
 
     init() {
         this.startPolling();
@@ -59,6 +62,7 @@ export default (config) => ({
         }
 
         this.submitting = false;
+        this.afterSubmit = true;
 
         if (this.active) {
             this.startPolling();
@@ -90,7 +94,9 @@ export default (config) => ({
             });
 
             if (response.status === 404) {
-                this.state = 'gone';
+                // Submit deletes the draft: after Back from Step 3 that
+                // means "already submitted", not "no longer available".
+                this.state = this.afterSubmit ? 'submitted' : 'gone';
                 this.stop();
                 return;
             }
