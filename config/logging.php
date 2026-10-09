@@ -125,6 +125,15 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        // The test suite's channel (phpunit.xml LOG_CHANNEL=testing): drops
+        // every message, so `php artisan test` never writes to the real
+        // storage/logs (docs/BUG_LOG.md N4). Log::listen() still sees them.
+        // (LOG_CHANNEL=null can't be used: env() reads "null" as PHP null.)
+        'testing' => [
+            'driver' => 'monolog',
+            'handler' => NullHandler::class,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
