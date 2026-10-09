@@ -9,7 +9,8 @@
     $identityErrors = $errors->getBag('identity');
 @endphp
 
-<div class="space-y-4" data-remote-identity>
+{{-- Hidden after Back from Step 3 once Submit went through (remote-monitor.js "submitted"): the draft is gone, so a correction can't be saved. --}}
+<div class="space-y-4" data-remote-identity x-show="state !== 'submitted'">
     @if ($identity === null)
         <div class="rounded-lg border border-slate-200 bg-white px-5 py-4 text-sm text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" data-identity-waiting>
             <p class="font-semibold text-body dark:text-slate-100">Student details</p>
