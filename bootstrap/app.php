@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureSingleActiveSession;
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\RestrictStudentDeviceNetwork;
 use App\Http\Middleware\StudentDeviceHeaders;
 use App\Http\Responses\StudentDeviceResponse;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'single-session' => EnsureSingleActiveSession::class,
+            'active' => EnsureUserIsActive::class,
         ]);
         $middleware->group('student-device', [
             // First: an address not on REMOTE_ASSESSMENT_ALLOWED_IPS (when

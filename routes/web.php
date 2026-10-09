@@ -38,7 +38,7 @@ Route::get('/', function () {
         : redirect()->route('login');
 })->name('home');
 
-Route::middleware(['auth', 'single-session'])->group(function (): void {
+Route::middleware(['auth', 'active', 'single-session'])->group(function (): void {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/psychometrician/dashboard', [DashboardController::class, 'psychometrician'])

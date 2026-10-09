@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Authorization;
 
+use App\Http\Middleware\EnsureUserIsActive;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
@@ -93,6 +94,10 @@ class RoleGatingTest extends TestCase
     {
         $onlyActivePsychometrician = $this->psychometrician();
         $inactiveActor = User::factory()->psychometrician()->create(['is_active' => false]);
+
+        // The `active` middleware now logs an inactive actor out first;
+        // this test checks the service-level guard behind it.
+        $this->withoutMiddleware(EnsureUserIsActive::class);
 
         $response = $this->actingAs($inactiveActor)->patch(route('users.deactivate', $onlyActivePsychometrician));
 

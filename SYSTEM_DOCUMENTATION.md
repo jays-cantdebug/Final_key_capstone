@@ -112,6 +112,7 @@ There is **no public sign-up**. Every account is created by a Psychometrician th
 - Email + password, checked against a securely hashed (never stored in plain text) password.
 - After **5 failed attempts** from the same email+IP combination, the system locks out further attempts for a cooldown period and logs the lockout in the Audit Log.
 - A deactivated account (`is_active = false`) fails to log in with the exact same generic message as a wrong password.
+- **Deactivating also ends access that is already open.** `UserManagementService::deactivate()` deletes the user's session rows (database session driver) and replaces their remember-me token, so neither a browser that is still logged in nor a "Remember me" cookie gets them back in. As a safety net, every logged-in page also passes through the `active` middleware (`EnsureUserIsActive`, between `auth` and `single-session`), which logs out any user whose account is inactive on their next request and sends them to the login page with the generic "Your session has ended. Please log in again." It never says the account was deactivated. Reactivating the account lets them log in normally again. Before 2026-10-09 a deactivated user who was already logged in (or had "Remember me" ticked) kept full access until they logged out; `tests/Feature/Auth/DeactivatedUserAccessTest.php` covers the fix. The student-device pages (`/s`) have no login and are not affected.
 
 **Why deactivated accounts fail silently, the same as a wrong password:** This is a deliberate security choice, not an oversight. If the system said "this account is deactivated" for a real account, but "wrong password" for a made-up email, an attacker probing the login form could tell which email addresses belong to real staff accounts just by watching which message comes back — a technique called *user enumeration*. Making every failure case look identical closes that gap.
 
@@ -924,6 +925,8 @@ The Settings area also manages the lookup tables everything else depends on: Cou
 Psychometrician-only. Creates, edits, deactivates/reactivates, and resets passwords for staff accounts.
 
 **Why deactivate instead of delete?** User accounts have no delete function at all — only `is_active` toggling. Every assessment, counseling session, and audit log entry permanently references *who* performed it; deleting a user account would either break those historical references or require silently reassigning history to someone else, both bad options. A user who leaves the school gets deactivated (immediately blocked from logging in) while every record they ever touched stays intact and correctly attributed.
+
+Deactivation takes effect immediately: the user is logged out everywhere, including a "Remember me" login (see "How login works" above).
 
 There's also a built-in safety net preventing a user from deactivating their own account — closing off a way to accidentally lock yourself out with no other admin available to reverse it.
 
