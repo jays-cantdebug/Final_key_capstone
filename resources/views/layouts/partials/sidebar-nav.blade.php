@@ -19,10 +19,12 @@ $iconClasses = fn (bool $active) => $active ? 'h-5 w-5 flex-shrink-0 text-primar
 
 {{-- Only the menu list scrolls, and only when the window is too short for it;
      the logo, the "Signed in as" card and Logout stay put. Its scrollbar is
-     hidden (wheel, touch and keyboard still scroll it); -m-1/p-1 keep the
-     links' focus rings from being clipped without moving anything. --}}
-<nav class="flex min-h-0 flex-1 flex-col">
-    <ul role="list" @if ($listId) id="{{ $listId }}" @endif class="-m-1 flex min-h-0 flex-1 flex-col gap-y-2 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+     hidden (wheel, touch and keyboard still scroll it) and it never scrolls
+     sideways. The links' focus rings get 4px of room without moving anything:
+     sideways from the nav's -mx-1 and the lists' padding, top and bottom from
+     the menu list's -my-1 and p-1, and scroll-py-1 keeps Tab from scrolling a ring out of view. --}}
+<nav class="-mx-1 flex min-h-0 flex-1 flex-col">
+    <ul role="list" @if ($listId) id="{{ $listId }}" @endif class="-my-1 flex min-h-0 flex-1 scroll-py-1 flex-col gap-y-2 overflow-x-hidden overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <li>
             <a href="{{ route('dashboard') }}" class="{{ $navLinkClasses(request()->routeIs('dashboard') || request()->routeIs('*.dashboard')) }}">
                 <svg class="{{ $iconClasses(request()->routeIs('dashboard') || request()->routeIs('*.dashboard')) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
@@ -117,7 +119,7 @@ $iconClasses = fn (bool $active) => $active ? 'h-5 w-5 flex-shrink-0 text-primar
             </li>
         @endif
     </ul>
-    <ul role="list" class="pt-8">
+    <ul role="list" class="px-1 pt-8">
         <li>
             {{-- Only opens the confirmation (layouts/partials/logout-modal), closing the mobile drawer first; the logout POST form is in the modal. --}}
             <button type="button" data-logout-trigger aria-haspopup="dialog" @click="open = false; $dispatch('open-modal', 'confirm-logout')" class="group flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-tint hover:text-primary dark:hover:bg-primary-soft/15 dark:hover:text-primary-soft">
