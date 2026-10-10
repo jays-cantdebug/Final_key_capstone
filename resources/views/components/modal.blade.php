@@ -3,6 +3,9 @@
     'show' => false,
     'maxWidth' => '2xl',
     'closeable' => true,
+    // Opt-out: :close-on-backdrop="false" keeps the dialog open when the
+    // backdrop is clicked (Escape still follows `closeable`).
+    'closeOnBackdrop' => true,
 ])
 
 @php
@@ -62,7 +65,7 @@ $restoreFocusFallback = $attributes->get('restore-focus');
     <div
         x-show="show"
         class="fixed inset-0 transform transition-all"
-        x-on:click="closeable && (show = false)"
+        @if ($closeOnBackdrop) x-on:click="closeable && (show = false)" @endif
         x-transition:enter="ease-out duration-300"
         x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100"
