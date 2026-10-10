@@ -2,6 +2,7 @@
 $labelClass ??= '';
 $userCardClass ??= '';
 $linkJustifyClass ??= 'justify-start';
+$listId ??= null;
 
 $navLinkClasses = fn (bool $active) => $active
     ? "flex items-center gap-3 rounded-lg bg-tint px-4 py-3 text-sm font-semibold text-primary shadow-sm dark:bg-primary-soft/15 dark:text-primary-soft $linkJustifyClass"
@@ -16,8 +17,12 @@ $iconClasses = fn (bool $active) => $active ? 'h-5 w-5 flex-shrink-0 text-primar
     <p class="text-xs text-white/75">{{ auth()->user()->role?->display_name ?? 'Unassigned Role' }}</p>
 </div>
 
-<nav class="flex flex-1 flex-col">
-    <ul role="list" class="flex flex-1 flex-col gap-y-2">
+{{-- Only the menu list scrolls, and only when the window is too short for it;
+     the logo, the "Signed in as" card and Logout stay put. Its scrollbar is
+     hidden (wheel, touch and keyboard still scroll it); -m-1/p-1 keep the
+     links' focus rings from being clipped without moving anything. --}}
+<nav class="flex min-h-0 flex-1 flex-col">
+    <ul role="list" @if ($listId) id="{{ $listId }}" @endif class="-m-1 flex min-h-0 flex-1 flex-col gap-y-2 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <li>
             <a href="{{ route('dashboard') }}" class="{{ $navLinkClasses(request()->routeIs('dashboard') || request()->routeIs('*.dashboard')) }}">
                 <svg class="{{ $iconClasses(request()->routeIs('dashboard') || request()->routeIs('*.dashboard')) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
@@ -111,7 +116,9 @@ $iconClasses = fn (bool $active) => $active ? 'h-5 w-5 flex-shrink-0 text-primar
                 </a>
             </li>
         @endif
-        <li class="mt-auto pt-6">
+    </ul>
+    <ul role="list" class="pt-8">
+        <li>
             {{-- Only opens the confirmation (layouts/partials/logout-modal), closing the mobile drawer first; the logout POST form is in the modal. --}}
             <button type="button" data-logout-trigger aria-haspopup="dialog" @click="open = false; $dispatch('open-modal', 'confirm-logout')" class="group flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-tint hover:text-primary dark:hover:bg-primary-soft/15 dark:hover:text-primary-soft">
                 <svg class="h-5 w-5 text-gold transition group-hover:text-primary dark:text-gold-soft dark:group-hover:text-primary-soft" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 4a1 1 0 0 0-1 1v2h2V6h6v8H8v-1H6v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H7Zm-.293 3.707L3.414 10H12v-1.5H3.414l3.293-2.707-1-1.086Z" /></svg>
