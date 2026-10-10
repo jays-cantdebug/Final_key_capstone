@@ -51,7 +51,8 @@ Alpine.data('sessionForm', (initialErrors = {}, followUpRequired = false, messag
         const clientErrors = {};
 
         for (const field of ['session_date', 'session_time', 'session_notes']) {
-            if (value(field) === '') {
+            // data-optional: unreadable stored notes, kept when left empty.
+            if (value(field) === '' && !form.elements[field]?.hasAttribute('data-optional')) {
                 clientErrors[field] = messages[field];
             }
         }

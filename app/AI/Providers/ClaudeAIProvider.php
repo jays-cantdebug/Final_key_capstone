@@ -39,6 +39,14 @@ class ClaudeAIProvider implements AIProviderInterface
 
     private const ANTHROPIC_VERSION = '2023-06-01';
 
+    /**
+     * Upper bound for the total request time, in seconds, whatever
+     * CLAUDE_TIMEOUT says: PHP's max_execution_time (30 s under php -S) is
+     * a fatal error, not an exception, so a request still waiting when it
+     * fires never reaches the rule-based fallback.
+     */
+    public const MAX_TIMEOUT_SECONDS = 20.0;
+
     public function __construct(private readonly RuleBasedDASSProvider $ruleBasedProvider) {}
 
     public function classify(AssessmentPayload $payload): AIClassificationResult
@@ -84,11 +92,14 @@ class ClaudeAIProvider implements AIProviderInterface
 
     private function classifyViaClaude(AssessmentPayload $payload): AIClassificationResult
     {
+        [$timeout, $connectTimeout] = $this->timeouts();
+
         $response = Http::withHeaders([
             'x-api-key' => (string) config('ai.providers.claude.api_key'),
             'anthropic-version' => self::ANTHROPIC_VERSION,
         ])
-            ->timeout(30)
+            ->timeout($timeout)
+            ->connectTimeout($connectTimeout)
             ->post((string) config('ai.providers.claude.api_url'), [
                 'model' => config('ai.providers.claude.model'),
                 'max_tokens' => 512,
@@ -126,6 +137,28 @@ class ClaudeAIProvider implements AIProviderInterface
             stressLevel: $toolInput['stress_level'],
             provider: self::PROVIDER_NAME,
         );
+    }
+
+    /**
+     * The total and connect timeouts from config('ai.providers.claude'). A
+     * missing, blank, non-numeric or non-positive value means the default
+     * (12 s / 4 s); the total is capped at MAX_TIMEOUT_SECONDS and the
+     * connect timeout at the total (a longer one would never apply).
+     *
+     * @return array{0: float, 1: float}
+     */
+    private function timeouts(): array
+    {
+        $seconds = function (string $key, float $default): float {
+            $value = config("ai.providers.claude.{$key}");
+
+            return is_numeric($value) && (float) $value > 0 ? (float) $value : $default;
+        };
+
+        $timeout = min($seconds('timeout', 12.0), self::MAX_TIMEOUT_SECONDS);
+        $connectTimeout = min($seconds('connect_timeout', 4.0), $timeout);
+
+        return [$timeout, $connectTimeout];
     }
 
     /**

@@ -25,9 +25,13 @@
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
+        <env name="LOG_CHANNEL" value="testing"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <!-- Off in tests, so the manual Step 1 flow the suite was written for
+             stays as it was; StudentEntryOnlyTest switches it on. -->
+        <env name="REMOTE_ASSESSMENT_STUDENT_ENTRY_ONLY" value="false"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
     </php>

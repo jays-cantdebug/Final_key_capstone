@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Casts\EncryptedString;
+use App\Models\Concerns\TracksUnreadableEncryptedAttributes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CounselingSession extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, TracksUnreadableEncryptedAttributes;
 
     public const STATUS_SCHEDULED = 'Scheduled';
 
@@ -55,7 +57,7 @@ class CounselingSession extends Model
     {
         return [
             'session_datetime' => 'datetime',
-            'session_notes' => 'encrypted',
+            'session_notes' => EncryptedString::class,
             'follow_up_required' => 'boolean',
             'follow_up_date' => 'date',
             'deleted_at' => 'datetime',

@@ -12,6 +12,8 @@ use RuntimeException;
 
 class UserSeeder extends Seeder
 {
+    public const EMAIL = 'superadmin@normi.edu.ph';
+
     /**
      * @throws RuntimeException if ADMIN_DEFAULT_PASSWORD is not set — there
      *                          is no hardcoded fallback, weak or otherwise, for the default Super
@@ -19,6 +21,13 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        // Create only when missing: re-running the seeders after go-live
+        // must never reset a changed password or re-activate a deactivated
+        // account.
+        if (User::query()->where('email', self::EMAIL)->exists()) {
+            return;
+        }
+
         $password = env('ADMIN_DEFAULT_PASSWORD');
 
         if (empty($password)) {
@@ -29,14 +38,12 @@ class UserSeeder extends Seeder
 
         $role = Role::query()->where('name', 'psychometrician')->firstOrFail();
 
-        User::query()->updateOrCreate(
-            ['email' => 'superadmin@normi.edu.ph'],
-            [
-                'role_id' => $role->id,
-                'name' => 'Default Super Admin',
-                'password' => Hash::make($password),
-                'is_active' => true,
-            ]
-        );
+        User::query()->create([
+            'email' => self::EMAIL,
+            'role_id' => $role->id,
+            'name' => 'Default Super Admin',
+            'password' => Hash::make($password),
+            'is_active' => true,
+        ]);
     }
 }

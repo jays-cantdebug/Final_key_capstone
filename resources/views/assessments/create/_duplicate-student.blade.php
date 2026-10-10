@@ -60,17 +60,20 @@
                     @endforeach
                 </div>
 
-                <input type="hidden" name="archived_warning_shown" value="1" />
+                {{-- $controls false (the student-device live page): the confirm box sits on its Submit form instead. --}}
+                @if ($controls ?? true)
+                    <input type="hidden" name="archived_warning_shown" value="1" />
 
-                <div class="relative" x-data="{ show: {{ $errors->has('confirm_archived_match') ? 'true' : 'false' }} }">
-                    <label class="flex items-start gap-2">
-                        <x-checkbox name="confirm_archived_match" value="1" class="mt-1" :checked="(bool) old('confirm_archived_match')" :invalid="$errors->has('confirm_archived_match')" @change="show = false" />
-                        <span>I understand. Create a new student record.</span>
-                    </label>
-                    <x-field-error-tooltip :message="$errors->first('confirm_archived_match')" />
-                </div>
+                    <div class="relative" x-data="{ show: {{ $errors->has('confirm_archived_match') ? 'true' : 'false' }} }">
+                        <label class="flex items-start gap-2">
+                            <x-checkbox name="confirm_archived_match" value="1" class="mt-1" :checked="(bool) old('confirm_archived_match')" :invalid="$errors->has('confirm_archived_match')" @change="show = false" />
+                            <span>I understand. Create a new student record.</span>
+                        </label>
+                        <x-field-error-tooltip :message="$errors->first('confirm_archived_match')" />
+                    </div>
 
-                <x-primary-button>Continue</x-primary-button>
+                    <x-primary-button>Continue</x-primary-button>
+                @endif
             @elseif ($single)
                 @if ($kind === 'conflict')
                     <p>{{ $single->full_name }} was registered as <span class="font-semibold">{{ $single->student_number }}</span> while this assessment was in progress, so nothing was saved. Please use Take Again for {{ $single->student_number }} and answer the questionnaire again.</p>
@@ -105,7 +108,8 @@
             @endif
         </div>
 
-        <button type="button" x-on:click="$root.remove()" aria-label="Dismiss" class="flex-shrink-0 opacity-60 hover:opacity-100">
+        {{-- 40x40 hit area around the 16 px ×; the negative margin keeps the panel layout unchanged. --}}
+        <button type="button" x-on:click="$root.remove()" aria-label="Dismiss" class="-m-3 inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md opacity-60 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
             <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
         </button>
     </div>

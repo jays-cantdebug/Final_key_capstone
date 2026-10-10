@@ -16,13 +16,13 @@
         <x-table.th>Name</x-table.th>
         <x-table.th>Program</x-table.th>
         <x-table.th>Gender</x-table.th>
-        <x-table.th align="right">Actions</x-table.th>
+        <x-table.th sticky align="right">Actions</x-table.th>
     </x-slot:head>
 
     @forelse ($students as $student)
         <tr>
             <x-table.td class="font-medium text-body dark:text-slate-100">{{ $student->student_number }}</x-table.td>
-            <x-table.td>
+            <x-table.td wrap>
                 <div class="font-medium text-body dark:text-slate-100">{{ $student->full_name }}</div>
                 <div class="text-xs text-slate-500 dark:text-slate-400">{{ $student->section?->section_name ?? 'No section' }}</div>
             </x-table.td>
@@ -31,7 +31,7 @@
                 <div class="text-xs text-slate-500 dark:text-slate-400">{{ $student->yearLevel?->label ?? 'N/A' }}</div>
             </x-table.td>
             <x-table.td>{{ $student->gender }}</x-table.td>
-            <x-table.td align="right">
+            <x-table.td sticky align="right">
                 <div class="inline-flex flex-wrap justify-end gap-2">
                     <a href="{{ route('students.show', $student) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                     <a href="{{ route('assessments.create.retake', $student) }}" class="rounded-md border border-primary/30 px-3 py-1.5 font-medium text-primary transition hover:bg-tint dark:border-primary-soft/30 dark:text-primary-soft dark:hover:bg-primary-soft/15">Take Again</a>

@@ -11,6 +11,7 @@ use App\Services\Auth\ActiveSessionGuard;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Manages Psychometrician and Guidance Counselor user accounts: creation,
@@ -22,6 +23,7 @@ class UserManagementService
     public function __construct(
         private readonly DatabaseManager $database,
         private readonly ActiveSessionGuard $activeSessionGuard,
+        private readonly RemoteAssessmentService $remoteAssessments,
     ) {}
 
     /**
@@ -88,10 +90,29 @@ class UserManagementService
         });
     }
 
+    /**
+     * Deactivating ends access at once, not only at the next login: the
+     * user's session rows are deleted and their remember-me token is
+     * replaced, so neither an open session nor a remember-me cookie gets
+     * them back in. (EnsureUserIsActive is the per-request safety net for
+     * any session this can't reach, e.g. a non-database session driver.)
+     */
     public function deactivate(User $user): User
     {
         return $this->database->transaction(function () use ($user): User {
-            $user->update(['is_active' => false]);
+            // One save, so the audit log still records a single Update
+            // (remember_token is never written to audit_logs).
+            $user->forceFill([
+                'is_active' => false,
+                'remember_token' => Str::random(60),
+            ])->save();
+
+            if (config('session.driver') === 'database') {
+                $this->activeSessionGuard->forceLogout($user);
+            }
+
+            // A deactivated Psychometrician's student-device draft ends too.
+            $this->remoteAssessments->discardFor($user);
 
             return $user->refresh();
         });
@@ -105,6 +126,9 @@ class UserManagementService
     public function forceLogout(User $user): void
     {
         $this->activeSessionGuard->forceLogout($user);
+        // No Logout event fires for sessions ended this way, so their
+        // student-device draft is discarded here.
+        $this->remoteAssessments->discardFor($user);
     }
 
     public function resetPassword(User $user, string $password): User

@@ -17,14 +17,14 @@
         <x-table.th>Program</x-table.th>
         <x-table.th>Assessments</x-table.th>
         <x-table.th>Archived</x-table.th>
-        <x-table.th align="right">Actions</x-table.th>
+        <x-table.th sticky align="right">Actions</x-table.th>
     </x-slot:head>
 
     @forelse ($students as $student)
         @php($conflicts = $activeMatches[$student->id] ?? collect())
         <tr>
             <x-table.td class="font-medium text-body dark:text-slate-100">{{ $student->student_number }}</x-table.td>
-            <x-table.td>
+            <x-table.td wrap>
                 <div class="font-medium text-body dark:text-slate-100">{{ $student->full_name }}</div>
                 <div class="text-xs text-slate-500 dark:text-slate-400">{{ $student->section?->section_name ?? 'No section' }}</div>
             </x-table.td>
@@ -37,7 +37,7 @@
                 <div class="text-xs text-slate-500 dark:text-slate-400">{{ $student->latest_assessment_at ? 'Latest '.$student->latest_assessment_at->format('M j, Y') : 'None' }}</div>
             </x-table.td>
             <x-table.td>{{ $student->deleted_at->format('M j, Y') }}</x-table.td>
-            <x-table.td align="right">
+            <x-table.td sticky align="right">
                 <div class="inline-flex flex-wrap items-center justify-end gap-2">
                     <a href="{{ route('assessments.index', ['student_number' => $student->student_number]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">Assessments</a>
                     @if ($conflicts->isNotEmpty())

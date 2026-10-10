@@ -211,7 +211,7 @@
             <x-table.th>Depression</x-table.th>
             <x-table.th>Flag</x-table.th>
             <x-table.th>Date</x-table.th>
-            <x-table.th align="right">Action</x-table.th>
+            <x-table.th sticky align="right">Action</x-table.th>
         </x-slot:head>
 
         @forelse ($assessments as $assessment)
@@ -220,7 +220,7 @@
                 $secondaryCount = $assessment->secondaryFlagCount();
             @endphp
             <tr>
-                <x-table.td class="font-medium text-body dark:text-slate-100">
+                <x-table.td wrap class="font-medium text-body dark:text-slate-100">
                     {{ $assessment->student->full_name }}
                     <div class="text-xs font-normal text-slate-500 dark:text-slate-400">{{ $assessment->student->student_number }} &mdash; {{ $assessment->student->yearLevel?->label }} / {{ $assessment->student->section?->section_name }}</div>
                 </x-table.td>
@@ -236,7 +236,7 @@
                     @endif
                 </x-table.td>
                 <x-table.td>{{ $assessment->submitted_at->format('M d, Y') }}</x-table.td>
-                <x-table.td align="right">
+                <x-table.td sticky align="right">
                     <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                 </x-table.td>
             </tr>

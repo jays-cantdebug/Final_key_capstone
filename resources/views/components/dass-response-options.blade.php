@@ -1,4 +1,4 @@
-@props(['question', 'selected' => null, 'invalid' => false])
+@props(['question', 'selected' => null, 'invalid' => false, 'disabled' => false])
 
 <div
     x-data="{ show: {{ $invalid ? 'true' : 'false' }} }"
@@ -13,13 +13,14 @@
 
     <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         @foreach ([0, 1, 2, 3] as $value)
-            <label class="cursor-pointer">
+            <label class="{{ $disabled ? 'cursor-default' : 'cursor-pointer' }}">
                 <input
                     type="radio"
                     name="responses[{{ $question->id }}]"
                     value="{{ $value }}"
                     class="peer sr-only"
                     @checked((string) $selected === (string) $value)
+                    @disabled($disabled)
                     @change="show = false"
                     @if ($invalid && $value === 0) data-field-invalid @endif
                 />

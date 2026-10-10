@@ -8,9 +8,9 @@
         : $assessment->result->{"{$subscale}_level"};
 
     $subscales = [
-        ['label' => 'Depression', 'score' => $assessment->result->depression_final_score, 'level' => $level('depression')],
-        ['label' => 'Anxiety', 'score' => $assessment->result->anxiety_final_score, 'level' => $level('anxiety')],
-        ['label' => 'Stress', 'score' => $assessment->result->stress_final_score, 'level' => $level('stress')],
+        ['label' => 'Depression', 'score' => $assessment->result->depression_final_score, 'level' => $level('depression'), 'unreadable' => $assessment->result->isUnreadable('depression_final_score')],
+        ['label' => 'Anxiety', 'score' => $assessment->result->anxiety_final_score, 'level' => $level('anxiety'), 'unreadable' => $assessment->result->isUnreadable('anxiety_final_score')],
+        ['label' => 'Stress', 'score' => $assessment->result->stress_final_score, 'level' => $level('stress'), 'unreadable' => $assessment->result->isUnreadable('stress_final_score')],
     ];
     $showCorrectedBadge = $counselorView && $assessment->wasCorrected();
 
@@ -130,7 +130,11 @@
                     @foreach ($subscales as $subscale)
                         <div class="rounded-lg bg-slate-50 dark:bg-slate-800 p-4">
                             <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{{ $subscale['label'] }}</p>
-                            <p class="mt-2 text-2xl font-semibold text-body dark:text-slate-100">{{ $subscale['score'] }}</p>
+                            @if ($subscale['unreadable'])
+                                <p class="mt-2"><x-unreadable-value /></p>
+                            @else
+                                <p class="mt-2 text-2xl font-semibold text-body dark:text-slate-100">{{ $subscale['score'] }}</p>
+                            @endif
                             <x-severity-badge :level="$subscale['level']" class="mt-2" />
                         </div>
                     @endforeach
@@ -174,7 +178,13 @@
                 <x-table.td>{{ $response->question->item_number }}</x-table.td>
                 <x-table.td class="!whitespace-normal">{{ $response->question->question_text }}</x-table.td>
                 <x-table.td>{{ $response->question->subscale }}</x-table.td>
-                <x-table.td class="font-semibold text-body dark:text-slate-100">{{ $response->answer_value }}</x-table.td>
+                <x-table.td class="font-semibold text-body dark:text-slate-100">
+                    @if ($response->isUnreadable('answer_value'))
+                        <x-unreadable-value />
+                    @else
+                        {{ $response->answer_value }}
+                    @endif
+                </x-table.td>
             </tr>
         @endforeach
     </x-table>

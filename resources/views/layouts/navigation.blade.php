@@ -1,10 +1,10 @@
 <aside class="fixed inset-y-0 left-0 z-40 hidden md:flex md:w-20 md:flex-col lg:w-72">
-    <div id="sidebar-scroll" class="flex h-full flex-col gap-y-6 overflow-y-auto bg-primary px-3 pb-4 pt-6 text-white shadow-2xl shadow-emerald-950/25 dark:bg-slate-900 dark:shadow-black/40 dark:border-r dark:border-slate-700/80 lg:px-6">
+    <div class="flex h-full flex-col gap-y-6 overflow-y-auto bg-primary px-3 pb-4 pt-6 text-white shadow-2xl shadow-emerald-950/25 dark:bg-slate-900 dark:shadow-black/40 dark:border-r dark:border-slate-700/80 lg:px-6">
         <div class="flex items-center justify-center gap-3 lg:justify-start">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
                 <x-application-logo class="h-12 w-12 flex-shrink-0 text-white lg:h-20 lg:w-20" />
                 <div class="hidden lg:block">
-                    <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
                     <p class="text-sm font-semibold">Assessment Portal</p>
                 </div>
             </a>
@@ -14,13 +14,14 @@
             'labelClass' => 'hidden lg:inline',
             'userCardClass' => 'hidden lg:block',
             'linkJustifyClass' => 'justify-center lg:justify-start',
+            'listId' => 'sidebar-scroll',
         ])
     </div>
 </aside>
 
 <script>
     // Every sidebar click is a full page load, which would reset the
-    // sidebar's scroll to the top. Restore it here, right after the sidebar
+    // sidebar menu list's scroll to the top. Restore it here, right after the sidebar
     // is parsed and before first paint, and save it when leaving the page.
     // sessionStorage can throw (blocked storage, some private modes), so
     // every access is guarded — the fallback is simply the old behaviour.
@@ -50,7 +51,7 @@
 
 <div class="md:hidden">
     <div class="sticky top-0 z-40 flex items-center gap-x-6 bg-primary px-4 py-4 shadow-lg shadow-emerald-950/20 dark:bg-slate-900 dark:shadow-black/40 dark:border-b dark:border-slate-700/80 sm:px-6">
-        <button type="button" class="-m-2.5 rounded-md p-2.5 text-white" @click="open = true">
+        <button type="button" data-sidebar-open class="-m-2.5 rounded-md p-2.5 text-white" @click="open = true">
             <span class="sr-only">Open sidebar</span>
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5m-16.5 6h16.5m-16.5 6h16.5" /></svg>
         </button>
@@ -65,7 +66,7 @@
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
                     <x-application-logo class="h-16 w-16 text-white" />
                     <div>
-                        <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.35em] text-white/65">{{ app(\App\Services\SystemSettingService::class)->systemName() }}</p>
                         <p class="text-sm font-semibold">Assessment Portal</p>
                     </div>
                 </a>

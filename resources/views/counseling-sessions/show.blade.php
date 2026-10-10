@@ -90,7 +90,11 @@
                     These session notes are marked Restricted and are only visible to the counselor who created this session.
                 </p>
             @else
-                <p class="mt-4 whitespace-pre-line rounded-lg bg-slate-50 dark:bg-slate-800 p-4 text-sm text-slate-700 dark:text-slate-300">{{ $session->session_notes }}</p>
+                @if ($session->isUnreadable('session_notes'))
+                    <p class="mt-4 rounded-lg bg-slate-50 dark:bg-slate-800 p-4"><x-unreadable-value /></p>
+                @else
+                    <p class="mt-4 whitespace-pre-line rounded-lg bg-slate-50 dark:bg-slate-800 p-4 text-sm text-slate-700 dark:text-slate-300">{{ $session->session_notes }}</p>
+                @endif
             @endif
         </x-card>
     </div>

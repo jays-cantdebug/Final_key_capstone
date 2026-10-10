@@ -30,7 +30,7 @@
         }
     </style>
 
-    <div class="records-grid grid gap-6 lg:grid-cols-3">
+    <div class="records-grid grid gap-6 2xl:grid-cols-3">
         <x-table class="records-table">
             <x-slot:header>
                 <h3 class="text-lg font-semibold text-body dark:text-slate-100">Courses</h3>
@@ -40,15 +40,15 @@
                 <x-table.th>Code</x-table.th>
                 <x-table.th>Name</x-table.th>
                 <x-table.th>Status</x-table.th>
-                <x-table.th align="right">Actions</x-table.th>
+                <x-table.th sticky align="right">Actions</x-table.th>
             </x-slot:head>
 
             @forelse ($courses as $course)
                 <tr>
                     <x-table.td class="font-medium text-body dark:text-slate-100">{{ $course->course_code }}</x-table.td>
-                    <x-table.td>{{ $course->course_name }}</x-table.td>
+                    <x-table.td wrap>{{ $course->course_name }}</x-table.td>
                     <x-table.td><x-badge :color="$statusColors[$course->status] ?? 'slate'">{{ $course->status }}</x-badge></x-table.td>
-                    <x-table.td align="right">
+                    <x-table.td sticky align="right">
                         <div class="inline-flex items-center justify-end gap-1.5">
                             <a href="{{ route('courses.edit', $course) }}" title="Edit" aria-label="Edit course" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" /></svg>
@@ -82,7 +82,7 @@
                 <x-table.th>Label</x-table.th>
                 <x-table.th>Order</x-table.th>
                 <x-table.th>Status</x-table.th>
-                <x-table.th align="right">Actions</x-table.th>
+                <x-table.th sticky align="right">Actions</x-table.th>
             </x-slot:head>
 
             @forelse ($yearLevels as $yearLevel)
@@ -90,7 +90,7 @@
                     <x-table.td class="font-medium text-body dark:text-slate-100">{{ $yearLevel->label }}</x-table.td>
                     <x-table.td>{{ $yearLevel->display_order }}</x-table.td>
                     <x-table.td><x-badge :color="$statusColors[$yearLevel->status] ?? 'slate'">{{ $yearLevel->status }}</x-badge></x-table.td>
-                    <x-table.td align="right">
+                    <x-table.td sticky align="right">
                         <div class="inline-flex items-center justify-end gap-1.5">
                             <a href="{{ route('year-levels.edit', $yearLevel) }}" title="Edit" aria-label="Edit year level" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" /></svg>
@@ -124,7 +124,7 @@
                 <x-table.th>Name</x-table.th>
                 <x-table.th>Capacity</x-table.th>
                 <x-table.th>Status</x-table.th>
-                <x-table.th align="right">Actions</x-table.th>
+                <x-table.th sticky align="right">Actions</x-table.th>
             </x-slot:head>
 
             @forelse ($sections as $section)
@@ -132,7 +132,7 @@
                     <x-table.td class="font-medium text-body dark:text-slate-100">{{ $section->section_name }}</x-table.td>
                     <x-table.td>{{ $section->capacity ?? '—' }}</x-table.td>
                     <x-table.td><x-badge :color="$statusColors[$section->status] ?? 'slate'">{{ $section->status }}</x-badge></x-table.td>
-                    <x-table.td align="right">
+                    <x-table.td sticky align="right">
                         <div class="inline-flex items-center justify-end gap-1.5">
                             <a href="{{ route('sections.edit', $section) }}" title="Edit" aria-label="Edit section" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" /></svg>

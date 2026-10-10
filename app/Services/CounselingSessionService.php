@@ -95,6 +95,12 @@ class CounselingSessionService
     public function update(CounselingSession $session, array $data): CounselingSession
     {
         return $this->database->transaction(function () use ($session, $data): CounselingSession {
+            // Unreadable stored notes (previous APP_KEY) left empty on the
+            // form stay exactly as they are; typed notes replace them.
+            if (($data['session_notes'] ?? null) === null && $session->isUnreadable('session_notes')) {
+                unset($data['session_notes']);
+            }
+
             $session->update($data);
 
             return $session->refresh();

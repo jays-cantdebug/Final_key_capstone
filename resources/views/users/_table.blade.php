@@ -12,7 +12,7 @@
         <x-table.th>Email</x-table.th>
         <x-table.th>Role</x-table.th>
         <x-table.th>Status</x-table.th>
-        <x-table.th align="right">Actions</x-table.th>
+        <x-table.th sticky align="right">Actions</x-table.th>
     </x-slot:head>
 
     @forelse ($users as $user)
@@ -25,7 +25,7 @@
                     {{ $user->is_active ? 'Active' : 'Inactive' }}
                 </x-badge>
             </x-table.td>
-            <x-table.td align="right">
+            <x-table.td sticky align="right">
                 <div class="inline-flex flex-wrap justify-end gap-2">
                     <a href="{{ route('users.show', $user) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                     <a href="{{ route('users.edit', $user) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">Edit</a>

@@ -38,7 +38,7 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ $questionnaire->description }}</p>
             <div class="text-right">
                 <x-badge :color="$questionnaire->status === 'Active' ? 'green' : 'slate'">{{ $questionnaire->status }}</x-badge>
-                <p class="mt-1 max-w-[14rem] text-[11px] leading-snug text-slate-500 dark:text-slate-400">Template status &mdash; controls whether this questionnaire can be selected at all.</p>
+                <p class="mt-1 max-w-[14rem] text-xs leading-snug text-slate-500 dark:text-slate-400">Template status &mdash; controls whether this questionnaire can be selected at all.</p>
             </div>
         </div>
     </x-card>
@@ -58,7 +58,7 @@
             <x-table.th>Effective Date</x-table.th>
             <x-table.th>Questions</x-table.th>
             <x-table.th>Version Status</x-table.th>
-            <x-table.th align="right">Actions</x-table.th>
+            <x-table.th sticky align="right">Actions</x-table.th>
         </x-slot:head>
 
         @forelse ($versions as $version)
@@ -67,7 +67,7 @@
                 <x-table.td>{{ $version->effective_date->format('M d, Y') }}</x-table.td>
                 <x-table.td>{{ $version->questions_count }}</x-table.td>
                 <x-table.td><x-badge :color="$versionStatusColors[$version->status] ?? 'slate'">{{ $version->status }}</x-badge></x-table.td>
-                <x-table.td align="right">
+                <x-table.td sticky align="right">
                     <div class="inline-flex flex-wrap justify-end gap-2">
                         <a href="{{ route('questionnaires.versions.show', [$questionnaire, $version]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
 

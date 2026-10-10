@@ -8,9 +8,9 @@
     $overallLevel = $counselorView ? $assessment->effectiveHighestSeverityLevel() : $assessment->result->highestSeverityLevel();
 
     $subscales = [
-        ['label' => 'Depression', 'score' => $assessment->result->depression_final_score, 'level' => $level('depression')],
-        ['label' => 'Anxiety', 'score' => $assessment->result->anxiety_final_score, 'level' => $level('anxiety')],
-        ['label' => 'Stress', 'score' => $assessment->result->stress_final_score, 'level' => $level('stress')],
+        ['label' => 'Depression', 'score' => $assessment->result->depression_final_score, 'level' => $level('depression'), 'unreadable' => $assessment->result->isUnreadable('depression_final_score')],
+        ['label' => 'Anxiety', 'score' => $assessment->result->anxiety_final_score, 'level' => $level('anxiety'), 'unreadable' => $assessment->result->isUnreadable('anxiety_final_score')],
+        ['label' => 'Stress', 'score' => $assessment->result->stress_final_score, 'level' => $level('stress'), 'unreadable' => $assessment->result->isUnreadable('stress_final_score')],
     ];
 
     $severityBadgeStyles = [
@@ -54,7 +54,7 @@
             @foreach ($subscales as $subscale)
                 <tr>
                     <td>{{ $subscale['label'] }}</td>
-                    <td>{{ $subscale['score'] }}</td>
+                    <td>@if ($subscale['unreadable'])<x-unreadable-value />@else{{ $subscale['score'] }}@endif</td>
                     <td><span class="badge" style="{{ $severityBadgeStyles[$subscale['level']] ?? '' }}">{{ $subscale['level'] }}</span></td>
                 </tr>
             @endforeach
@@ -82,7 +82,7 @@
                     <td>{{ $response->question->item_number }}</td>
                     <td>{{ $response->question->question_text }}</td>
                     <td>{{ $response->question->subscale }}</td>
-                    <td>{{ $response->answer_value }}</td>
+                    <td>@if ($response->isUnreadable('answer_value'))<x-unreadable-value />@else{{ $response->answer_value }}@endif</td>
                 </tr>
             @endforeach
         </tbody>

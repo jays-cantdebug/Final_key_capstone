@@ -54,7 +54,9 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', env('LOG_STACK', 'single')),
+            // Daily files kept LOG_DAILY_DAYS (14) days by default, so the log
+            // never grows without limit (docs/BUG_LOG.md L4).
+            'channels' => explode(',', env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
         ],
 
@@ -119,6 +121,15 @@ return [
         ],
 
         'null' => [
+            'driver' => 'monolog',
+            'handler' => NullHandler::class,
+        ],
+
+        // The test suite's channel (phpunit.xml LOG_CHANNEL=testing): drops
+        // every message, so `php artisan test` never writes to the real
+        // storage/logs (docs/BUG_LOG.md N4). Log::listen() still sees them.
+        // (LOG_CHANNEL=null can't be used: env() reads "null" as PHP null.)
+        'testing' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,
         ],

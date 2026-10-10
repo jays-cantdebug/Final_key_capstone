@@ -15,6 +15,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionnaireController;
 use App\Http\Controllers\QuestionnaireVersionController;
+use App\Http\Controllers\RemoteAssessmentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Reports\AssessmentReportController;
 use App\Http\Controllers\Reports\AssessmentSummaryReportController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentCounselingHistoryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\YearLevelController;
+use App\Http\Middleware\RefuseWhenStudentEntryOnly;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -36,7 +38,7 @@ Route::get('/', function () {
         : redirect()->route('login');
 })->name('home');
 
-Route::middleware(['auth', 'single-session'])->group(function (): void {
+Route::middleware(['auth', 'active', 'single-session'])->group(function (): void {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/psychometrician/dashboard', [DashboardController::class, 'psychometrician'])
@@ -109,11 +111,41 @@ Route::middleware(['auth', 'single-session'])->group(function (): void {
             ->name('assessments.create.')
             ->group(function (): void {
                 Route::get('/retake/{student}', [AssessmentWizardController::class, 'startRetake'])->name('retake');
-                Route::post('/student', [AssessmentWizardController::class, 'confirmStudent'])->name('student');
+                // "New Assessment" (the sidebar button): resume-or-create a
+                // student-device run. A POST, so only a deliberate,
+                // CSRF-checked click starts anything.
+                Route::post('/start', [RemoteAssessmentController::class, 'start'])->name('start');
+                Route::post('/discard', [RemoteAssessmentController::class, 'discardAndStart'])->name('discard');
+                // Refused while REMOTE_ASSESSMENT_STUDENT_ENTRY_ONLY is on.
+                Route::post('/student', [AssessmentWizardController::class, 'confirmStudent'])
+                    ->middleware(RefuseWhenStudentEntryOnly::class.':step1')
+                    ->name('student');
                 Route::get('/questionnaire', [AssessmentWizardController::class, 'showQuestionnaireStep'])->name('questionnaire');
-                Route::post('/questionnaire', [AssessmentWizardController::class, 'storeResponses'])->name('questionnaire.store');
+                Route::post('/questionnaire', [AssessmentWizardController::class, 'storeResponses'])
+                    ->middleware(RefuseWhenStudentEntryOnly::class.':step2')
+                    ->name('questionnaire.store');
                 Route::get('/result', [AssessmentWizardController::class, 'showResultStep'])->name('result');
                 Route::post('/submit', [AssessmentWizardController::class, 'submit'])->name('submit');
+
+                // Step 2 (or Steps 1 and 2, from `remote/student`) answered
+                // on a separate student device (the device itself uses
+                // routes/student-device.php). Each action works only on this
+                // Psychometrician's own draft.
+                Route::prefix('remote')->name('remote')->group(function (): void {
+                    Route::post('/', [RemoteAssessmentController::class, 'store'])->name('.store');
+                    Route::post('/student', [RemoteAssessmentController::class, 'storeForStudent'])->name('.store-student');
+                    Route::put('/identity', [RemoteAssessmentController::class, 'correctIdentity'])->name('.identity');
+                    Route::get('/', [RemoteAssessmentController::class, 'show'])->name('');
+                    Route::get('/status', [RemoteAssessmentController::class, 'status'])
+                        ->middleware('throttle:remote-assessment-monitor')
+                        ->name('.status');
+                    Route::post('/new-code', [RemoteAssessmentController::class, 'newCode'])->name('.new-code');
+                    Route::post('/return', [RemoteAssessmentController::class, 'returnToStudent'])->name('.return');
+                    Route::post('/extend', [RemoteAssessmentController::class, 'extend'])->name('.extend');
+                    Route::post('/restart', [RemoteAssessmentController::class, 'restart'])->name('.restart');
+                    Route::delete('/', [RemoteAssessmentController::class, 'cancel'])->name('.cancel');
+                    Route::post('/submit', [RemoteAssessmentController::class, 'submit'])->name('.submit');
+                });
             });
     });
 

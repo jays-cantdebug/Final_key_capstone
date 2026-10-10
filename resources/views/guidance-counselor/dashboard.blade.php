@@ -131,15 +131,15 @@
             <x-table.th>Student</x-table.th>
             <x-table.th>Date</x-table.th>
             <x-table.th>Severity</x-table.th>
-            <x-table.th align="right">Actions</x-table.th>
+            <x-table.th sticky align="right">Actions</x-table.th>
         </x-slot:head>
 
         @forelse ($recentAssessments as $assessment)
             <tr>
-                <x-table.td class="font-medium text-body dark:text-slate-100">{{ $assessment->student->full_name }}</x-table.td>
+                <x-table.td wrap class="font-medium text-body dark:text-slate-100">{{ $assessment->student->full_name }}</x-table.td>
                 <x-table.td>{{ $assessment->submitted_at->format('M d, Y') }}</x-table.td>
                 <x-table.td><x-severity-badge :level="$assessment->effectiveHighestSeverityLevel()" /></x-table.td>
-                <x-table.td align="right">
+                <x-table.td sticky align="right">
                     <a href="{{ route('assessments.show', $assessment) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">View</a>
                 </x-table.td>
             </tr>

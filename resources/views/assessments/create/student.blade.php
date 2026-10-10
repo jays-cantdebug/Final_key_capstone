@@ -9,6 +9,29 @@
         <x-toast type="error">{{ $message }}</x-toast>
     @enderror
 
+    @if (session('status'))
+        <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>
+    @endif
+
+    {{-- Or the student fills in this step (and the questionnaire) on a separate student device. --}}
+    @if ($remoteDraftInProgress)
+        <x-alert type="warning" class="mb-6" data-remote-in-progress>
+            A student device session is in progress: the student is filling in their details there.
+            <a href="{{ route('assessments.create.remote') }}" class="font-semibold underline">Open the student device page</a>
+        </x-alert>
+    @else
+        <div class="mb-6 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-5 py-4 dark:border-slate-700 dark:bg-slate-800 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm font-semibold text-body dark:text-slate-100">Who will fill in the details?</p>
+                <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Type them below, or let the student fill in their details and the questionnaire on a separate student device while you follow along here.</p>
+            </div>
+            <form method="POST" action="{{ route('assessments.create.remote.store-student') }}" class="shrink-0">
+                @csrf
+                <x-secondary-button type="submit">{{ __('Let the student fill this in on their device') }}</x-secondary-button>
+            </form>
+        </div>
+    @endif
+
     <x-card>
         <p class="text-sm text-slate-600 dark:text-slate-400">Every assessment begins with the student's information for this encounter.</p>
 
@@ -25,71 +48,14 @@
                 @include('assessments.create._duplicate-student', ['duplicate' => $duplicate])
             @endif
 
-            <div class="grid gap-6 sm:grid-cols-2">
-                <div class="sm:col-span-2 grid gap-6 sm:grid-cols-3">
-                    <div class="relative" x-data="{ show: {{ $errors->has('first_name') ? 'true' : 'false' }} }">
-                        <x-input-label for="first_name" :value="__('First Name')" />
-                        <x-text-input id="first_name" name="first_name" type="text" class="mt-1 block w-full" :value="old('first_name')" :invalid="$errors->has('first_name')" autofocus @input="show = false" />
-                        <x-field-error-tooltip :message="$errors->first('first_name')" />
-                    </div>
-
-                    <div class="relative" x-data="{ show: {{ $errors->has('middle_name') ? 'true' : 'false' }} }">
-                        <x-input-label for="middle_name" :value="__('Middle Name')" />
-                        <x-text-input id="middle_name" name="middle_name" type="text" class="mt-1 block w-full" :value="old('middle_name')" :invalid="$errors->has('middle_name')" @input="show = false" />
-                        <x-field-error-tooltip :message="$errors->first('middle_name')" />
-                    </div>
-
-                    <div class="relative" x-data="{ show: {{ $errors->has('last_name') ? 'true' : 'false' }} }">
-                        <x-input-label for="last_name" :value="__('Last Name')" />
-                        <x-text-input id="last_name" name="last_name" type="text" class="mt-1 block w-full" :value="old('last_name')" :invalid="$errors->has('last_name')" @input="show = false" />
-                        <x-field-error-tooltip :message="$errors->first('last_name')" />
-                    </div>
-                </div>
-
-                <div class="relative" x-data="{ show: {{ $errors->has('gender') ? 'true' : 'false' }} }">
-                    <x-input-label for="gender" :value="__('Gender')" />
-                    <x-select id="gender" name="gender" class="mt-1 block w-full" :invalid="$errors->has('gender')" @change="show = false">
-                        <option value="">Select gender</option>
-                        @foreach (['Male', 'Female', 'Prefer not to say'] as $genderOption)
-                            <option value="{{ $genderOption }}" @selected(old('gender') === $genderOption)>{{ $genderOption }}</option>
-                        @endforeach
-                    </x-select>
-                    <x-field-error-tooltip :message="$errors->first('gender')" />
-                </div>
-
-                <div class="relative" x-data="{ show: {{ $errors->has('course_id') ? 'true' : 'false' }} }">
-                    <x-input-label for="course_id" :value="__('Course')" />
-                    <x-select id="course_id" name="course_id" class="mt-1 block w-full" :invalid="$errors->has('course_id')" @change="show = false">
-                        <option value="">Select a course</option>
-                        @foreach ($courses as $course)
-                            <option value="{{ $course->id }}" @selected((string) old('course_id') === (string) $course->id)>{{ $course->course_code }} - {{ $course->course_name }}</option>
-                        @endforeach
-                    </x-select>
-                    <x-field-error-tooltip :message="$errors->first('course_id')" />
-                </div>
-
-                <div class="relative" x-data="{ show: {{ $errors->has('year_level_id') ? 'true' : 'false' }} }">
-                    <x-input-label for="year_level_id" :value="__('Year Level')" />
-                    <x-select id="year_level_id" name="year_level_id" class="mt-1 block w-full" :invalid="$errors->has('year_level_id')" @change="show = false">
-                        <option value="">Select a year level</option>
-                        @foreach ($yearLevels as $yearLevel)
-                            <option value="{{ $yearLevel->id }}" @selected((string) old('year_level_id') === (string) $yearLevel->id)>{{ $yearLevel->label }}</option>
-                        @endforeach
-                    </x-select>
-                    <x-field-error-tooltip :message="$errors->first('year_level_id')" />
-                </div>
-
-                <div class="relative" x-data="{ show: {{ $errors->has('section_id') ? 'true' : 'false' }} }">
-                    <x-input-label for="section_id" :value="__('Section')" />
-                    <x-select id="section_id" name="section_id" class="mt-1 block w-full" :invalid="$errors->has('section_id')" @change="show = false">
-                        <option value="">Select a section</option>
-                        @foreach ($sections as $section)
-                            <option value="{{ $section->id }}" @selected((string) old('section_id') === (string) $section->id)>{{ $section->section_name }}</option>
-                        @endforeach
-                    </x-select>
-                    <x-field-error-tooltip :message="$errors->first('section_id')" />
-                </div>
-            </div>
+            {{-- The same fields as the student device and the live page's correction form. --}}
+            @include('assessments.create._student-fields', [
+                'fieldValue' => fn (string $field): mixed => old($field),
+                'fieldErrors' => $errors,
+                'idPrefix' => '',
+                'autofocusField' => 'first_name',
+                'autocompleteOff' => false,
+            ])
 
             <div class="relative mt-6" x-data="{ show: {{ $errors->has('privacy_consent') ? 'true' : 'false' }} }">
                 <label class="flex items-start gap-2">

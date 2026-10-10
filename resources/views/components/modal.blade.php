@@ -3,6 +3,9 @@
     'show' => false,
     'maxWidth' => '2xl',
     'closeable' => true,
+    // Opt-out: :close-on-backdrop="false" keeps the dialog open when the
+    // backdrop is clicked (Escape still follows `closeable`).
+    'closeOnBackdrop' => true,
 ])
 
 @php
@@ -13,12 +16,18 @@ $maxWidth = [
     'xl' => 'sm:max-w-xl',
     '2xl' => 'sm:max-w-2xl',
 ][$maxWidth];
+
+// Opt-in `restore-focus`: on close, the element focused before opening gets
+// the focus back; if it is hidden by then, the element matching
+// restore-focus="<selector>" does (when given and visible).
+$restoreFocusFallback = $attributes->get('restore-focus');
 @endphp
 
 <div
     x-data="{
         show: @js($show),
         closeable: @js($closeable),
+        returnFocusTo: null,
         focusables() {
             // All focusable element types...
             let selector = 'a, button, input:not([type=\'hidden\']), textarea, select, details, [tabindex]:not([tabindex=\'-1\'])'
@@ -35,10 +44,12 @@ $maxWidth = [
     }"
     x-init="$watch('show', value => {
         if (value) {
+            {{ $attributes->has('restore-focus') ? 'returnFocusTo = document.activeElement;' : '' }}
             document.body.classList.add('overflow-y-hidden');
             {{ $attributes->has('focusable') ? 'setTimeout(() => firstFocusable().focus(), 100)' : '' }}
         } else {
             document.body.classList.remove('overflow-y-hidden');
+            {{ $attributes->has('restore-focus') ? 'if (returnFocusTo && returnFocusTo.offsetParent === null) { returnFocusTo = '.(is_string($restoreFocusFallback) && $restoreFocusFallback !== '' ? 'document.querySelector('.\Illuminate\Support\Js::from($restoreFocusFallback).')' : 'null').' } returnFocusTo && returnFocusTo.offsetParent !== null && returnFocusTo.focus(); returnFocusTo = null;' : '' }}
         }
     })"
     x-on:open-modal.window="$event.detail == '{{ $name }}' ? show = true : null"
@@ -54,7 +65,7 @@ $maxWidth = [
     <div
         x-show="show"
         class="fixed inset-0 transform transition-all"
-        x-on:click="closeable && (show = false)"
+        @if ($closeOnBackdrop) x-on:click="closeable && (show = false)" @endif
         x-transition:enter="ease-out duration-300"
         x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100"

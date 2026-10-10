@@ -58,7 +58,7 @@
             </dl>
             <div class="text-right">
                 <x-badge :color="$versionStatusColors[$version->status] ?? 'slate'">{{ $version->status }}</x-badge>
-                <p class="mt-1 max-w-[14rem] text-[11px] leading-snug text-slate-500 dark:text-slate-400">Version status &mdash; controls which version is currently used for new assessments. Independent from the questionnaire's own template status.</p>
+                <p class="mt-1 max-w-[14rem] text-xs leading-snug text-slate-500 dark:text-slate-400">Version status &mdash; controls which version is currently used for new assessments. Independent from the questionnaire's own template status.</p>
             </div>
         </div>
     </x-card>
@@ -108,19 +108,19 @@
             <x-table.th>Order</x-table.th>
             <x-table.th>Required</x-table.th>
             @if ($version->isEditable())
-                <x-table.th align="right">Actions</x-table.th>
+                <x-table.th sticky align="right">Actions</x-table.th>
             @endif
         </x-slot:head>
 
         @forelse ($questions as $question)
             <tr>
                 <x-table.td class="font-medium text-body dark:text-slate-100">{{ $question->item_number }}</x-table.td>
-                <x-table.td>{{ $question->question_text }}</x-table.td>
+                <x-table.td wrap="wide">{{ $question->question_text }}</x-table.td>
                 <x-table.td><x-badge :color="$subscaleColors[$question->subscale] ?? 'slate'">{{ $question->subscale }}</x-badge></x-table.td>
                 <x-table.td>{{ $question->display_order }}</x-table.td>
                 <x-table.td>{{ $question->is_required ? 'Yes' : 'No' }}</x-table.td>
                 @if ($version->isEditable())
-                    <x-table.td align="right">
+                    <x-table.td sticky align="right">
                         <div class="inline-flex flex-wrap justify-end gap-2">
                             <a href="{{ route('questionnaires.versions.questions.edit', [$questionnaire, $version, $question]) }}" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700">Edit</a>
                             <form id="delete-question-form-{{ $question->id }}" method="POST" action="{{ route('questionnaires.versions.questions.destroy', [$questionnaire, $version, $question]) }}" class="hidden">

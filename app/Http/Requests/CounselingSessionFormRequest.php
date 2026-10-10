@@ -93,7 +93,9 @@ class CounselingSessionFormRequest extends FormRequest
             ],
             'session_time' => ['required', 'date_format:H:i'],
             'session_datetime' => ['required', 'date'],
-            'session_notes' => ['required', 'string'],
+            // Stored notes that can't be decrypted (previous APP_KEY) may be
+            // left empty on edit: CounselingSessionService then keeps them.
+            'session_notes' => $session?->isUnreadable('session_notes') ? ['nullable', 'string'] : ['required', 'string'],
             'session_status' => [
                 'required',
                 Rule::in([

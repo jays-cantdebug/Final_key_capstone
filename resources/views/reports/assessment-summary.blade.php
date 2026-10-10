@@ -3,6 +3,9 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <h2 class="text-2xl font-semibold text-body dark:text-slate-100">Assessment Summary Report</h2>
             <div class="flex flex-wrap gap-2">
+                <x-secondary-button :href="route('reports.index')">
+                    Back to Reports
+                </x-secondary-button>
                 <x-secondary-button :href="route('reports.assessment-summary.print', ['course_id' => $courseId, 'year_level_id' => $yearLevelId, 'gender' => $gender, 'date_from' => $dateFrom, 'date_to' => $dateTo])" target="_blank">
                     Print
                 </x-secondary-button>
@@ -70,7 +73,7 @@
         @include('reports._summary-counts-basis')
     </p>
 
-    <div class="mt-4 grid gap-6 lg:grid-cols-3">
+    <div class="mt-4 grid gap-6 xl:grid-cols-3">
         @foreach ([
             'Depression' => $depressionBySeverity,
             'Anxiety' => $anxietyBySeverity,

@@ -11,6 +11,7 @@ use App\AI\Providers\RuleBasedDASSProvider;
 use App\Models\ClassificationThreshold;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Tests\Concerns\InteractsWithDomainData;
@@ -285,6 +286,90 @@ class ClaudeAIProviderTest extends TestCase
 
             return true;
         });
+    }
+
+    public function test_falls_back_to_rule_based_without_throwing_when_the_request_times_out(): void
+    {
+        Log::shouldReceive('warning')
+            ->once()
+            ->withArgs(fn (string $message, array $context): bool => $message === 'Claude AI classification failed; falling back to rule-based classification.'
+                && str_contains($context['error'], 'cURL error 28'));
+
+        Http::fake(function () {
+            throw new ConnectionException('cURL error 28: Operation timed out after 12001 milliseconds with 0 bytes received (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for https://api.anthropic.com/v1/messages');
+        });
+
+        $result = $this->classify(depression: 25, anxiety: 12, stress: 40);
+
+        $this->assertSame('rule_based', $result->provider);
+        $this->assertSame('Severe', $result->depressionLevel);
+        $this->assertSame('Moderate', $result->anxietyLevel);
+        $this->assertSame('Extremely Severe', $result->stressLevel);
+    }
+
+    public function test_passes_the_configured_timeouts_to_the_http_client(): void
+    {
+        config([
+            'ai.providers.claude.timeout' => '9',
+            'ai.providers.claude.connect_timeout' => '3',
+        ]);
+
+        $this->assertSame(['timeout' => 9.0, 'connect_timeout' => 3.0], $this->sentTimeouts());
+    }
+
+    public function test_uses_12_and_4_seconds_when_the_timeouts_are_missing_or_blank(): void
+    {
+        config(['ai.providers.claude' => Arr::except(config('ai.providers.claude'), ['timeout', 'connect_timeout'])]);
+        $this->assertSame(['timeout' => 12.0, 'connect_timeout' => 4.0], $this->sentTimeouts());
+
+        // A blank CLAUDE_TIMEOUT= in .env must not become a 0 (or 1) second timeout.
+        config([
+            'ai.providers.claude.timeout' => '',
+            'ai.providers.claude.connect_timeout' => 'abc',
+        ]);
+        $this->assertSame(['timeout' => 12.0, 'connect_timeout' => 4.0], $this->sentTimeouts());
+    }
+
+    public function test_a_total_timeout_above_the_cap_is_reduced_to_20_seconds(): void
+    {
+        config([
+            'ai.providers.claude.timeout' => '45',
+            'ai.providers.claude.connect_timeout' => '30',
+        ]);
+
+        $this->assertSame(['timeout' => 20.0, 'connect_timeout' => 20.0], $this->sentTimeouts());
+    }
+
+    /**
+     * Runs one classification and returns the timeout options the request
+     * actually reached Guzzle with (a global middleware sits outside the
+     * fake's stub handler, so it sees the real options).
+     *
+     * @return array{timeout: float, connect_timeout: float}
+     */
+    private function sentTimeouts(): array
+    {
+        $sent = [];
+
+        Http::globalMiddleware(function (callable $handler) use (&$sent): callable {
+            return function ($request, array $options) use ($handler, &$sent) {
+                $sent = ['timeout' => $options['timeout'], 'connect_timeout' => $options['connect_timeout']];
+
+                return $handler($request, $options);
+            };
+        });
+
+        Http::fake([
+            '*' => Http::response($this->toolUseResponse([
+                'depression_level' => 'Severe',
+                'anxiety_level' => 'Moderate',
+                'stress_level' => 'Extremely Severe',
+            ])),
+        ]);
+
+        $this->assertSame('claude', $this->classify(depression: 25, anxiety: 12, stress: 40)->provider);
+
+        return $sent;
     }
 
     /**

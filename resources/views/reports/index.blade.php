@@ -25,7 +25,8 @@
                         <option value="awareness_notification">Awareness Notification</option>
                     </x-select>
                     <div class="flex gap-2">
-                        <x-primary-button type="submit" formaction="{{ route('reports.flagged-students.print') }}">
+                        {{-- Opens the print view in a new tab (with the chosen flag type); the report page stays open. --}}
+                        <x-primary-button type="submit" formaction="{{ route('reports.flagged-students.print') }}" formtarget="_blank">
                             Print
                         </x-primary-button>
                         <x-secondary-button type="submit" formaction="{{ route('reports.flagged-students.pdf') }}">

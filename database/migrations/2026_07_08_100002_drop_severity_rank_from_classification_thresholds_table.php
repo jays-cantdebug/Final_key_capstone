@@ -26,11 +26,15 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * default(0): SQLite can't add a NOT NULL column without a default to an
+     * existing table, so a full rollback used to stop here (docs/BUG_LOG.md
+     * N3). Nothing reads the column any more; restored rows get 0.
      */
     public function down(): void
     {
         Schema::table('classification_thresholds', function (Blueprint $table) {
-            $table->unsignedTinyInteger('severity_rank')->after('severity_level');
+            $table->unsignedTinyInteger('severity_rank')->default(0)->after('severity_level');
         });
     }
 };
